@@ -1333,9 +1333,7 @@ ${requirementsSection}
 
   const [minTotal, setMinTotal] = useState("");
   const [minScorePercent, setMinScorePercent] = useState("");
-  const [minFinalRating, setMinFinalRating] = useState("");
-
-
+ 
   // ✅ Step 1: Filtering
   const filteredPersons = persons.filter((personData) => {
 
@@ -1353,10 +1351,7 @@ ${requirementsSection}
 
     const scorePercent = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
 
-    const finalRating =
-      subjectScores.length > 0
-        ? total / subjectScores.length
-        : 0;
+  
 
     /* 🏫 CAMPUS */
     const personCampus = String(personData.campus ?? "").trim();
@@ -1375,11 +1370,7 @@ ${requirementsSection}
       (scorePercent >= Number(minScorePercent) &&
         scorePercent < Number(minScorePercent) + 1);
 
-    const matchesFinalRating =
-      minFinalRating === "" ||
-      (finalRating >= Number(minFinalRating) &&
-        finalRating < Number(minFinalRating) + 1);
-
+  
     /* 🔎 SEARCH */
     const query = searchQuery.toLowerCase();
     const fullName =
@@ -1442,7 +1433,6 @@ ${requirementsSection}
       matchesCampus &&
       matchesTotal &&              // ✅ NEW
       matchesScorePercent &&       // ✅ NEW
-      matchesFinalRating &&        // ✅ NEW
       matchesDateRange
     );
   });
@@ -1942,7 +1932,7 @@ ${requirementsSection}
                   <MenuItem value="name">Applicant's Name</MenuItem>
                   <MenuItem value="id">Applicant ID</MenuItem>
                   <MenuItem value="email">Email Address</MenuItem>
-                  <MenuItem value="final_rating">Final Rating</MenuItem>{" "}
+          
                   {/* ✅ New */}
                   <MenuItem value="created_at">Date Applied</MenuItem>
                 </Select>
@@ -2169,14 +2159,7 @@ ${requirementsSection}
             onChange={(e) => setMinScorePercent(e.target.value)}
           />
 
-          <Typography fontSize={13}>Final Rating:</Typography>
-          <TextField
-            label="Final Rating"
-            size="small"
-            type="number"
-            value={minFinalRating}
-            onChange={(e) => setMinFinalRating(e.target.value)}
-          />
+      
 
         </Box>
       </Paper>
@@ -2434,9 +2417,7 @@ ${requirementsSection}
                 Score %
               </TableCell>
 
-              <TableCell sx={{ color: "black", textAlign: "center", width: "6%", py: 0.5, fontSize: "12px", border: `1px solid ${borderColor}` }}>
-                Final Rating
-              </TableCell>
+             
 
               <TableCell
                 sx={{
@@ -2495,12 +2476,7 @@ ${requirementsSection}
                     ? ((totalScore / maxTotal) * 50) + 50
                     : 0;
 
-                // Final rating same as converted rating
-                const computedFinalRating =
-                  subjectScores.length > 0
-                    ? totalScore / subjectScores.length
-                    : 0;
-
+             
 
 
                 return (
@@ -2595,16 +2571,7 @@ ${requirementsSection}
 
 
 
-                    {/* FINAL RATING */}
-                    <TableCell
-                      sx={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {Number(computedFinalRating).toFixed(2)}
-                    </TableCell>
+                  
 
                     <TableCell
                       sx={{

@@ -204,7 +204,8 @@ const ApplicantProfile = () => {
 
   const [steps, setSteps] = useState({
     step1: false,
-    step2: false,
+    qualifyingDone: false,
+    interviewDone: false,
     step3: false,
     step4: false,
     step5: false,
@@ -244,19 +245,23 @@ const ApplicantProfile = () => {
         return;
       }
 
-      // 3️⃣ Get scores
-      let entrance_exam_score = null;
+      let entrance_exam_status = null;
       let qualifying_result = null;
       let interview_result = null;
+      let qualifying_status = 0;
+      let interview_status = 0;
 
       try {
         const scoreRes = await axios.get(
           `${API_BASE_URL}/api/applicant-scores/${query}`
         );
 
-        entrance_exam_score = scoreRes.data?.entrance_exam_score;
+        entrance_exam_status = scoreRes.data?.entrance_exam_status;
         qualifying_result = scoreRes.data?.qualifying_result;
         interview_result = scoreRes.data?.interview_result;
+
+        qualifying_status = Number(scoreRes.data?.qualifying_status || 0);
+        interview_status = Number(scoreRes.data?.interview_status || 0);
       } catch (err) {
         console.error("Score API failed:", err);
       }
@@ -306,8 +311,14 @@ const ApplicantProfile = () => {
 
       // 🔥 FINAL STEP LOGIC
       const newSteps = {
-        step1: !!entrance_exam_score,
-        step2: !!qualifying_result && !!interview_result,
+        step1:
+          entrance_exam_status === "PASSED" ||
+          entrance_exam_status === "FAILED",
+
+        // separate step 2 states
+        qualifyingDone: qualifying_status === 1,
+        interviewDone: interview_status === 1,
+
         step3: isAccepted,
         step4: isRegistrarApproved,
         step5: isRegistrarApproved && hasStudentNumberLocal,
@@ -324,9 +335,9 @@ const ApplicantProfile = () => {
       }
 
       // 🧠 Snackbar logic
-      if (!entrance_exam_score) {
+      if (!entrance_exam_status) {
         showSnackbar("📝 Proceed to Entrance Exam.", "info");
-      } else if (entrance_exam_score && !qualifying_result) {
+      } else if (entrance_exam_status && !qualifying_status) {
         showSnackbar("✅ Proceed to Qualifying.", "success");
       } else if (qualifying_result && !interview_result) {
         showSnackbar("✅ Proceed to Interview.", "success");

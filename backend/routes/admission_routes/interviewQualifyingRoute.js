@@ -178,11 +178,9 @@ const getApplicantAuditDetails = async (applicantNumber) => {
 
   return rows[0] || null;
 };
-
 router.get("/api/applicants-with-number", async (req, res) => {
   try {
-
-    // ✅ SUBJECTS
+    // Get active subjects dynamically
     const [subjects] = await db.query(`
       SELECT id, name, max_score
       FROM subjects
@@ -190,7 +188,7 @@ router.get("/api/applicants-with-number", async (req, res) => {
       ORDER BY id ASC
     `);
 
- 
+    // Main applicants query
     const [rows] = await db.query(`
       SELECT DISTINCT
         p.person_id,
@@ -216,14 +214,13 @@ router.get("/api/applicants-with-number", async (req, res) => {
         ia.status AS interview_status,
         ia.action,
         ia.email_sent,
+        ia.qualifying_status,
+        ia.interview_status AS interview_status_result,
 
-        -- From person_status_table
         COALESCE(ps.interview_status, 0) AS applicant_interview_status,
         COALESCE(ps.exam_result, 0) AS total_ave,
         COALESCE(ps.qualifying_result, 0) AS qualifying_exam_score,
-        COALESCE(ps.interview_result, 0) AS qualifying_interview_score,
-
-        ia.status AS college_approval_status
+        COALESCE(ps.interview_result, 0) AS qualifying_interview_score
 
       FROM admission.person_table p
       INNER JOIN admission.applicant_numbering_table a
@@ -241,66 +238,79 @@ router.get("/api/applicants-with-number", async (req, res) => {
       ORDER BY p.person_id ASC
     `);
 
-    // ✅ DETAILS (per subject scores)
+    // Get exam subject scores
     const [details] = await db.query(`
       SELECT exam_result_id, subject_id, score
       FROM exam_result_details
     `);
 
-    // ✅ FORMAT RESULT (same logic as your working API)
-    const formatted = rows.map(row => {
-
+    const formatted = rows.map((row) => {
       const scores = {};
 
-      // initialize all subjects = 0
-      subjects.forEach(sub => {
-        scores[sub.id] = 0;
+      // initialize all subjects to 0
+      subjects.forEach((sub) => {
+        scores[sub.name.toLowerCase()] = 0;
       });
 
-      // fill actual scores
+      // assign actual scores dynamically
       details
-        .filter(d => d.exam_result_id === row.exam_result_id)
-        .forEach(d => {
-          scores[d.subject_id] = Number(d.score);
+        .filter(
+          (detail) =>
+            Number(detail.exam_result_id) === Number(row.exam_result_id)
+        )
+        .forEach((detail) => {
+          const subject = subjects.find(
+            (s) => Number(s.id) === Number(detail.subject_id)
+          );
+
+          if (subject) {
+            scores[subject.name.toLowerCase()] = Number(detail.score);
+          }
         });
 
-      const total = Object.values(scores).reduce((sum, val) => sum + val, 0);
-
-      const maxTotal = subjects.reduce(
-        (sum, sub) => sum + Number(sub.max_score || 0),
+      const computedTotal = Object.values(scores).reduce(
+        (sum, score) => sum + Number(score),
         0
       );
 
-      const percentage =
-        row.percentage ??
-        (maxTotal > 0 ? (total / maxTotal) * 100 : 0);
-
-      const final_rating =
-        row.final_rating ??
-        (subjects.length > 0 ? total / subjects.length : 0);
+      const maxTotal = subjects.reduce(
+        (sum, sub) => sum + Number(sub.max_score),
+        0
+      );
 
       return {
         ...row,
+
+        // dynamic scores object
         scores,
-        total,
-        percentage,
-        final_rating
+
+        // keep existing saved values if available
+        total: row.total_score ?? computedTotal,
+        percentage:
+          row.percentage ??
+          (maxTotal > 0 ? ((computedTotal / maxTotal) * 100).toFixed(2) : 0),
+
+        final_rating:
+          row.final_rating ??
+          (subjects.length > 0
+            ? (computedTotal / subjects.length).toFixed(2)
+            : 0),
+
+        exam_status: row.exam_status || "Pending",
       };
     });
 
-    // ✅ SEND
     res.json({
       subjects,
-      data: formatted
+      data: formatted,
     });
-
   } catch (err) {
-    console.error("Error fetching applicants with number:", err);
-    res.status(500).send("Server error");
+    console.error("Error fetching applicants:", err);
+    res.status(500).json({
+      error: "Server Error",
+    });
   }
 });
-
-
 
 // Assign Max Slots
 router.put("/api/interview_applicants/assign-max", async (req, res) => {
@@ -381,7 +391,6 @@ router.put("/api/interview_applicants/assign-custom", async (req, res) => {
   }
 });
 
-
 router.post(
   "/api/interview/save",
   verifyToken,
@@ -391,12 +400,10 @@ router.post(
         applicant_number,
         qualifying_exam_score,
         qualifying_interview_score,
+        qualifying_status,
+        interview_status_result,
         status,
       } = req.body;
-
-      // -------------------------------------------------
-      // VALIDATION
-      // -------------------------------------------------
 
       if (!applicant_number) {
         return res.status(400).json({
@@ -414,19 +421,10 @@ router.post(
       };
 
       if (req.user?.email) {
-        const [userRows] =
-          await db3.query(
-            `
-            SELECT
-              email,
-              role
-            FROM user_accounts
-            WHERE email = ?
-            LIMIT 1
-            `,
-            [req.user.email]
-          );
-
+        const [userRows] = await db3.query(
+          `SELECT email, role FROM user_accounts WHERE email = ? LIMIT 1`,
+          [req.user.email]
+        );
         if (userRows.length) {
           actor = userRows[0];
         }
@@ -439,23 +437,15 @@ router.post(
       // -------------------------------------------------
 
       const [rows] = await db.query(
-        `
-        SELECT person_id
-        FROM applicant_numbering_table
-        WHERE applicant_number = ?
-        LIMIT 1
-        `,
+        `SELECT person_id FROM applicant_numbering_table WHERE applicant_number = ? LIMIT 1`,
         [applicant_number]
       );
 
       if (!rows.length) {
-        return res.status(400).json({
-          error: "Applicant not found",
-        });
+        return res.status(400).json({ error: "Applicant not found" });
       }
 
-      const personId =
-        rows[0].person_id;
+      const personId = rows[0].person_id;
       const applicantDetails = await getApplicantAuditDetails(applicant_number);
       const applicantName = [
         applicantDetails?.first_name,
@@ -471,134 +461,103 @@ router.post(
       // -------------------------------------------------
 
       const [oldRows] = await db.query(
-        `
-        SELECT
-          qualifying_result,
-          interview_result,
-          exam_result
-        FROM person_status_table
-        WHERE person_id = ?
-        LIMIT 1
-        `,
+        `SELECT qualifying_result, interview_result, exam_result
+         FROM person_status_table
+         WHERE person_id = ?
+         LIMIT 1`,
         [personId]
       );
 
-      const [oldStatusRows] =
-        await db.query(
-          `
-          SELECT status
-          FROM interview_applicants
-          WHERE applicant_id = ?
-          LIMIT 1
-          `,
-          [applicant_number]
-        );
+      // ✅ Fetch old status + qualifying_status + interview_status together
+      const [oldStatusRows] = await db.query(
+        `SELECT status, qualifying_status, interview_status AS interview_status_result
+         FROM interview_applicants
+         WHERE applicant_id = ?
+         LIMIT 1`,
+        [applicant_number]
+      );
 
-      const oldData =
-        oldRows[0] || {};
+      const oldData = oldRows[0] || {};
+      const oldStatus = oldStatusRows[0]?.status ?? null;
 
-      const oldStatus =
-        oldStatusRows[0]?.status ??
-        null;
+      // ✅ Attach old pass/fail values onto oldData for change detection
+      oldData.qualifying_status = oldStatusRows[0]?.qualifying_status ?? null;
+      oldData.interview_status_result = oldStatusRows[0]?.interview_status_result ?? null;
 
       // -------------------------------------------------
       // NEW VALUES
       // -------------------------------------------------
 
-      const qExam =
-        toNumberOrNull(
-          qualifying_exam_score
-        );
-
-      const qInterview =
-        toNumberOrNull(
-          qualifying_interview_score
-        );
+      const qExam = toNumberOrNull(qualifying_exam_score);
+      const qInterview = toNumberOrNull(qualifying_interview_score);
 
       const finalAve =
-        qExam !== null &&
-        qInterview !== null
-          ? (
-              qExam +
-              qInterview
-            ) / 2
+        qExam !== null && qInterview !== null
+          ? (qExam + qInterview) / 2
           : null;
 
       const hasStatusPayload =
-        status !== undefined &&
-        String(status).trim() !== "";
+        status !== undefined && String(status).trim() !== "";
 
-      const newStatus =
-        hasStatusPayload
-          ? String(status).trim()
-          : oldStatus;
+      const newStatus = hasStatusPayload ? String(status).trim() : oldStatus;
+
+      // ✅ Normalize pass/fail: keep null if not provided, else 0 or 1
+      const newQualifyingStatus =
+        qualifying_status === undefined || qualifying_status === ""
+          ? oldData.qualifying_status   // no change — keep old
+          : qualifying_status === null
+            ? null                      // explicit clear
+            : Number(qualifying_status);
+
+      const newInterviewStatusResult =
+        interview_status_result === undefined || interview_status_result === ""
+          ? oldData.interview_status_result // no change — keep old
+          : interview_status_result === null
+            ? null                          // explicit clear
+            : Number(interview_status_result);
 
       // -------------------------------------------------
-      // CHECK CHANGES FIRST
+      // CHECK CHANGES
       // -------------------------------------------------
 
       let changes = [];
 
-      if (
-        isDifferent(
-          oldData.qualifying_result,
-          qExam
-        )
-      ) {
+      if (isDifferent(oldData.qualifying_result, qExam)) {
         changes.push(
-          `Qualifying Exam: ${
-            oldData.qualifying_result ??
-            "NONE"
-          } -> ${
-            qExam ?? "NONE"
-          }`
+          `Qualifying Exam: ${oldData.qualifying_result ?? "NONE"} -> ${qExam ?? "NONE"}`
         );
       }
 
-      if (
-        isDifferent(
-          oldData.interview_result,
-          qInterview
-        )
-      ) {
+      if (isDifferent(oldData.interview_result, qInterview)) {
         changes.push(
-          `Interview Score: ${
-            oldData.interview_result ??
-            "NONE"
-          } -> ${
-            qInterview ?? "NONE"
-          }`
+          `Interview Score: ${oldData.interview_result ?? "NONE"} -> ${qInterview ?? "NONE"}`
         );
       }
 
-      if (
-        isDifferent(
-          oldData.exam_result,
-          finalAve
-        )
-      ) {
+      if (isDifferent(oldData.exam_result, finalAve)) {
         changes.push(
-          `Final Average: ${
-            oldData.exam_result ??
-            "NONE"
-          } -> ${
-            finalAve ?? "NONE"
-          }`
+          `Final Average: ${oldData.exam_result ?? "NONE"} -> ${finalAve ?? "NONE"}`
         );
       }
 
-      if (
-        isDifferent(
-          oldStatus,
-          newStatus
-        )
-      ) {
+      if (isDifferent(oldStatus, newStatus)) {
+        changes.push(`Status: ${oldStatus ?? "NONE"} -> ${newStatus ?? "NONE"}`);
+      }
+
+      // ✅ Change detection for new pass/fail columns
+      if (isDifferent(oldData.qualifying_status, newQualifyingStatus)) {
+        const label = (v) =>
+          v === null ? "No Result" : v === 1 ? "Passed" : "Failed";
         changes.push(
-          `Status: ${
-            oldStatus ?? "NONE"
-          } -> ${
-            newStatus ?? "NONE"
-          }`
+          `Qualifying Result: ${label(oldData.qualifying_status)} -> ${label(newQualifyingStatus)}`
+        );
+      }
+
+      if (isDifferent(oldData.interview_status_result, newInterviewStatusResult)) {
+        const label = (v) =>
+          v === null ? "No Result" : v === 1 ? "Passed" : "Failed";
+        changes.push(
+          `Interview Result: ${label(oldData.interview_status_result)} -> ${label(newInterviewStatusResult)}`
         );
       }
 
@@ -607,121 +566,75 @@ router.post(
       // -------------------------------------------------
 
       if (changes.length === 0) {
-        return res.json({
-          success: true,
-          message:
-            "No changes detected",
-        });
+        return res.json({ success: true, message: "No changes detected" });
       }
 
       // -------------------------------------------------
-      // SAVE DATA
+      // SAVE TO person_status_table
       // -------------------------------------------------
 
       await db.query(
-        `
-        INSERT INTO person_status_table
-        (
-          person_id,
-          qualifying_result,
-          interview_result,
-          exam_result
-        )
-        VALUES (?, ?, ?, ?)
-
-        ON DUPLICATE KEY UPDATE
-
-        qualifying_result =
-          COALESCE(
-            VALUES(
-              qualifying_result
-            ),
-            qualifying_result
-          ),
-
-        interview_result =
-          COALESCE(
-            VALUES(
-              interview_result
-            ),
-            interview_result
-          ),
-
-        exam_result =
-          COALESCE(
-            VALUES(
-              exam_result
-            ),
-            exam_result
-          )
-        `,
-        [
-          personId,
-          qExam,
-          qInterview,
-          finalAve,
-        ]
+        `INSERT INTO person_status_table
+         (person_id, qualifying_result, interview_result, exam_result)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           qualifying_result = COALESCE(VALUES(qualifying_result), qualifying_result),
+           interview_result  = COALESCE(VALUES(interview_result),  interview_result),
+           exam_result       = COALESCE(VALUES(exam_result),       exam_result)`,
+        [personId, qExam, qInterview, finalAve]
       );
 
+      // -------------------------------------------------
+      // SAVE TO interview_applicants (status + pass/fail)
+      // -------------------------------------------------
+
+      // ✅ Always update qualifying_status and interview_status.
+      // For status, only update if a new value was provided.
       if (hasStatusPayload) {
         await db.query(
-          `
-          UPDATE interview_applicants
-          SET status =
-            COALESCE(
-              ?,
-              status
-            )
-          WHERE applicant_id = ?
-          `,
-          [
-            newStatus,
-            applicant_number,
-          ]
+          `UPDATE interview_applicants
+           SET
+             status             = COALESCE(?, status),
+             qualifying_status  = ?,
+             interview_status   = ?
+           WHERE applicant_id = ?`,
+          [newStatus, newQualifyingStatus, newInterviewStatusResult, applicant_number]
+        );
+      } else {
+        // No status payload — still save the two pass/fail columns
+        await db.query(
+          `UPDATE interview_applicants
+           SET
+             qualifying_status = ?,
+             interview_status  = ?
+           WHERE applicant_id = ?`,
+          [newQualifyingStatus, newInterviewStatusResult, applicant_number]
         );
       }
 
       // -------------------------------------------------
-      // INSERT AUDIT LOG (ONCE)
+      // AUDIT LOG
       // -------------------------------------------------
 
       const roleLabel = formatAuditActorRole(actor.role);
       const message =
-        `${roleLabel} (${actor.actorId}) - ${actor.email || "No email"} updated Applicant #${applicant_number}${applicantName ? ` - ${applicantName}` : ""} (${applicantEmail}):\n` +
+        `${roleLabel} (${actor.actorId}) - ${actor.email || "No email"} updated Applicant #${applicant_number}` +
+        `${applicantName ? ` - ${applicantName}` : ""} (${applicantEmail}):\n` +
         changes.join("\n");
 
       await insertAuditLog({
-        actorId:
-          actor.actorId,
-        role:
-          actor.role,
-        action:
-          "EDIT",
+        actorId: actor.actorId,
+        role: actor.role,
+        action: "EDIT",
         message,
-        severity:
-          "INFO",
+        severity: "INFO",
       });
 
-      // -------------------------------------------------
-
-      return res.json({
-        success: true,
-        message:
-          "Saved successfully",
-      });
+      return res.json({ success: true, message: "Saved successfully" });
 
     } catch (err) {
-      console.error(
-        "❌ SAVE ERROR:",
-        err
-      );
-
-      res.status(500).json({
-        error:
-          "Failed to save",
-        details:
-          err.message,
-      });
+      console.error("❌ SAVE ERROR:", err);
+      res.status(500).json({ error: "Failed to save", details: err.message });
     }
   }
 );

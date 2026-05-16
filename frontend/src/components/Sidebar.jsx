@@ -29,6 +29,14 @@ import SchoolIcon from "@mui/icons-material/School";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import API_BASE_URL from "../apiConfig";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import {
+  AccountTree,
+  Payments,
+  CloudUpload,
+  Grade,
+  EmojiEvents,
+  LockReset
+} from "@mui/icons-material";
 
 const GLOBAL_PAGE_IDS = [13, 15, 17, 38, 39, 40, 41, 42, 50, 56, 59, 62, 73, 80, 92, 96, 101, 104, 105, 106, 117];
 const GLOBAL_ACCESS_THRESHOLD = 10;
@@ -618,87 +626,422 @@ const SideBar = ({
   }];
   const systemMenuGroups = [
     {
-      key: "roomRequirements", label: "Room & Requirements", icon: MeetingRoom, items: [
-        { title: "Room Registration", link: "/room_registration", icon: MeetingRoom, page_id: 52 },
-        { title: "Requirements Panel", link: "/requirements_form", icon: Assignment, page_id: 51 },
-      ]
+      key: "roomManagement",
+      label: "Room Management",
+      icon: MeetingRoom,
+      items: [
+        {
+          title: "Room Registration",
+          link: "/room_registration",
+          icon: MeetingRoom,
+          page_id: 52,
+        },
+      ],
+    },
+
+    {
+      key: "requirementsManagement",
+      label: "Requirements Management",
+      icon: Assignment,
+      items: [
+        {
+          title: "Requirements Panel",
+          link: "/requirements_form",
+          icon: Assignment,
+          page_id: 51,
+        },
+      ],
+    },
+
+    {
+      key: "profileSettings",
+      label: "Profile & Settings",
+      icon: Settings,
+      items: [
+        {
+          title: `${shortTerm} Profile`,
+          link: "/settings",
+          icon: Settings,
+          page_id: 74,
+        },
+        {
+          title: "Signature Upload",
+          link: "/signature_upload",
+          icon: Settings,
+          page_id: 114,
+        },
+      ],
+    },
+
+
+    {
+      key: "academicConfiguration",
+      label: "Academic Configuration",
+      icon: School,
+      items: [
+
+        {
+          title: "Grade Conversion Management",
+          link: "/grade_conversion_admin",
+          icon: Settings,
+          page_id: 144,
+        },
+        {
+          title: "Change Grading Period",
+          link: "/change_grade_period",
+          icon: ChangeCircle,
+          page_id: 14,
+        },
+        {
+          title: "Student Grade File",
+          link: "/student_grade_file",
+          icon: Grade,
+          page_id: 126,
+        },
+        {
+          title: "Academic Achiever Awardee's",
+          link: "/honors_report",
+          icon: EmojiEvents,
+          page_id: 146,
+        },
+      ],
+    },
+
+
+    {
+      key: "branchAdministration",
+      label: "Branch Administration",
+      icon: AccountTree,
+      items: [
+        {
+          title: "Branch Management",
+          link: "/admin_branches",
+          icon: Settings,
+          page_id: 138,
+        },
+      ],
+    },
+
+    {
+      key: "communicationManagement",
+      label: "Communication",
+      icon: Campaign,
+      items: [
+        {
+          title: "Email Sender",
+          link: "/email_template_manager",
+          icon: Email,
+          page_id: 67,
+        },
+        {
+          title: "Announcement",
+          link: "/announcement",
+          icon: Campaign,
+          page_id: 66,
+        },
+      ],
     },
     {
-      key: "settingsCommunication", label: "Settings & Communication", icon: Campaign, items: [
-        { title: `${shortTerm} Profile`, link: "/settings", icon: Settings, page_id: 74 },
-        { title: "Program Slot Remaining", link: "/program_slot_limit", icon: People, page_id: 110 },
-        { title: "Branch Management", link: "/admin_branches", icon: Settings, page_id: 138 },
-        { title: "Grade Conversion Mgmt", link: "/grade_conversion_admin", icon: Settings, page_id: 144 },
-        { title: "Email Sender", link: "/email_template_manager", icon: Email, page_id: 67 },
-        { title: "Announcement", link: "/announcement", icon: Campaign, page_id: 66 },
-        { title: "Audit Logs", link: "/audit_logs", icon: HistoryEdu, page_id: 95 },
-        { title: "Signature Upload", link: "/signature_upload", icon: Settings, page_id: 114 },
-      ]
-    },
+      key: "slotConfiguration",
+      label: "Slot Configuration",
+      icon: School,
+      items: [
+        {
+          title: "Program Slot Remaining",
+          link: "/program_slot_limit",
+          icon: People,
+          page_id: 110,
+        },
+
+      ],
+    },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
     {
-      key: "sectionSemester", label: "Section & Semester", icon: Class, items: [
-        { title: "Section Panel Form", link: "/section_panel", icon: Class, page_id: 57 },
-        { title: "Semester Panel Form", link: "/semester_panel", icon: Timeline, page_id: 58 },
-        { title: "Change Grading Period", link: "/change_grade_period", icon: ChangeCircle, page_id: 14 },
-      ]
+      key: "sectionManagement",
+      label: "Section Management",
+      icon: Class,
+      items: [
+        {
+          title: "Section Panel Form",
+          link: "/section_panel",
+          icon: Class,
+          page_id: 57,
+        },
+      ],
     },
+
     {
-      key: "yearSchool", label: "Year & School", icon: CalendarToday, items: [
-        { title: "Year Level Panel Form", link: "/year_level_panel", icon: Layers, page_id: 63 },
-        { title: "Year Panel Form", link: "/year_panel", icon: CalendarToday, page_id: 64 },
-        { title: "School Year Panel", link: "/school_year_panel", icon: DateRange, page_id: 55 },
-      ]
+      key: "semesterManagement",
+      label: "Semester Management",
+      icon: Timeline,
+      items: [
+        {
+          title: "Semester Panel Form",
+          link: "/semester_panel",
+          icon: Timeline,
+          page_id: 58,
+        },
+      ],
     },
+
     {
-      key: "paymentEvaluation", label: "Payment & Evaluation", icon: Assessment, items: [
-        { title: "Evaluation Management", link: "/evaluation_crud", icon: HelpOutline, page_id: 23 },
-        { title: "TOSF CRUD", link: "/tosf_crud", icon: HelpOutline, page_id: 99 },
-        { title: "Payment Exporting Module", link: "/payment_exporting_module", icon: HelpOutline, page_id: 116 },
-        { title: "Student Scholarship List", link: "/student_scholarship_list", icon: HelpOutline, page_id: 116 },
-        { title: "Receipt Counter Assignment", link: "/assign_receipt_counter", icon: HelpOutline, page_id: 122 },
-        { title: "Matriculation Payment", link: "/matriculation_payment", icon: HelpOutline, page_id: 121 },
-      ]
+      key: "yearManagement",
+      label: "Year Management",
+      icon: CalendarToday,
+      items: [
+        {
+          title: "Year Level Panel Form",
+          link: "/year_level_panel",
+          icon: Layers,
+          page_id: 63,
+        },
+        {
+          title: "Year Panel Form",
+          link: "/year_panel",
+          icon: CalendarToday,
+          page_id: 64,
+        },
+        {
+          title: "School Year Panel",
+          link: "/school_year_panel",
+          icon: DateRange,
+          page_id: 55,
+        },
+      ],
+    },
+
+    {
+      key: "evaluationManagement",
+      label: "Evaluation Management",
+      icon: Assessment,
+      items: [
+        {
+          title: "Evaluation Management",
+          link: "/evaluation_crud",
+          icon: HelpOutline,
+          page_id: 23,
+        },
+        {
+          title: "TOSF CRUD",
+          link: "/tosf_crud",
+          icon: HelpOutline,
+          page_id: 99,
+        },
+      ],
+    },
+
+    {
+      key: "paymentManagement",
+      label: "Payment Management",
+      icon: Payments,
+      items: [
+        {
+          title: "Payment Exporting Module",
+          link: "/payment_exporting_module",
+          icon: HelpOutline,
+          page_id: 116,
+        },
+        {
+          title: "Receipt Counter Assignment",
+          link: "/assign_receipt_counter",
+          icon: HelpOutline,
+          page_id: 122,
+        },
+        {
+          title: "Matriculation Payment",
+          link: "/matriculation_payment",
+          icon: HelpOutline,
+          page_id: 121,
+        },
+      ],
+    },
+
+    {
+      key: "scholarshipManagement",
+      label: "Scholarship Management",
+      icon: School,
+      items: [
+        {
+          title: "Student Scholarship List",
+          link: "/student_scholarship_list",
+          icon: HelpOutline,
+          page_id: 116,
+        },
+      ],
+    },
+
+    {
+      key: "systemLogs",
+      label: "System Logs",
+      icon: HistoryEdu,
+      items: [
+        {
+          title: "Audit Logs",
+          link: "/audit_logs",
+          icon: HistoryEdu,
+          page_id: 95,
+        },
+      ],
     },
   ];
   const accountMenuGroups = [
     {
-      key: "accountSettings", label: "Settings", icon: Settings, items: [
-        { title: "Settings", link: "/registrar_reset_password", icon: Settings, page_id: 73 },
-        { title: "Student Grade File", link: "/student_grade_file", icon: Settings, page_id: 126 },
-        { title: "Migration Data Panel", link: "/migration_data_panel", icon: Settings, page_id: 114 },
-        { title: "Academic Achiever Awardee's", link: "/honors_report", icon: Settings, page_id: 146 },
-      ]
+      key: "generalSettings",
+      label: "General Settings",
+      icon: Settings,
+      items: [
+        {
+          title: "Settings",
+          link: "/registrar_reset_password",
+          icon: Settings,
+          page_id: 73,
+        },
+        {
+          title: "Migration Data Panel",
+          link: "/migration_data_panel",
+          icon: CloudUpload,
+          page_id: 114,
+        },
+      ],
     },
+
+
+
     {
-      key: "accountCreation", label: "Account Creation", icon: PersonAdd, items: [
-        { title: "Add Faculty Accounts", link: "/register_prof", icon: PersonAdd, page_id: 70 },
-        { title: "Add Registrar Account", link: "/register_registrar", icon: PersonAdd, page_id: 71 },
-        { title: "Create Student Account", link: "/student_accounts", icon: Info, page_id: 143 },
-        { title: "Professor Education", link: "/superadmin_professor_education", icon: PersonAdd, page_id: 109 },
-      ]
+      key: "accountCreation",
+      label: "Account Creation",
+      icon: PersonAdd,
+      items: [
+        {
+          title: "Add Faculty Accounts",
+          link: "/register_prof",
+          icon: PersonAdd,
+          page_id: 70,
+        },
+        {
+          title: "Add Registrar Account",
+          link: "/register_registrar",
+          icon: AdminPanelSettings,
+          page_id: 71,
+        },
+        {
+          title: "Create Student Account",
+          link: "/student_accounts",
+          icon: School,
+          page_id: 143,
+        },
+      ],
     },
+
     {
-      key: "accountInformation", label: "Account Information", icon: Info, items: [
-        { title: "Applicant Information", link: "/super_admin_applicant_dashboard1", icon: Info, page_id: 75 },
-        { title: "Applicant Upload Requirements", link: "/applicant_requirements_uploader", icon: Info, page_id: 84 },
-        { title: "Student Information", link: "/super_admin_student_dashboard1", icon: Info, page_id: 86 },
-        { title: "Student Upload Requirements", link: "/student_requirements_uploader", icon: Info, page_id: 150 },
-        { title: "Archive", link: "/archived", icon: Info, page_id: 142 },
-      ]
+      key: "facultyManagement",
+      label: "Faculty Management",
+      icon: SupervisorAccount,
+      items: [
+        {
+          title: "Professor Education",
+          link: "/superadmin_professor_education",
+          icon: School,
+          page_id: 109,
+        },
+      ],
     },
+
     {
-      key: "userPageAccess", label: "User Access & Page Table", icon: Security, items: [
-        { title: "User Page Access", link: "/user_page_access", icon: Security, page_id: 72 },
-        { title: "Page Table", link: "/page_crud", icon: TableChart, page_id: 72 },
-      ]
+      key: "applicantManagement",
+      label: "Applicant Management",
+      icon: Badge,
+      items: [
+        {
+          title: "Applicant Information",
+          link: "/super_admin_applicant_dashboard1",
+          icon: Info,
+          page_id: 75,
+        },
+        {
+          title: "Applicant Upload Requirements",
+          link: "/applicant_requirements_uploader",
+          icon: Assignment,
+          page_id: 84,
+        },
+      ],
     },
+
     {
-      key: "resetPasswordManagement", label: "Reset Password", icon: SupervisorAccount, items: [
-        { title: "Applicant Reset Password", link: "/superadmin_applicant_reset_password", icon: People, page_id: 81 },
-        { title: "Student Reset Password", link: "/superadmin_student_reset_password", icon: School, page_id: 91 },
-        { title: "Faculty Reset Password", link: "/superadmin_faculty_reset_password", icon: SupervisorAccount, page_id: 82 },
-        { title: "Registrar Reset Password", link: "/superadmin_registrar_reset_password", icon: AdminPanelSettings, page_id: 83 },
-      ]
+      key: "studentManagement",
+      label: "Student Management",
+      icon: School,
+      items: [
+        {
+          title: "Student Information",
+          link: "/super_admin_student_dashboard1",
+          icon: Info,
+          page_id: 86,
+        },
+        {
+          title: "Student Upload Requirements",
+          link: "/student_requirements_uploader",
+          icon: Assignment,
+          page_id: 150,
+        },
+        {
+          title: "Archive",
+          link: "/archived",
+          icon: FolderCopy,
+          page_id: 142,
+        },
+      ],
+    },
+
+    {
+      key: "accessControl",
+      label: "Access Control",
+      icon: Security,
+      items: [
+        {
+          title: "User Page Access",
+          link: "/user_page_access",
+          icon: Security,
+          page_id: 72,
+        },
+        {
+          title: "Page Table",
+          link: "/page_crud",
+          icon: TableChart,
+          page_id: 72,
+        },
+      ],
+    },
+
+    {
+      key: "passwordManagement",
+      label: "Password Management",
+      icon: LockReset,
+      items: [
+        {
+          title: "Applicant Reset Password",
+          link: "/superadmin_applicant_reset_password",
+          icon: People,
+          page_id: 81,
+        },
+        {
+          title: "Student Reset Password",
+          link: "/superadmin_student_reset_password",
+          icon: School,
+          page_id: 91,
+        },
+        {
+          title: "Faculty Reset Password",
+          link: "/superadmin_faculty_reset_password",
+          icon: SupervisorAccount,
+          page_id: 82,
+        },
+        {
+          title: "Registrar Reset Password",
+          link: "/superadmin_registrar_reset_password",
+          icon: AdminPanelSettings,
+          page_id: 83,
+        },
+      ],
     },
   ];
 
@@ -813,12 +1156,12 @@ const SideBar = ({
                 color: "black"
               }}
             >
-            <div
-  style={{
-    ...ICON_CONTAINER_STYLE,
-    border: "1.5px solid black",
-  }}
->
+              <div
+                style={{
+                  ...ICON_CONTAINER_STYLE,
+                  border: "1.5px solid black",
+                }}
+              >
                 <Menu sx={{ fontSize: SIDEBAR_ICON_SIZE, color: "black" }} />
               </div>
             </button>

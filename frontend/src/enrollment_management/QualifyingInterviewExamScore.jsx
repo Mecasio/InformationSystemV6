@@ -191,38 +191,18 @@ const QualifyingExamScore = () => {
 
   const buildPayload = (person) => {
     const edits = editScores[person.person_id] || {};
-    const selectedStatus =
-      edits.status ??
-      person.college_approval_status ??
-      person.status ??
-      "";
+    const selectedStatus = edits.status ?? person.college_approval_status ?? person.status ?? "";
 
     return {
       applicant_number: person.applicant_number,
-      qualifying_exam_score:
-        edits.qualifying_exam_score ?? person.qualifying_exam_score ?? 0,
-      qualifying_interview_score:
-        edits.qualifying_interview_score ??
-        person.qualifying_interview_score ??
-        0,
-
-      // ✅ ADD THIS
-      status:
-        selectedStatus && selectedStatus !== "On Process"
-          ? selectedStatus
-          : "Waiting List",
-
+      qualifying_exam_score: edits.qualifying_exam_score ?? person.qualifying_exam_score ?? 0,
+      qualifying_interview_score: edits.qualifying_interview_score ?? person.qualifying_interview_score ?? 0,
+      qualifying_status: edits.qualifying_status !== undefined ? edits.qualifying_status : (person.qualifying_status ?? null),   // ✅ NEW
+      interview_status_result: edits.interview_status_result !== undefined ? edits.interview_status_result : (person.interview_status_result ?? null), // ✅ NEW
+      status: selectedStatus && selectedStatus !== "On Process" ? selectedStatus : "Waiting List",
       user_person_id: userID,
-      audit_actor_id:
-        employeeID ||
-        localStorage.getItem("employee_id") ||
-        localStorage.getItem("email") ||
-        "unknown",
-      audit_actor_role:
-        localStorage.getItem("access_description") ||
-        userRole ||
-        localStorage.getItem("role") ||
-        "registrar",
+      audit_actor_id: employeeID || localStorage.getItem("employee_id") || localStorage.getItem("email") || "unknown",
+      audit_actor_role: localStorage.getItem("access_description") || userRole || localStorage.getItem("role") || "registrar",
       audit_actor_email: localStorage.getItem("email") || "",
     };
   };
@@ -472,9 +452,10 @@ const QualifyingExamScore = () => {
       const withAssignedFlag = data.map((p) => ({
         ...p,
         assigned: false,
-        // ✅ guarantee the fields are always numbers, never null/undefined
         qualifying_exam_score: Number(p.qualifying_exam_score) || 0,
         qualifying_interview_score: Number(p.qualifying_interview_score) || 0,
+        qualifying_status: p.qualifying_status ?? null,           // ✅ NEW
+        interview_status_result: p.interview_status_result ?? null, // ✅ NEW
       }));
 
       setPersons(withAssignedFlag);
@@ -607,7 +588,6 @@ const QualifyingExamScore = () => {
 
   const [minTotal, setMinTotal] = useState("");
   const [minScorePercent, setMinScorePercent] = useState("");
-  const [minFinalRating, setMinFinalRating] = useState("");
 
 
   const filteredPersons = persons.filter((personData) => {
@@ -678,19 +658,7 @@ const QualifyingExamScore = () => {
     const scorePercent =
       maxTotal > 0 ? (total / maxTotal) * 100 : 0;
 
-    const finalRating =
-      subjectScores.length > 0
-        ? total / subjectScores.length
-        : 0;
 
-    /* ⭐ SCORE FILTER */
-    const matchesScore =
-      (minScore === "" || finalRating >= Number(minScore)) &&
-      (maxScore === "" || finalRating <= Number(maxScore));
-
-    const matchesExactRating =
-      exactRating === "" ||
-      finalRating === Number(exactRating);
 
     const matchesTotal =
       minTotal === "" ||
@@ -702,10 +670,6 @@ const QualifyingExamScore = () => {
       (scorePercent >= Number(minScorePercent) &&
         scorePercent < Number(minScorePercent) + 1);
 
-    const matchesFinalRating =
-      minFinalRating === "" ||
-      (finalRating >= Number(minFinalRating) &&
-        finalRating < Number(minFinalRating) + 1);
 
     /* FINAL FILTER RESULT */
     return (
@@ -718,11 +682,8 @@ const QualifyingExamScore = () => {
       matchesSchoolYear &&
       matchesSemester &&
       matchesCampus &&
-      matchesScore &&
-      matchesExactRating &&
       matchesTotal &&
-      matchesScorePercent &&
-      matchesFinalRating
+      matchesScorePercent
     );
   });
 
@@ -1780,7 +1741,7 @@ ${reqText}`.trim();
     return text.trim();
   };
 
-  
+
   const handleOpenDialog = (applicant = null) => {
     const today = new Date();
     const validUntil = new Date(today);
@@ -3083,17 +3044,7 @@ Thank you, best regards
             value={minScorePercent}
             onChange={(e) => setMinScorePercent(e.target.value)}
           />
-          <Typography fontSize={13} sx={{ minWidth: "70px" }}>
-            Final Rating:
-          </Typography>
-          <TextField
-            label="Final Rating"
-            size="small"
-            type="number"
-            value={minFinalRating}
-            onChange={(e) => setMinFinalRating(e.target.value)}
-          />
-
+         
         </Box>
       </TableContainer>
 
@@ -3190,18 +3141,7 @@ Thank you, best regards
               >
                 Score %
               </TableCell>
-              <TableCell
-                sx={{
-                  color: "white",
-                  textAlign: "center",
-                  width: "10%",
-                  py: 0.5,
-                  fontSize: "12px",
-                  border: `1px solid ${borderColor}`,
-                }}
-              >
-                Final Rating
-              </TableCell>
+             
               {/* Exam Columns */}
               <TableCell
                 sx={{
@@ -3217,6 +3157,14 @@ Thank you, best regards
               </TableCell>
               <TableCell
                 sx={{
+                  color: "white", textAlign: "center", width: "8%",
+                  py: 0.5, fontSize: "12px", border: `1px solid ${borderColor}`,
+                }}
+              >
+                Qualifying Result
+              </TableCell>
+              <TableCell
+                sx={{
                   color: "white",
                   textAlign: "center",
                   width: "10%",
@@ -3226,6 +3174,15 @@ Thank you, best regards
                 }}
               >
                 Interview Exam Score
+              </TableCell>
+
+              <TableCell
+                sx={{
+                  color: "white", textAlign: "center", width: "8%",
+                  py: 0.5, fontSize: "12px", border: `1px solid ${borderColor}`,
+                }}
+              >
+                Interview Result
               </TableCell>
               <TableCell
                 sx={{
@@ -3328,7 +3285,7 @@ Thank you, best regards
                   (Number(qualifyingExam) + Number(qualifyingInterview)) / 2;
                 const applicantId = person.applicant_number;
                 const isAssigned = !!person.schedule_id; // ✅ check if already assigned
-                const finalRating = Number(person.final_rating) || 0; // ✅ use backend value
+          
 
                 const totalScore = subjectScores.reduce(
                   (sum, score) => sum + score,
@@ -3345,11 +3302,7 @@ Thank you, best regards
                     ? ((totalScore / maxTotal) * 50) + 50
                     : 0;
 
-                // Final rating same as converted rating
-                const computedFinalRating =
-                  subjectScores.length > 0
-                    ? totalScore / subjectScores.length
-                    : 0;
+          
 
 
                 return (
@@ -3446,16 +3399,7 @@ Thank you, best regards
 
 
 
-                    {/* FINAL RATING */}
-                    <TableCell
-                      sx={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {Number(computedFinalRating).toFixed(2)}
-                    </TableCell>
+                
 
                     {/* Qualifying Exam Score */}
                     <TableCell
@@ -3479,6 +3423,25 @@ Thank you, best regards
                         sx={{ width: 70 }}
                       />
                     </TableCell>
+                    <TableCell sx={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={
+                            editScores[person.person_id]?.qualifying_status !== undefined
+                              ? editScores[person.person_id].qualifying_status
+                              : (person.qualifying_status ?? "")
+                          }
+                          onChange={(e) =>
+                            handleScoreChange(person, "qualifying_status", e.target.value === "" ? null : Number(e.target.value))
+                          }
+                          displayEmpty
+                        >
+                          <MenuItem value=""><em>—</em></MenuItem>
+                          <MenuItem value={1}>✅ Passed</MenuItem>
+                          <MenuItem value={0}>❌ Failed</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </TableCell>
 
                     {/* Qualifying Interview Score */}
                     <TableCell
@@ -3501,6 +3464,29 @@ Thank you, best regards
                         type="number"
                         sx={{ width: 70 }}
                       />
+                    </TableCell>
+                    {/* Qualifying Status (Pass/Fail) */}
+
+
+                    {/* Interview Status (Pass/Fail) */}
+                    <TableCell sx={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={
+                            editScores[person.person_id]?.interview_status_result !== undefined
+                              ? editScores[person.person_id].interview_status_result
+                              : (person.interview_status_result ?? "")
+                          }
+                          onChange={(e) =>
+                            handleScoreChange(person, "interview_status_result", e.target.value === "" ? null : Number(e.target.value))
+                          }
+                          displayEmpty
+                        >
+                          <MenuItem value=""><em>—</em></MenuItem>
+                          <MenuItem value={1}>✅ Passed</MenuItem>
+                          <MenuItem value={0}>❌ Failed</MenuItem>
+                        </Select>
+                      </FormControl>
                     </TableCell>
 
                     {/* ✅ Total Average (read-only, comes from DB or recomputed) */}

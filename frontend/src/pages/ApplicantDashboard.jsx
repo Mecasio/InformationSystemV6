@@ -146,20 +146,19 @@ const ApplicantDashboard = (props) => {
   const [examScore, setExamScore] = useState(null);
 
   const fetchProctorSchedule = async (applicantNumber) => {
-    if (!applicantNumber)
-      return console.warn("fetchProctorSchedule missing applicantNumber");
+    if (!applicantNumber) return;
+    console.log("fetchProctorSchedule called with:", applicantNumber); // 👈
     try {
       const { data } = await axios.get(
         `${API_BASE_URL}/api/applicant-schedule/${applicantNumber}`,
       );
-      console.info("applicant-schedule response for", applicantNumber, data);
+      console.log("proctor data:", data);
       setProctor(data);
     } catch (err) {
       console.error("Error fetching schedule:", err);
       setProctor(null);
     }
   };
-
   const [requirementsCompleted, setRequirementsCompleted] = useState(
     localStorage.getItem("requirementsCompleted") === "1",
   );
@@ -194,25 +193,6 @@ const ApplicantDashboard = (props) => {
       );
       setPerson(res.data || {});
 
-      const applicantNumber =
-        res.data?.applicant_number ?? res.data?.applicantNumber ?? null;
-      if (applicantNumber) {
-        setApplicantID(applicantNumber);
-        try {
-          const sched = await axios.get(
-            `${API_BASE_URL}/api/applicant-schedule/${applicantNumber}`,
-          );
-          setProctor(sched.data);
-        } catch (e) {
-          setProctor(null);
-        }
-      } else {
-        console.warn(
-          "No applicant_number in person_with_applicant response for id",
-          id,
-        );
-      }
-
       // map many possible field names
       let qExam =
         res.data?.qualifying_exam_score ??
@@ -226,12 +206,10 @@ const ApplicantDashboard = (props) => {
       let ex = res.data?.exam_score ?? res.data?.exam_result ?? null;
 
       // fallback: fetch person_status_by_applicant if scores not present
-      if (
-        qExam === null &&
-        qInterview === null &&
-        ex === null &&
-        applicantNumber
-      ) {
+      const applicantNumber =
+        res.data?.applicant_number ?? res.data?.applicantNumber ?? null;
+
+      if (qExam === null && qInterview === null && ex === null && applicantNumber) {
         try {
           const st = await axios.get(
             `${API_BASE_URL}/api/person_status_by_applicant/${applicantNumber}`,
@@ -299,12 +277,10 @@ const ApplicantDashboard = (props) => {
   });
 
   const [examScores, setExamScores] = useState({
-    english: null,
-    science: null,
-    filipino: null,
-    math: null,
-    abstract: null,
+    subjects: {},
     final: null,
+    total: null,
+    percentage: null,
     status: null,
   });
 
@@ -312,41 +288,31 @@ const ApplicantDashboard = (props) => {
     if (!applicantNumber) return;
 
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/applicants-with-number`);
-      const applicant = res.data.find(
-        (a) => a.applicant_number === applicantNumber,
+      const res = await axios.get(
+        `${API_BASE_URL}/api/applicants-with-number`
+      );
+
+      // API now returns { subjects, data }
+      const applicant = res.data.data.find(
+        (a) => a.applicant_number === applicantNumber
       );
 
       if (applicant) {
-        const english = Number(applicant.english) || 0;
-        const science = Number(applicant.science) || 0;
-        const filipino = Number(applicant.filipino) || 0;
-        const math = Number(applicant.math) || 0;
-        const abstract = Number(applicant.abstract) || 0;
-
-        const finalRating = applicant.final_rating
-          ? Number(applicant.final_rating)
-          : (english + science + filipino + math + abstract) / 5;
-
-        const status = applicant.exam_status || null;
-
         setExamScores({
-          english,
-          science,
-          filipino,
-          math,
-          abstract,
-          final: finalRating.toFixed(2),
-          status,
+          subjects: applicant.scores || {}, // dynamic subjects
+          final: applicant.final_rating
+            ? Number(applicant.final_rating).toFixed(2)
+            : "0.00",
+          total: applicant.total || 0,
+          percentage: applicant.percentage || 0,
+          status: applicant.exam_status || "Pending",
         });
       } else {
         setExamScores({
-          english: null,
-          science: null,
-          filipino: null,
-          math: null,
-          abstract: null,
+          subjects: {},
           final: null,
+          total: null,
+          percentage: null,
           status: null,
         });
       }
@@ -356,18 +322,11 @@ const ApplicantDashboard = (props) => {
   };
 
   const hasScores =
-    examScores.english !== null &&
-    examScores.science !== null &&
-    examScores.filipino !== null &&
-    examScores.math !== null &&
-    examScores.abstract !== null &&
-    (examScores.english > 0 ||
-      examScores.science > 0 ||
-      examScores.filipino > 0 ||
-      examScores.math > 0 ||
-      examScores.abstract > 0);
+    examScores.subjects &&
+    Object.keys(examScores.subjects).length > 0;
 
-  const hasSchedule = proctor?.email_sent === 1;
+  // AFTER — shows whenever schedule data exists
+  const hasSchedule = !!(proctor?.day_description && proctor?.start_time);
 
   const [interviewSchedule, setInterviewSchedule] = useState(null);
   const [hasInterviewScores, setHasInterviewScores] = useState(false);
@@ -1607,7 +1566,7 @@ const ApplicantDashboard = (props) => {
                             />
                             <strong>Next Step:</strong>
                             <br />
-                            Go to <strong>Applicant Form</strong> →{" "}
+                            Go to <strong>Applicant Profile</strong> →{" "}
                             <strong>Examination Permit</strong>
                             <br />
                             and <strong>print your permit</strong>.
@@ -1700,18 +1659,35 @@ const ApplicantDashboard = (props) => {
 
                         {hasInterviewScores && (
                           <>
-                            🗣 Interview Score:{" "}
-                            {qualifyingInterviewScore ?? "N/A"} <br />
-                            📝 Qualifying Exam Score:{" "}
-                            {qualifyingExamScore ?? "N/A"} <br />
-                            📊 Exam Result: {examScore ?? "N/A"} <br />
-                            📈 Total Average:{" "}
-                            {(
-                              (Number(qualifyingExamScore ?? 0) +
-                                Number(qualifyingInterviewScore ?? 0) +
-                                Number(examScore ?? 0)) /
-                              3
-                            ).toFixed(2)}
+                            🗣 Interview Status:{" "}
+                            <span
+                              style={{
+                                color:
+                                  qualifyingInterviewScore === "Passed"
+                                    ? "green"
+                                    : qualifyingInterviewScore === "Failed"
+                                      ? "red"
+                                      : "orange",
+                              }}
+                            >
+                              {qualifyingInterviewScore ?? "Pending"}
+                            </span>
+                            <br />
+
+                            📝 Qualifying Exam Status:{" "}
+                            <span
+                              style={{
+                                color:
+                                  qualifyingExamScore === "Passed"
+                                    ? "green"
+                                    : qualifyingExamScore === "Failed"
+                                      ? "red"
+                                      : "orange",
+                              }}
+                            >
+                              {qualifyingExamScore ?? "Pending"}
+                            </span>
+
                           </>
                         )}
                       </>
@@ -1824,15 +1800,15 @@ const ApplicantDashboard = (props) => {
             </DialogTitle>
 
             <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
-           
-                <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6, mt: 2 }}>
-                  Welcome to the <strong>{companyName}</strong> Applicant Dashboard.
-                </Typography>
 
-                <Typography sx={{ mt: 1.5, fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
-                  Before continuing, please make sure that you will:
-                </Typography>
-              
+              <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6, mt: 2 }}>
+                Welcome to the <strong>{companyName}</strong> Applicant Dashboard.
+              </Typography>
+
+              <Typography sx={{ mt: 1.5, fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
+                Before continuing, please make sure that you will:
+              </Typography>
+
               <Box
                 sx={{
                   mt: 1.5,

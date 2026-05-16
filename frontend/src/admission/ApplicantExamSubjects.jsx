@@ -144,8 +144,8 @@ const AdminSubjects = () => {
         }
     };
 
-   const tabs = [
-   
+    const tabs = [
+
         {
             label: "Verify Documents Room Assignment",
             to: "/verify_document_schedule",
@@ -505,7 +505,7 @@ const AdminSubjects = () => {
                                         p: 2.5,
                                         borderRadius: 2,
                                         border: "1px solid",
-                                        borderColor: isActive ? "success.light" : "divider",
+                                        border: `1px solid ${borderColor}`,
                                         transition: "box-shadow 0.2s",
                                         "&:hover": { boxShadow: 3 },
                                     }}
@@ -661,7 +661,8 @@ const AdminSubjects = () => {
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={handleCloseDialog} color="error"
+                    <Button onClick={handleCloseDialog}
+                        color="error"
                         variant="outlined">
                         Cancel
                     </Button>
@@ -703,7 +704,7 @@ const AdminSubjects = () => {
 
                 <DialogActions>
                     <Button
-                        color="inherit"
+                        color="error"
                         variant="outlined"
                         onClick={() => {
                             setOpenDeleteDialog(false);
@@ -769,7 +770,7 @@ const AdminSubjects = () => {
 
                 <DialogActions>
                     <Button
-                        color="inherit"
+                        color="error"
                         variant="outlined"
                         onClick={() => {
                             setOpenDeactivateDialog(false);

@@ -1299,7 +1299,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         fontSize: "18px",
                                     }}
                                 >
-                                    {steps.step2 && (
+                                    {steps.qualifyingDone && (
                                         <span style={{ color: "green", fontWeight: "bold" }}>
                                             ✔ DONE
                                         </span>
@@ -1311,9 +1311,15 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         border: "1px solid black",
                                         textAlign: "center",
                                         padding: "8px",
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                     }}
-                                ></td>
+                                >
+                                    {steps.interviewDone && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
+                                </td>
                                 <td
                                     colSpan={5}
                                     style={{
@@ -1446,7 +1452,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         textAlign: "center",
                                     }}
                                 >
-                                       {steps.step4 && (
+                                    {steps.step4 && (
                                         <span style={{ color: "green", fontWeight: "bold" }}>
                                             ✔ DONE
                                         </span>
@@ -1506,7 +1512,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                             textAlign: "right",
                                         }}
                                     >
-                                        Registrar's Copy
+                                        Dean's Copy
                                     </div>
                                 </td>
                             </tr>
@@ -1525,6 +1531,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
 
                     <Container>
                         <div
+                            className="student-table"
                             style={{
                                 width: "8in", // matches table width assuming 8in for 40 columns
                                 maxWidth: "100%",
@@ -1881,6 +1888,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                             display: "flex",
                                             alignItems: "center",
                                             width: "100%",
+                                            marginTop: "2px",
                                         }}
                                     >
                                         <label
@@ -2374,7 +2382,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                             </tr>
 
                             <tr>
-                                <td colSpan="40" style={{ height: "10px" }}></td>
+                                <td colSpan="40" style={{ height: "0.5px" }}></td>
                             </tr>
 
                             <tr>
@@ -2426,7 +2434,10 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         textAlign: "center",
                                         verticalAlign: "middle",
                                     }}
-                                ></td>
+                                >
+
+
+                                </td>
 
                                 <td
                                     colSpan={16}
@@ -2438,6 +2449,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         textAlign: "left",
                                     }}
                                 >
+
                                     {" "}
                                     <b>College Dean's Office</b>
                                     <br />
@@ -2451,7 +2463,9 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         verticalAlign: "middle",
                                         height: "35px",
                                     }}
-                                ></td>
+                                >
+
+                                </td>
                             </tr>
                             <tr>
                                 <td
@@ -2460,9 +2474,15 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         border: "1px solid black",
                                         textAlign: "center",
                                         padding: "8px",
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                     }}
-                                ></td>
+                                >
+                                    {steps.step1 && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
+                                </td>
                                 <td
                                     colSpan={5}
                                     style={{
@@ -2497,18 +2517,30 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         border: "1px solid black",
                                         textAlign: "center",
                                         padding: "8px",
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                     }}
-                                ></td>
+                                >
+                                    {steps.qualifyingDone && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
+                                </td>
                                 <td
                                     colSpan={5}
                                     style={{
                                         border: "1px solid black",
                                         textAlign: "center",
                                         padding: "8px",
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                     }}
-                                ></td>
+                                >
+                                    {steps.interviewDone && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
+                                </td>
                                 <td
                                     colSpan={5}
                                     style={{
@@ -2575,7 +2607,9 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         textAlign: "center",
                                         verticalAlign: "middle",
                                     }}
-                                ></td>
+                                >
+
+                                </td>
                                 <td
                                     colSpan={10}
                                     style={{
@@ -2600,9 +2634,15 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                         border: "1px solid black",
                                         textAlign: "center",
                                         padding: "8px",
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                     }}
-                                ></td>
+                                >
+                                    {steps.step3 && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
+                                </td>
                                 <td
                                     colSpan={5}
                                     style={{
@@ -2626,13 +2666,19 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                     colSpan={11}
                                     style={{
                                         height: "50px",
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                         fontFamily: "Arial",
                                         border: "1px solid black",
                                         padding: "8px",
-                                        textAlign: "left",
+                                        textAlign: "center",
                                     }}
-                                ></td>
+                                >
+                                    {steps.step4 && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
+                                </td>
                                 <td
                                     colSpan={5}
                                     style={{
@@ -2654,16 +2700,21 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                 <td
                                     colSpan={10}
                                     style={{
-                                        fontSize: "12px",
+                                        fontSize: "18px",
                                         fontFamily: "Arial",
                                         border: "1px solid black",
                                         padding: "8px",
-                                        textAlign: "left",
+                                        textAlign: "center",
                                     }}
                                 >
-                                    {" "}
+                                    {steps.step5 && (
+                                        <span style={{ color: "green", fontWeight: "bold" }}>
+                                            ✔ DONE
+                                        </span>
+                                    )}
                                 </td>
                             </tr>
+
                             <tr>
                                 <td
                                     colSpan={40}
@@ -2682,12 +2733,10 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                                             textAlign: "right",
                                         }}
                                     >
-                                        Dean's Copy
+                                        Registrar's Copy
                                     </div>
                                 </td>
                             </tr>
-
-
                         </tbody>
                     </table>
                 </div>

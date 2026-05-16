@@ -727,6 +727,7 @@ const StudentRequirements = () => {
           user_id: localStorage.getItem("person_id"),
         })
       );
+
       setDocumentStatus(newStatus);
 
       await fetchDocumentStatus(person.applicant_number);
@@ -735,9 +736,18 @@ const StudentRequirements = () => {
         await fetchUploadsByApplicantNumber(person.applicant_number);
       }
 
-      console.log("Document status updated and UI refreshed!");
+      // ✅ BUILD FULL NAME
+      const fullName = `${(person.last_name || "").toUpperCase()}, ${(person.first_name || "").toUpperCase()} ${(person.middle_name || "").toUpperCase()} ${(person.extension || "").toUpperCase()}`;
+
+      // ✅ SNACKBAR SUCCESS MESSAGE
+      showSnackbar(
+        `✅ Status updated to "${newStatus}" for Applicant [${person.applicant_number}] ${fullName}`,
+        "success"
+      );
+
     } catch (err) {
       console.error("Error updating document status:", err);
+      showSnackbar("❌ Failed to update document status.", "error");
     }
   };
 
@@ -1068,7 +1078,7 @@ const StudentRequirements = () => {
 
 
   return (
-   <Box
+    <Box
       sx={{
         height: "calc(100vh - 150px)",
         overflowY: "auto",
@@ -1091,7 +1101,7 @@ const StudentRequirements = () => {
             fontSize: '36px',
           }}
         >
-         SUBMITTED DOCUMENTS
+          SUBMITTED DOCUMENTS
         </Typography>
 
 
@@ -1113,7 +1123,7 @@ const StudentRequirements = () => {
             startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
           }}
         />
-    
+
       </Box>
 
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
@@ -1177,11 +1187,11 @@ const StudentRequirements = () => {
         ))}
       </Box>
 
-     <br/>
-     <br/>
+      <br />
+      <br />
 
 
-      {/* Applicant ID and Name */ }
+      {/* Applicant ID and Name */}
       <TableContainer component={Paper} sx={{ width: '100%', border: `1px solid ${borderColor}` }}>
         <Table>
           <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2", }}>
@@ -1751,8 +1761,8 @@ const StudentRequirements = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setConfirmOpen(false)}
-               color="error"
-            variant="outlined"
+              color="error"
+              variant="outlined"
             >
               Cancel
             </Button>

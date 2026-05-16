@@ -995,7 +995,7 @@ const ApplicantScoring = () => {
               `).join("")}
               <th style="width:8%">Total</th>
               <th style="width:8%">Score %</th>
-              <th style="width:8%">Final Rating</th>
+
               <th style="width:8%">Status</th>
             </tr>
           </thead>
@@ -1022,11 +1022,7 @@ const ApplicantScoring = () => {
                         ? ((totalScore / maxTotal) * 50) + 50
                         : 0;
 
-                // Final rating same as converted rating
-                const computedFinalRating =
-                    subjectScores.length > 0
-                        ? totalScore / subjectScores.length
-                        : 0;
+        
 
                 return `
                 <tr>
@@ -1229,17 +1225,13 @@ const ApplicantScoring = () => {
                 ? (total / maxTotal) * 100
                 : 0;
 
-        const final_rating =
-            subjectScores.length > 0
-                ? total / subjectScores.length
-                : 0;
 
         return {
             applicant_number: person.applicant_number,
             scores: subjectScores,
             total,
             percentage,
-            final_rating,
+          
             status:
                 editedScores.status ??
                 person.status ??
@@ -1290,7 +1282,7 @@ const ApplicantScoring = () => {
                             scores: updatedScores,
                             total_score: payload.total,
                             percentage: payload.percentage,
-                            final_rating: payload.final_rating,
+                    
                             status: payload.status
                         }
                         : p
@@ -2111,15 +2103,7 @@ const ApplicantScoring = () => {
                                 onChange={(e) => setMinScorePercent(e.target.value)}
                             />
 
-                            <Typography fontSize={13}>Final Rating:</Typography>
-                            <TextField
-                                label="Final Rating"
-                                size="small"
-                                type="number"
-                                value={minFinalRating}
-                                onChange={(e) => setMinFinalRating(e.target.value)}
-                            />
-
+                           
                         </Box>
                     </Box>
 
@@ -2180,9 +2164,7 @@ const ApplicantScoring = () => {
                                 Score %
                             </TableCell>
 
-                            <TableCell sx={{ color: "white", textAlign: "center", width: "6%", py: 0.5, fontSize: "12px", border: `1px solid ${borderColor}` }}>
-                                Final Rating
-                            </TableCell>
+                        
 
                             <TableCell sx={{ color: "white", textAlign: "center", width: "5%", py: 0.5, fontSize: "12px", border: `1px solid ${borderColor}` }}>
                                 Date Applied
@@ -2233,12 +2215,7 @@ const ApplicantScoring = () => {
                                     ? ((totalScore / maxTotal) * 50) + 50
                                     : 0;
 
-                            // Final rating same as converted rating
-                            const computedFinalRating =
-                                subjectScores.length > 0
-                                    ? totalScore / subjectScores.length
-                                    : 0;
-
+                
                             return (
                                 <TableRow
                                     key={person.person_id}
@@ -2383,18 +2360,7 @@ const ApplicantScoring = () => {
 
 
 
-                                    {/* FINAL RATING */}
-                                    <TableCell
-                                        sx={{
-                                            color: "black",
-                                            textAlign: "center",
-                                            border: `1px solid ${borderColor}`,
-                                            py: 0.5,
-                                            fontSize: "15px",
-                                        }}
-                                    >
-                                        {Number(computedFinalRating).toFixed(2)}
-                                    </TableCell>
+                                
 
 
 
@@ -2438,8 +2404,8 @@ const ApplicantScoring = () => {
                                                 }))}
                                             >
                                                 <MenuItem value=""><em>Select Status</em></MenuItem>
-                                                <MenuItem value="PASSED">PASSED</MenuItem>
-                                                <MenuItem value="FAILED">FAILED</MenuItem>
+                                                <MenuItem value="PASSED">✅ Passed</MenuItem>
+                                                <MenuItem value="FAILED">❌ Failed</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </TableCell>

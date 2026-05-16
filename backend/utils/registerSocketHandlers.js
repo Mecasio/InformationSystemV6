@@ -4731,42 +4731,64 @@ WHERE proctor LIKE ?
       try {
         const [rows] = await db.query(
           `
-      SELECT
-        ies.schedule_id,
-        ies.day_description,
-        ies.building_description,
-        ies.room_description,
-        ies.start_time,
-        ies.end_time,
-        ies.interviewer,
-        ps.exam_result,
-        ps.qualifying_result,
-        ps.interview_result
-      FROM interview_applicants ia
-      JOIN interview_exam_schedule ies
-        ON ia.schedule_id = ies.schedule_id
-      LEFT JOIN person_status_table ps
-        ON ia.applicant_id = ps.applicant_id
-      WHERE ia.applicant_id = ?
-      LIMIT 1
-      `,
-          [applicantNumber],
+        SELECT
+          ies.schedule_id,
+          ies.day_description,
+          ies.building_description,
+          ies.room_description,
+          ies.start_time,
+          ies.end_time,
+          ies.interviewer,
+
+          ps.exam_result,
+
+          ia.qualifying_status,
+          ia.interview_status
+
+        FROM interview_applicants ia
+        JOIN interview_exam_schedule ies
+          ON ia.schedule_id = ies.schedule_id
+        LEFT JOIN person_status_table ps
+          ON ia.applicant_id = ps.applicant_id
+        WHERE ia.applicant_id = ?
+        LIMIT 1
+        `,
+          [applicantNumber]
         );
 
         if (rows.length > 0) {
-          res.json(rows[0]);
+          const applicant = rows[0];
+
+          res.json({
+            ...applicant,
+
+            qualifying_result:
+              applicant.qualifying_status === 1
+                ? "Passed"
+                : applicant.qualifying_status === 0
+                  ? "Failed"
+                  : "Pending",
+
+            interview_result:
+              applicant.interview_status === 1
+                ? "Passed"
+                : applicant.interview_status === 0
+                  ? "Failed"
+                  : "Pending"
+          });
+
         } else {
-          res
-            .status(404)
-            .json({ message: "No interview schedule found for this applicant" });
+          res.status(404).json({
+            message: "No interview schedule found for this applicant"
+          });
         }
       } catch (err) {
-        console.error(" Error fetching interview schedule:", err);
-        res
-          .status(500)
-          .json({ message: "Server error fetching interview schedule" });
+        console.error("Error fetching interview schedule:", err);
+        res.status(500).json({
+          message: "Server error fetching interview schedule"
+        });
       }
-    },
+    }
   );
   app.get("/api/interview_applicants/:applicantId", async (req, res) => {
     try {
@@ -6164,20 +6186,38 @@ WHERE proctor LIKE ?
       const person_id = personRow[0].person_id;
 
       // 1  Get Admission Exam Score
+      // 1 Get Admission Exam Status
       const [examRow] = await db.query(
-        "SELECT final_rating FROM exam_results WHERE person_id = ? LIMIT 1",
-        [person_id],
+        `
+  SELECT status
+  FROM exam_results
+  WHERE person_id = ?
+  LIMIT 1
+  `,
+        [person_id]
       );
 
-      const entrance_exam_score = examRow.length ? examRow[0].final_rating : null;
+      const entrance_exam_status = examRow.length
+        ? examRow[0].status
+        : null;
 
       // 2  Get Qualifying & Interview Results
       const [statusRow] = await db.query(
-        `SELECT qualifying_result, interview_result
-       FROM person_status_table
-       WHERE person_id = ? LIMIT 1`,
-        [person_id],
+        `
+  SELECT 
+      pst.qualifying_result,
+      pst.interview_result,
+      ia.qualifying_status,
+      ia.interview_status
+  FROM person_status_table pst
+  LEFT JOIN interview_applicants ia 
+      ON ia.applicant_id = ?
+  WHERE pst.person_id = ?
+  LIMIT 1
+  `,
+        [applicant_number, person_id]
       );
+
 
       const qualifying_result = statusRow.length
         ? statusRow[0].qualifying_result
@@ -6187,9 +6227,15 @@ WHERE proctor LIKE ?
         : null;
 
       res.json({
-        entrance_exam_score,
+        entrance_exam_status,
         qualifying_result,
         interview_result,
+        qualifying_status: statusRow.length
+          ? statusRow[0].qualifying_status
+          : 0,
+        interview_status: statusRow.length
+          ? statusRow[0].interview_status
+          : 0,
       });
     } catch (err) {
       console.error(err);

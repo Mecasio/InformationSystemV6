@@ -10,7 +10,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Paper,
   TextField,
   MenuItem,
   Dialog,
@@ -18,33 +17,135 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Stack,
+  Chip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import LinearWithValueLabel from "../components/LinearWithValueLabel";
 import { Snackbar, Alert } from "@mui/material";
 import { FaFileExcel } from "react-icons/fa";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
-import SchoolIcon from "@mui/icons-material/School";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import PeopleIcon from "@mui/icons-material/People";
-import PersonSearchIcon from "@mui/icons-material/PersonSearch";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import SearchIcon from "@mui/icons-material/Search";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
 import API_BASE_URL from "../apiConfig";
 import ScoreIcon from "@mui/icons-material/Score";
+
+/* ─── Design tokens ─── */
+const TOKEN = {
+  navyLight: "#1a3260",
+  accent: "#2563eb",
+  accentHover: "#1d4ed8",
+  accentSoft: "#eff6ff",
+  gold: "#f59e0b",
+  green: "#16a34a",
+  greenSoft: "#f0fdf4",
+  red: "#dc2626",
+  redSoft: "#fef2f2",
+  orange: "#ea580c",
+  orangeSoft: "#fff7ed",
+  bg: "#f4f6fb",
+  surface: "#ffffff",
+  border: "#e2e8f0",
+  borderStrong: "#cbd5e1",
+  text: "#0f172a",
+  textMid: "#475569",
+  textLight: "#94a3b8",
+  shadow: "0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06)",
+  shadowMd: "0 4px 24px rgba(0,0,0,.10)",
+};
+
+/* ─── Tiny helpers ─── */
+const Card = ({ children, sx = {} }) => (
+  <Box
+    sx={{
+      backgroundColor: TOKEN.surface,
+      boxShadow: TOKEN.shadow,
+      overflow: "hidden",
+      ...sx,
+    }}
+  >
+    {children}
+  </Box>
+);
+
+const SectionHeader = ({ children, headerColor, sx = {} }) => (
+  <Box
+    sx={{
+      px: 2.5,
+      py: 1.5,
+      backgroundColor: headerColor,
+      ...sx,
+    }}
+  >
+    <Typography
+      sx={{
+        color: "#fff",
+        fontWeight: 700,
+        fontSize: "13px",
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+      }}
+    >
+      {children}
+    </Typography>
+  </Box>
+);
+
+const StyledTh = ({ children, headerColor, style = {} }) => (
+  <TableCell
+    sx={{
+      backgroundColor: headerColor,
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: "11px",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+      textAlign: "center",
+      whiteSpace: "nowrap",
+      py: 1.25,
+      px: 1,
+      border: "none",
+      borderRight: `1px solid rgba(255,255,255,0.1)`,
+      "&:last-child": { borderRight: "none" },
+      ...style,
+    }}
+  >
+    {children}
+  </TableCell>
+);
+
+const StyledTd = ({ children, sx = {}, ...rest }) => (
+  <TableCell
+    sx={{
+      fontSize: "12px",
+      textAlign: "center",
+      py: 0.9,
+      px: 1,
+      borderBottom: `1px solid ${TOKEN.border}`,
+      color: TOKEN.text,
+      ...sx,
+    }}
+    {...rest}
+  >
+    {children}
+  </TableCell>
+);
+
+/* ─── Main component ─── */
 const CourseTaggingForSummerCollege = () => {
   const settings = useContext(SettingsContext);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-  const [subButtonColor, setSubButtonColor] = useState("#ffffff"); // ✅ NEW
-  const [stepperColor, setStepperColor] = useState("#000000"); // ✅ NEW
+  const [subButtonColor, setSubButtonColor] = useState("#ffffff");
+  const [stepperColor, setStepperColor] = useState("#000000");
 
   const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
@@ -53,33 +154,26 @@ const CourseTaggingForSummerCollege = () => {
 
   useEffect(() => {
     if (!settings) return;
-
-    // 🎨 Colors
     if (settings.title_color) setTitleColor(settings.title_color);
     if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
     if (settings.border_color) setBorderColor(settings.border_color);
-    if (settings.main_button_color)
-      setMainButtonColor(settings.main_button_color);
-    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color); // ✅ NEW
-    if (settings.stepper_color) setStepperColor(settings.stepper_color); // ✅ NEW
-
-    // 🏫 Logo
+    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
+    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color);
+    if (settings.stepper_color) setStepperColor(settings.stepper_color);
     if (settings.logo_url) {
       setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
-    } else {
-      setFetchedLogo(EaristLogo);
     }
-
-    // 🏷️ School Information
     if (settings.company_name) setCompanyName(settings.company_name);
     if (settings.short_term) setShortTerm(settings.short_term);
     if (settings.campus_address) setCampusAddress(settings.campus_address);
   }, [settings]);
 
+  /* derived header color from settings */
+  const headerColor = settings?.header_color || "#1976d2";
+
   const [data, setdata] = useState([]);
   const [currentDate, setCurrentDate] = useState("");
   const [personID, setPersonID] = useState("");
-  //////////
   const [hasAccess, setHasAccess] = useState(null);
 
   const [snack, setSnack] = useState({
@@ -134,7 +228,7 @@ const CourseTaggingForSummerCollege = () => {
   const checkAccess = async (employeeID) => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`,
+        `${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`
       );
       if (response.data && response.data.page_privilege === 1) {
         setHasAccess(true);
@@ -172,11 +266,9 @@ const CourseTaggingForSummerCollege = () => {
       const minutes = String(now.getMinutes()).padStart(2, "0");
       const seconds = String(now.getSeconds()).padStart(2, "0");
       const ampm = now.getHours() >= 12 ? "PM" : "AM";
-
       const formattedDate = `${month} ${day}, ${year} ${hours}:${minutes}:${seconds} ${ampm}`;
       setCurrentDate(formattedDate);
     };
-
     updateDate();
     const interval = setInterval(updateDate, 1000);
     return () => clearInterval(interval);
@@ -185,7 +277,7 @@ const CourseTaggingForSummerCollege = () => {
   const [courses, setCourses] = useState([]);
   const [enrolled, setEnrolled] = useState([]);
   const [studentNumber, setStudentNumber] = useState("");
-  const [userId, setUserId] = useState(null); // Dynamic userId (student_number)
+  const [userId, setUserId] = useState(null);
   const [first_name, setUserFirstName] = useState(null);
   const [middle_name, setUserMiddleName] = useState(null);
   const [last_name, setUserLastName] = useState(null);
@@ -210,30 +302,22 @@ const CourseTaggingForSummerCollege = () => {
   const isBulkEnrollDisabled =
     String(applyingAs) === "7" || String(applyingAs) === "8";
 
-  // 🔍 Map of course_id -> { allowed, hasPrereq }
   const [prereqMap, setPrereqMap] = useState({});
-
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Modal for confirming enroll (single or bulk)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null); // { type: 'single'|'bulk', course?, yearLevelId? }
+  const [pendingAction, setPendingAction] = useState(null);
   const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
 
   const fetchSubjectCounts = async (sectionId) => {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/subject-enrollment-count`,
-        {
-          params: { sectionId, activeSchoolYearId },
-        },
+        { params: { sectionId, activeSchoolYearId } }
       );
-
       const counts = {};
       response.data.forEach((item) => {
         counts[item.course_id] = item.enrolled_count;
       });
-
       setSubjectCounts(counts);
     } catch (err) {
       console.error("Failed to fetch subject counts", err);
@@ -254,70 +338,40 @@ const CourseTaggingForSummerCollege = () => {
           axios.get(`${API_BASE_URL}/get_semester`),
           axios.get(`${API_BASE_URL}/active_school_year`),
         ]);
-
-        const semesters = Array.isArray(semesterRes.data)
-          ? semesterRes.data
-          : [];
+        const semesters = Array.isArray(semesterRes.data) ? semesterRes.data : [];
         const summerSemester = semesters.find((semester) =>
-          String(semester.semester_description || "")
-            .toLowerCase()
-            .includes("summer"),
+          String(semester.semester_description || "").toLowerCase().includes("summer")
         );
-
         if (!summerSemester) {
-          setSnack({
-            open: true,
-            message: "Summer semester not found.",
-            severity: "warning",
-          });
+          setSnack({ open: true, message: "Summer semester not found.", severity: "warning" });
           setActiveSemester("Summer");
           setActiveSemesterId(null);
           return;
         }
-
-        const activeYearRow = Array.isArray(activeYearRes.data)
-          ? activeYearRes.data[0]
-          : null;
+        const activeYearRow = Array.isArray(activeYearRes.data) ? activeYearRes.data[0] : null;
         const yearId = activeYearRow?.year_id ?? null;
-
         if (!yearId) {
-          setSnack({
-            open: true,
-            message: "Active school year not found.",
-            severity: "warning",
-          });
+          setSnack({ open: true, message: "Active school year not found.", severity: "warning" });
           return;
         }
-
         const selectedYearRes = await axios.get(
-          `${API_BASE_URL}/get_selecterd_year/${yearId}/${summerSemester.semester_id}`,
+          `${API_BASE_URL}/get_selecterd_year/${yearId}/${summerSemester.semester_id}`
         );
         const summerSchoolYearId = Array.isArray(selectedYearRes.data)
           ? selectedYearRes.data[0]?.school_year_id
           : null;
-
         if (!summerSchoolYearId) {
-          setSnack({
-            open: true,
-            message: "Active school year for Summer not found.",
-            severity: "warning",
-          });
+          setSnack({ open: true, message: "Active school year for Summer not found.", severity: "warning" });
           return;
         }
-
         setActiveSemester(summerSemester.semester_description || "Summer");
         setActiveSemesterId(summerSemester.semester_id);
         setActiveSchoolYearId(summerSchoolYearId);
       } catch (err) {
         console.error("Error loading summer context:", err);
-        setSnack({
-          open: true,
-          message: "Failed to load Summer school year context.",
-          severity: "error",
-        });
+        setSnack({ open: true, message: "Failed to load Summer school year context.", severity: "error" });
       }
     };
-
     fetchSummerContext();
   }, []);
 
@@ -347,24 +401,18 @@ const CourseTaggingForSummerCollege = () => {
     }
   }, [userId, currId, activeSchoolYearId]);
 
-  // Fetch sections whenever selectedDepartment changes
   useEffect(() => {
     if (selectedDepartment) {
       fetchDepartmentSections();
     }
   }, [selectedDepartment]);
 
-  // Fetch department sections based on selected department
   const fetchDepartmentSections = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/api/department-sections`,
-        {
-          params: { departmentId: selectedDepartment },
-        },
-      );
-      // Artificial delay
+      const response = await axios.get(`${API_BASE_URL}/api/department-sections`, {
+        params: { departmentId: selectedDepartment },
+      });
       setTimeout(() => {
         setSections(response.data);
         setLoading(false);
@@ -380,30 +428,17 @@ const CourseTaggingForSummerCollege = () => {
     if (!canEdit) { setSnack({ open: true, message: "You do not have permission to change active curriculum.", severity: "error" }); return; }
     const sectionId = e.target.value;
     setSelectedSection(sectionId);
-    console.log("Selected section ID:", sectionId);
-
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/api/update-active-curriculum`,
-        {
-          studentId: studentNumber,
-          departmentSectionId: sectionId,
-        },
-      );
-
-      const courseRes = await axios.get(
-        `${API_BASE_URL}/api/search-student/${sectionId}`,
-      );
-
+      const response = await axios.put(`${API_BASE_URL}/api/update-active-curriculum`, {
+        studentId: studentNumber,
+        departmentSectionId: sectionId,
+      });
+      const courseRes = await axios.get(`${API_BASE_URL}/api/search-student/${sectionId}`);
       if (courseRes.data.length > 0) {
         setCurr(courseRes.data[0].curriculum_id);
         setCourseCode(courseRes.data[0].program_code);
         setCourseDescription(courseRes.data[0].program_description);
-      } else {
-        console.warn("No program data found for selected section");
       }
-
-      console.log("Curriculum updated:", response.data);
     } catch (error) {
       console.error("Error updating curriculum:", error);
     }
@@ -412,442 +447,149 @@ const CourseTaggingForSummerCollege = () => {
   const isEnrolledCourse = (course_id) =>
     enrolled.some((item) => item.course_id === course_id);
 
-  // ✅ Has prerequisite based on backend-computed map
   const hasCoursePrereq = (course) => {
     const status = prereqMap[course.course_id];
     return status ? status.hasPrereq === true : false;
   };
 
-  // 🔍 Helper to check prerequisites using backend (fixed)
   const checkPrerequisite = async (student_number, course) => {
     try {
-      const { data } = await axios.post(
-        `${API_BASE_URL}/api/check-prerequisite`,
-        {
-          student_number,
-          course_id: course.course_id,
-          semester_id: course.semester_id,
-          curriculum_id: currId,
-        },
-      );
-
-      // Backend returns: { allowed, status, message, failedPrereq?, missingPrereq? }
-
-      // If backend did not include "allowed", treat as error
+      const { data } = await axios.post(`${API_BASE_URL}/api/check-prerequisite`, {
+        student_number,
+        course_id: course.course_id,
+        semester_id: course.semester_id,
+        curriculum_id: currId,
+      });
       if (typeof data.allowed !== "boolean") {
-        return {
-          allowed: false,
-          reason: "ERROR",
-          status: data.status,
-          message:
-            data.message ||
-            "Invalid response from prerequisite API. Please contact administrator.",
-        };
+        return { allowed: false, reason: "ERROR", status: data.status, message: data.message || "Invalid response from prerequisite API. Please contact administrator." };
       }
-
-      // ✅ If allowed = true → we don’t care about status, let them enroll
       if (data.allowed) {
-        return {
-          allowed: true,
-          reason: "OK",
-          status: data.status,
-          message: data.message,
-        };
+        return { allowed: true, reason: "OK", status: data.status, message: data.message };
       }
-
-      // ❌ Not allowed → map backend status to the reasons used in addToCart/addAllToCart
       let reason = "ERROR";
-
-      if (data.status === "FAILED_PREREQ") {
-        reason = "FAILED_PREREQUISITE";
-      } else if (data.status === "MISSING_PREREQ") {
-        reason = "MISSING_OR_NOT_PASSED_PREREQUISITE";
-      }
-
-      return {
-        allowed: false,
-        reason,
-        status: data.status,
-        message: data.message,
-        failedPrereq: data.failedPrereq || [],
-        missingPrereq: data.missingPrereq || [],
-      };
+      if (data.status === "FAILED_PREREQ") reason = "FAILED_PREREQUISITE";
+      else if (data.status === "MISSING_PREREQ") reason = "MISSING_OR_NOT_PASSED_PREREQUISITE";
+      return { allowed: false, reason, status: data.status, message: data.message, failedPrereq: data.failedPrereq || [], missingPrereq: data.missingPrereq || [] };
     } catch (err) {
       console.error("Error calling /api/check-prerequisite:", err);
-      return {
-        allowed: false,
-        reason: "ERROR",
-        status: "REQUEST_ERROR",
-        message: "Error calling prerequisite API.",
-      };
+      return { allowed: false, reason: "ERROR", status: "REQUEST_ERROR", message: "Error calling prerequisite API." };
     }
   };
 
-  // 🟢🟠 Precompute prerequisite status for highlighting rows (backend-driven)
   useEffect(() => {
     const computePrereqStatus = async () => {
-      if (!userId || courses.length === 0) {
-        setPrereqMap({});
-        return;
-      }
-
+      if (!userId || courses.length === 0) { setPrereqMap({}); return; }
       const map = {};
-
       for (const course of courses) {
-        // Always ask backend about this course
         const res = await checkPrerequisite(userId, course);
-
-        // Backend status tells us if the subject actually has a prerequisite
         let hasPrereq = true;
-        if (res.status === "NO_PREREQ" || res.status === "PREREQ_NOT_FOUND") {
-          hasPrereq = false;
-        }
-
-        map[course.course_id] = {
-          allowed: !!res.allowed, // true = meets prereq / or no prereq
-          hasPrereq, // true = course has prerequisite
-        };
+        if (res.status === "NO_PREREQ" || res.status === "PREREQ_NOT_FOUND") hasPrereq = false;
+        map[course.course_id] = { allowed: !!res.allowed, hasPrereq };
       }
-
       setPrereqMap(map);
     };
-
     computePrereqStatus();
   }, [userId, courses]);
 
   const addToCart = async (course) => {
     if (!canCreate) { setSnack({ open: true, message: "You do not have permission to enroll subjects.", severity: "error" }); return; }
-    if (!selectedSection) {
-      setSnack({
-        open: true,
-        message:
-          "Please select a department section before enrolling in a course.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!activeSchoolYearId || !activeSemesterId) {
-      setSnack({
-        open: true,
-        message: "Summer school year is not ready yet.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!userId) {
-      setSnack({
-        open: true,
-        message: "Please search and select a student first.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (isEnrolledCourse(course.course_id)) {
-      return;
-    }
-
-    const payload = {
-      subject_id: course.course_id,
-      department_section_id: selectedSection,
-      active_school_year_id: activeSchoolYearId,
-    };
-
+    if (!selectedSection) { setSnack({ open: true, message: "Please select a department section before enrolling in a course.", severity: "warning" }); return; }
+    if (!activeSchoolYearId || !activeSemesterId) { setSnack({ open: true, message: "Summer school year is not ready yet.", severity: "warning" }); return; }
+    if (!userId) { setSnack({ open: true, message: "Please search and select a student first.", severity: "warning" }); return; }
+    if (isEnrolledCourse(course.course_id)) return;
+    const payload = { subject_id: course.course_id, department_section_id: selectedSection, active_school_year_id: activeSchoolYearId };
     try {
-      // ✅ ALWAYS ENROLL – NO PREREQ BLOCK HERE
-      await axios.post(
-        `${API_BASE_URL}/add-to-enrolled-courses/${userId}/${currId}/`,
-        payload,
-        auditConfig,
-      );
-
-      // Refresh enrolled courses list after adding
-      const { data } = await axios.get(
-        `${API_BASE_URL}/enrolled_courses/${userId}/${currId}`,
-        { params: { activeSchoolYearId } },
-      );
+      await axios.post(`${API_BASE_URL}/add-to-enrolled-courses/${userId}/${currId}/`, payload, auditConfig);
+      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`, { params: { activeSchoolYearId } });
       setEnrolled(data);
-
-      setSnack({
-        open: true,
-        message: `Enrolled ${course.course_code} successfully.`,
-        severity: "success",
-      });
+      setSnack({ open: true, message: `Enrolled ${course.course_code} successfully.`, severity: "success" });
     } catch (err) {
       console.error("Error adding course or refreshing enrolled list:", err);
-      setSnack({
-        open: true,
-        message: "Error enrolling in this course. Please try again.",
-        severity: "error",
-      });
+      setSnack({ open: true, message: "Error enrolling in this course. Please try again.", severity: "error" });
     }
   };
 
-  //------------delete
-  //------------delete
   const deleteFromCart = async (id) => {
     if (!canDelete) { setSnack({ open: true, message: "You do not have permission to unenroll subjects.", severity: "error" }); return; }
-    if (!id) {
-      console.error("No ID provided to deleteFromCart");
-      return;
-    }
-
+    if (!id) { console.error("No ID provided to deleteFromCart"); return; }
     try {
-      // Delete the specific enrolled_subject row
       const res = await axios.delete(`${API_BASE_URL}/courses/delete/${id}`, auditConfig);
-      console.log("Delete response:", res.data);
-
-      // Refresh enrolled courses list
-      const { data } = await axios.get(
-        `${API_BASE_URL}/enrolled_courses/${userId}/${currId}`,
-        { params: { activeSchoolYearId } },
-      );
+      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`, { params: { activeSchoolYearId } });
       setEnrolled(data);
-
-      setSnack({
-        open: true,
-        message: "Subject unenrolled successfully.",
-        severity: "success",
-      });
-
-      console.log(`Course with ID ${id} deleted and enrolled list updated`);
+      setSnack({ open: true, message: "Subject unenrolled successfully.", severity: "success" });
     } catch (err) {
-      console.error(
-        "Error deleting course or refreshing enrolled list:",
-        err.response?.data || err.message || err,
-      );
-
-      setSnack({
-        open: true,
-        message: "Error unenrolling subject. Please check the console.",
-        severity: "error",
-      });
+      console.error("Error deleting course or refreshing enrolled list:", err.response?.data || err.message || err);
+      setSnack({ open: true, message: "Error unenrolling subject. Please check the console.", severity: "error" });
     }
   };
-  //-------delete
-
-  //-------delete
 
   const addAllToCart = async (yearLevelId) => {
     if (!canCreate) { setSnack({ open: true, message: "You do not have permission to bulk enroll subjects.", severity: "error" }); return; }
     const newCourses = courses.filter(
-      (c) =>
-        !isEnrolledCourse(c.course_id) &&
-        c.year_level_id === yearLevelId &&
-        (activeSemesterId ? c.semester_id === activeSemesterId : true),
+      (c) => !isEnrolledCourse(c.course_id) && c.year_level_id === yearLevelId && (activeSemesterId ? c.semester_id === activeSemesterId : true)
     );
-
-    if (!selectedSection) {
-      setSnack({
-        open: true,
-        message:
-          "Please select a department section before adding all the courses.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!activeSchoolYearId || !activeSemesterId) {
-      setSnack({
-        open: true,
-        message: "Summer school year is not ready yet.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!userId) {
-      setSnack({
-        open: true,
-        message: "Please search and select a student first.",
-        severity: "warning",
-      });
-      return;
-    }
-
+    if (!selectedSection) { setSnack({ open: true, message: "Please select a department section before adding all the courses.", severity: "warning" }); return; }
+    if (!activeSchoolYearId || !activeSemesterId) { setSnack({ open: true, message: "Summer school year is not ready yet.", severity: "warning" }); return; }
+    if (!userId) { setSnack({ open: true, message: "Please search and select a student first.", severity: "warning" }); return; }
     if (newCourses.length === 0) return;
-
     let enrolledCount = 0;
-
     try {
       await Promise.all(
         newCourses.map(async (course) => {
           try {
-            // ✅ ALWAYS ENROLL, IGNORE PREREQUISITE RESULT
             await axios.post(`${API_BASE_URL}/add-all-to-enrolled-courses-summer`, {
-              subject_id: course.course_id,
-              user_id: userId,
-              curriculumID: currId,
-              departmentSectionID: selectedSection,
-              year_level: yearLevelId,
-              active_school_year_id: activeSchoolYearId,
-              active_semester_id: activeSemesterId,
+              subject_id: course.course_id, user_id: userId, curriculumID: currId,
+              departmentSectionID: selectedSection, year_level: yearLevelId,
+              active_school_year_id: activeSchoolYearId, active_semester_id: activeSemesterId,
             }, auditConfig);
-
             enrolledCount++;
             setDisableYearButtons(true);
-          } catch (err) {
-            console.error("Error enrolling course in bulk:", err);
-          }
-        }),
+          } catch (err) { console.error("Error enrolling course in bulk:", err); }
+        })
       );
-
-      // Refresh enrolled courses list
-      const { data } = await axios.get(
-        `${API_BASE_URL}/enrolled_courses/${userId}/${currId}`,
-        { params: { activeSchoolYearId } },
-      );
+      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`, { params: { activeSchoolYearId } });
       setEnrolled(data);
-
-      if (data.length > 0) {
-        setCourseCode(data[0].program_code);
-        setCourseDescription(data[0].program_description);
-        setSectionDescription(data[0].section);
-      }
-
-      if (enrolledCount > 0) {
-        setSnack({
-          open: true,
-          message:
-            "Bulk enroll finished. All available subjects were enrolled.",
-          severity: "success",
-        });
-      } else {
-        setSnack({
-          open: true,
-          message: "No new subjects were enrolled.",
-          severity: "info",
-        });
-      }
+      if (data.length > 0) { setCourseCode(data[0].program_code); setCourseDescription(data[0].program_description); setSectionDescription(data[0].section); }
+      setSnack({ open: true, message: enrolledCount > 0 ? "Bulk enroll finished. All available subjects were enrolled." : "No new subjects were enrolled.", severity: enrolledCount > 0 ? "success" : "info" });
     } catch (err) {
       console.error("Unexpected error during enrollment:", err);
-      setSnack({
-        open: true,
-        message: "Unexpected error during bulk enrollment.",
-        severity: "error",
-      });
+      setSnack({ open: true, message: "Unexpected error during bulk enrollment.", severity: "error" });
     }
   };
 
   const deleteAllCart = async () => {
     if (!canDelete) { setSnack({ open: true, message: "You do not have permission to unenroll subjects.", severity: "error" }); return; }
     try {
-      if (!activeSchoolYearId) {
-        setSnack({
-          open: true,
-          message: "Summer school year is not ready yet.",
-          severity: "warning",
-        });
-        return;
-      }
-
-      // Delete all user courses
-      await axios.delete(`${API_BASE_URL}/courses/user/${userId}`, {
-        headers: auditConfig.headers,
-        params: { activeSchoolYearId },
-      });
-      // Refresh enrolled courses list
-      const { data } = await axios.get(
-        `${API_BASE_URL}/enrolled_courses/${userId}/${currId}`,
-        { params: { activeSchoolYearId } },
-      );
+      if (!activeSchoolYearId) { setSnack({ open: true, message: "Summer school year is not ready yet.", severity: "warning" }); return; }
+      await axios.delete(`${API_BASE_URL}/courses/user/${userId}`, { headers: auditConfig.headers, params: { activeSchoolYearId } });
+      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`, { params: { activeSchoolYearId } });
       setEnrolled(data);
       setDisableYearButtons(false);
-      console.log("Cart cleared and enrolled courses refreshed");
-    } catch (err) {
-      console.error("Error deleting cart or refreshing enrolled list:", err);
-    }
+    } catch (err) { console.error("Error deleting cart or refreshing enrolled list:", err); }
   };
 
   const handleSearchStudent = async () => {
-    if (!studentNumber.trim()) {
-      setSnack({
-        open: true,
-        message: "Please fill in the student number",
-        severity: "warning",
-      });
-
-      return;
-    }
-
-    if (!activeSchoolYearId || !activeSemesterId) {
-      setSnack({
-        open: true,
-        message: "Summer school year is not ready yet. Please try again.",
-        severity: "warning",
-      });
-      return;
-    }
-
+    if (!studentNumber.trim()) { setSnack({ open: true, message: "Please fill in the student number", severity: "warning" }); return; }
+    if (!activeSchoolYearId || !activeSemesterId) { setSnack({ open: true, message: "Summer school year is not ready yet. Please try again.", severity: "warning" }); return; }
     try {
       const response = await axios.post(
         `${API_BASE_URL}/student-tagging`,
         { studentNumber, active_school_year_id: activeSchoolYearId },
-        { headers: { "Content-Type": "application/json" } },
+        { headers: { "Content-Type": "application/json" } }
       );
-
-      const {
-        token2,
-        isEnrolled,
-        person_id2,
-        studentNumber: studentNum,
-        section: section,
-        activeCurriculum: effectiveProgram,
-        yearLevel,
-        courseCode: courseCode,
-        courseDescription: courseDescription,
-        firstName: first_name,
-        middleName: middle_name,
-        lastName: last_name,
-        applyingAs: applyingAsValue,
-      } = response.data;
-
-      localStorage.setItem("token2", token2);
-      localStorage.setItem("person_id2", person_id2);
-      localStorage.setItem("studentNumber", studentNum);
-      localStorage.setItem("activeCurriculum", effectiveProgram);
-      localStorage.setItem("yearLevel", yearLevel);
-      localStorage.setItem("courseCode", courseCode);
-      localStorage.setItem("courseDescription", courseDescription);
-      localStorage.setItem("firstName", first_name);
-      localStorage.setItem("middleName", middle_name);
-      localStorage.setItem("lastName", last_name);
-      localStorage.setItem("section", section);
-      localStorage.setItem("isEnrolled", isEnrolled);
-
-      setUserId(studentNum); // Set dynamic userId (used as student_number)
-      setUserFirstName(first_name);
-      setUserMiddleName(middle_name);
-      setUserLastName(last_name);
-      setApplyingAs(applyingAsValue ?? "");
-      setCurr(effectiveProgram);
-      setCourseCode(courseCode);
-      setCourseDescription(courseDescription);
-      setPersonID(person_id2);
-      setSectionDescription(section);
-      setIsEnrolled(isEnrolled);
-
-      setSnack({
-        open: true,
-        message: "Student found and authenticated!",
-        severity: "success",
-      });
+      const { token2, isEnrolled, person_id2, studentNumber: studentNum, section, activeCurriculum: effectiveProgram, yearLevel, courseCode: courseCode, courseDescription: courseDescription, firstName: first_name, middleName: middle_name, lastName: last_name, applyingAs: applyingAsValue } = response.data;
+      localStorage.setItem("token2", token2); localStorage.setItem("person_id2", person_id2); localStorage.setItem("studentNumber", studentNum); localStorage.setItem("activeCurriculum", effectiveProgram); localStorage.setItem("yearLevel", yearLevel); localStorage.setItem("courseCode", courseCode); localStorage.setItem("courseDescription", courseDescription); localStorage.setItem("firstName", first_name); localStorage.setItem("middleName", middle_name); localStorage.setItem("lastName", last_name); localStorage.setItem("section", section); localStorage.setItem("isEnrolled", isEnrolled);
+      setUserId(studentNum); setUserFirstName(first_name); setUserMiddleName(middle_name); setUserLastName(last_name); setApplyingAs(applyingAsValue ?? ""); setCurr(effectiveProgram); setCourseCode(courseCode); setCourseDescription(courseDescription); setPersonID(person_id2); setSectionDescription(section); setIsEnrolled(isEnrolled);
+      setSnack({ open: true, message: "Student found and authenticated!", severity: "success" });
     } catch (error) {
       console.log("");
       setApplyingAs("");
-      setSnack({
-        open: true,
-        message: "Student not found or error processing request.",
-        severity: "error",
-      });
+      setSnack({ open: true, message: "Student not found or error processing request.", severity: "error" });
     }
   };
 
   useEffect(() => {
     const email = localStorage.getItem("email");
-
     if (email) {
       axios
         .get(`${API_BASE_URL}/api/admin_data/${email}`)
@@ -857,11 +599,7 @@ const CourseTaggingForSummerCollege = () => {
         })
         .catch((err) => {
           console.error("Failed to fetch admin data:", err);
-          setSnack({
-            open: true,
-            message: "Failed to load your department.",
-            severity: "error",
-          });
+          setSnack({ open: true, message: "Failed to load your department.", severity: "error" });
         });
     }
   }, []);
@@ -870,258 +608,94 @@ const CourseTaggingForSummerCollege = () => {
 
   const handleImport = async () => {
     try {
-      if (!selectedFile) {
-        setSnack({
-          open: true,
-          message: "Please choose a file first!",
-          severity: "warning",
-        });
-        return;
-      }
-
+      if (!selectedFile) { setSnack({ open: true, message: "Please choose a file first!", severity: "warning" }); return; }
       const formData = new FormData();
       formData.append("file", selectedFile);
-
-      const res = await axios.post(
-        `${API_BASE_URL}/api/import-xlsx`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        },
-      );
-
-      if (res.data.success) {
-        setSnack({
-          open: true,
-          message: res.data.message || "Excel imported successfully!",
-          severity: "success",
-        });
-        setSelectedFile(null);
-      } else {
-        setSnack({
-          open: true,
-          message: res.data.error || "Failed to import",
-          severity: "error",
-        });
-      }
+      const res = await axios.post(`${API_BASE_URL}/api/import-xlsx`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      if (res.data.success) { setSnack({ open: true, message: res.data.message || "Excel imported successfully!", severity: "success" }); setSelectedFile(null); }
+      else { setSnack({ open: true, message: res.data.error || "Failed to import", severity: "error" }); }
     } catch (err) {
       console.error("❌ Import error:", err);
-      setSnack({
-        open: true,
-        message: "Import failed: " + (err.response?.data?.error || err.message),
-        severity: "error",
-      });
+      setSnack({ open: true, message: "Import failed: " + (err.response?.data?.error || err.message), severity: "error" });
     }
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
+  const handleFileChange = (e) => { if (e.target.files && e.target.files.length > 0) setSelectedFile(e.target.files[0]); };
 
-  // 🟢🟠 Row style based on prerequisite qualification
   const getCourseRowSx = (course) => {
     const status = prereqMap[course.course_id];
     if (!status) return {};
-    // Green: meets qualification (either no prereq or allowed)
-    if (!status.hasPrereq || status.allowed) {
-      return { backgroundColor: "#e6ffe6" }; // light green
-    }
-    // Orange: has prereq but does NOT meet qualification
-    return { backgroundColor: "#ffeacc" }; // light orange
+    if (!status.hasPrereq || status.allowed) return { backgroundColor: TOKEN.greenSoft, "&:hover": { backgroundColor: "#dcfce7" } };
+    return { backgroundColor: TOKEN.orangeSoft, "&:hover": { backgroundColor: "#fed7aa" } };
   };
 
-  // Wrapper: single enroll click → show modal if course has prerequisite
   const handleEnrollClick = async (course) => {
-    if (!selectedSection) {
-      setSnack({
-        open: true,
-        message:
-          "Please select a department section before enrolling in a course.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!userId) {
-      setSnack({
-        open: true,
-        message: "Please search and select a student first.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (isEnrolledCourse(course.course_id)) {
-      return;
-    }
-
+    if (!selectedSection) { setSnack({ open: true, message: "Please select a department section before enrolling in a course.", severity: "warning" }); return; }
+    if (!userId) { setSnack({ open: true, message: "Please search and select a student first.", severity: "warning" }); return; }
+    if (isEnrolledCourse(course.course_id)) return;
     const status = prereqMap[course.course_id];
-
-    // If backend says this subject has prerequisite(s), show confirmation modal
     if (status && status.hasPrereq) {
       let msg = `The subject ${course.course_code} has prerequisite subject(s).\n\n`;
-
-      if (status.allowed) {
-        msg +=
-          "The student meets the prerequisite qualification.\n\nDo you want to continue enrolling this subject?";
-      } else {
-        msg +=
-          "The student does NOT meet the prerequisite qualification (failed or not yet passed).\n\nDo you still want to attempt to enroll this subject?";
-      }
-
-      setPendingAction({ type: "single", course });
-      setConfirmDialogMessage(msg);
-      setConfirmDialogOpen(true);
-    } else {
-      // No prereq → enroll directly
-      await addToCart(course);
-    }
+      msg += status.allowed
+        ? "The student meets the prerequisite qualification.\n\nDo you want to continue enrolling this subject?"
+        : "The student does NOT meet the prerequisite qualification (failed or not yet passed).\n\nDo you still want to attempt to enroll this subject?";
+      setPendingAction({ type: "single", course }); setConfirmDialogMessage(msg); setConfirmDialogOpen(true);
+    } else { await addToCart(course); }
   };
 
-  // Wrapper: bulk enroll click → show modal if at least one course has prerequisite
   const handleBulkEnrollClick = async (yearLevelId, semesterLabel) => {
-    if (isBulkEnrollDisabled) {
-      return;
-    }
-
-    if (!activeSchoolYearId || !activeSemesterId) {
-      setSnack({
-        open: true,
-        message: "Summer school year is not ready yet.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!selectedSection) {
-      setSnack({
-        open: true,
-        message:
-          "Please select a department section before adding all the courses.",
-        severity: "warning",
-      });
-      return;
-    }
-
-    if (!userId) {
-      setSnack({
-        open: true,
-        message: "Please search and select a student first.",
-        severity: "warning",
-      });
-      return;
-    }
-
+    if (isBulkEnrollDisabled) return;
+    if (!activeSchoolYearId || !activeSemesterId) { setSnack({ open: true, message: "Summer school year is not ready yet.", severity: "warning" }); return; }
+    if (!selectedSection) { setSnack({ open: true, message: "Please select a department section before adding all the courses.", severity: "warning" }); return; }
+    if (!userId) { setSnack({ open: true, message: "Please search and select a student first.", severity: "warning" }); return; }
     const newCourses = courses.filter(
-      (c) =>
-        !isEnrolledCourse(c.course_id) &&
-        c.year_level_id === yearLevelId &&
-        (activeSemesterId ? c.semester_id === activeSemesterId : true),
+      (c) => !isEnrolledCourse(c.course_id) && c.year_level_id === yearLevelId && (activeSemesterId ? c.semester_id === activeSemesterId : true)
     );
     if (newCourses.length === 0) return;
-
-    console.log("Hello: ", newCourses);
-
     const coursesWithPrereq = newCourses.filter((c) => hasCoursePrereq(c));
-
-    if (coursesWithPrereq.length === 0) {
-      await addAllToCart(yearLevelId);
-      return;
-    }
-
-    const listText = coursesWithPrereq
-      .map((c) => {
-        const status = prereqMap[c.course_id];
-        let tag = "";
-        if (status) {
-          if (status.allowed) tag = " (qualified)";
-          else tag = " (NOT qualified)";
-        }
-        return `• ${c.course_code}${tag}`;
-      })
-      .join("\n");
-
+    if (coursesWithPrereq.length === 0) { await addAllToCart(yearLevelId); return; }
+    const listText = coursesWithPrereq.map((c) => { const status = prereqMap[c.course_id]; let tag = status ? (status.allowed ? " (qualified)" : " (NOT qualified)") : ""; return `• ${c.course_code}${tag}`; }).join("\n");
     const msg = `${yearLevelId} - ${semesterLabel || "Semester"}, You are trying to enroll multiple subjects that have prerequisites:\n\n${listText}\n\nGreen-highlighted rows mean the student meets the prerequisite qualification.\nOrange-highlighted rows mean the student does NOT meet the prerequisite qualification.\n\nDo you want to continue with bulk enrollment?`;
-
-    setPendingAction({ type: "bulk", yearLevelId });
-    setConfirmDialogMessage(msg);
-    setConfirmDialogOpen(true);
+    setPendingAction({ type: "bulk", yearLevelId }); setConfirmDialogMessage(msg); setConfirmDialogOpen(true);
   };
 
-  const handleConfirmDialogClose = () => {
-    setConfirmDialogOpen(false);
-    setPendingAction(null);
-    setConfirmDialogMessage("");
-  };
+  const handleConfirmDialogClose = () => { setConfirmDialogOpen(false); setPendingAction(null); setConfirmDialogMessage(""); };
 
   const handleConfirmDialogProceed = async () => {
-    if (!pendingAction) {
-      handleConfirmDialogClose();
-      return;
-    }
-
+    if (!pendingAction) { handleConfirmDialogClose(); return; }
     try {
-      if (pendingAction.type === "single" && pendingAction.course) {
-        await addToCart(pendingAction.course);
-      } else if (pendingAction.type === "bulk" && pendingAction.yearLevelId) {
-        await addAllToCart(pendingAction.yearLevelId);
-      }
-    } finally {
-      handleConfirmDialogClose();
-    }
+      if (pendingAction.type === "single" && pendingAction.course) await addToCart(pendingAction.course);
+      else if (pendingAction.type === "bulk" && pendingAction.yearLevelId) await addAllToCart(pendingAction.yearLevelId);
+    } finally { handleConfirmDialogClose(); }
   };
 
   const formatYear = (year) => {
-    switch (year) {
-      case "First Year":
-        return "1st Year";
-      case "Second Year":
-        return "2nd Year";
-      case "Third Year":
-        return "3rd Year";
-      case "Fourth Year":
-        return "4th Year";
-      case "Fifth Year":
-        return "5th Year";
-      default:
-        return year;
-    }
+    const map = { "First Year": "1st Year", "Second Year": "2nd Year", "Third Year": "3rd Year", "Fourth Year": "4th Year", "Fifth Year": "5th Year" };
+    return map[year] || year;
   };
 
   const formatSemester = (semester) => {
-    switch (semester) {
-      case "First Semester":
-        return "1st Sem";
-      case "Second Semester":
-        return "2nd Sem";
-      case "Summer":
-        return "Summer";
-      default:
-        return semester;
-    }
+    const map = { "First Semester": "1st Sem", "Second Semester": "2nd Sem", "Summer": "Summer" };
+    return map[semester] || semester;
   };
 
   useEffect(() => {
     if (!studentNumber) return;
-
-    const delayDebounce = setTimeout(() => {
-      handleSearchStudent();
-    }, 500); // ⏱️ adjust delay if needed
-
+    const delayDebounce = setTimeout(() => { handleSearchStudent(); }, 500);
     return () => clearTimeout(delayDebounce);
   }, [studentNumber]);
 
-  // Put this at the very bottom before the return
-  if (loading || hasAccess === null) {
-    return <LoadingOverlay open={loading} message="Loading..." />;
-  }
+  /* ── total units ── */
+  const totalUnits =
+    enrolled.reduce((sum, item) => sum + (parseFloat(item.course_unit) || 0), 0) +
+    enrolled.reduce((sum, item) => sum + (parseFloat(item.lab_unit) || 0), 0);
 
-  if (!hasAccess) {
-    return <Unauthorized />;
-  }
+  if (loading || hasAccess === null) return <LoadingOverlay open={loading} message="Loading..." />;
+  if (!hasAccess) return <Unauthorized />;
 
+  /* ════════════════════════════════════════════════════
+     RENDER
+  ════════════════════════════════════════════════════ */
   return (
     <Box
       sx={{
@@ -1133,814 +707,519 @@ const CourseTaggingForSummerCollege = () => {
         padding: 2,
       }}
     >
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
-      >
-        <Typography variant="h4"
-          sx={{
-            fontWeight: 'bold',
-            color: titleColor,
-            fontSize: '36px',
-          }}
-        >
+      {/* ── PAGE HEADER ── */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: titleColor, fontSize: "36px" }}>
           COURSE TAGGING PANEL SUMMER CLASS
         </Typography>
 
-
-
-      </Box>
-
-      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
-
-    
-
-      <br />
-      <br />
-
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between", // LEFT + RIGHT
-          alignItems: "center",
-          marginBottom: "1rem",
-          flexWrap: "wrap",
-          paddingRight: 2,
-          mr: 2,
-        }}
-      >
-        {/* LEFT SIDE — Download Template */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => {
-              window.location.href = `${API_BASE_URL}/grade_report_template`;
-            }}
-            style={{
-              padding: "5px 20px",
+        {/* Upload controls */}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => { window.location.href = `${API_BASE_URL}/grade_report_template`; }}
+            sx={{
+              height: 40,
+              mb: 2,
+              color: "black",
               border: "2px solid black",
               backgroundColor: "#f0f0f0",
-              color: "black",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontSize: "14px",
+              textTransform: "none",
               fontWeight: "bold",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              width: "225px",
-              pointerEvents: "auto",
+              minWidth: 165,
             }}
           >
             📥 Download Template
-          </button>
-        </div>
+          </Button>
 
-        {/* RIGHT SIDE — Choose Excel + Upload */}
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "1rem",
-            justifyContent: "flex-end",
-            alignItems: "center",
-          }}
-        >
-          {/* CHOOSE EXCEL */}
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={1}
-            sx={{ minWidth: 200 }}
-          >
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-              id="excel-upload"
-            />
-
-            <button
-              onClick={() => document.getElementById("excel-upload").click()}
-              style={{
-                border: "2px solid green",
-                backgroundColor: "#f0fdf4",
-                color: "green",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "bold",
-                height: "50px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                justifyContent: "center",
-                userSelect: "none",
-                width: "200px",
-              }}
-              type="button"
-            >
-              <FaFileExcel size={20} />
-              Choose Excel
-            </button>
-          </Box>
-
-          {/* UPLOAD BUTTON */}
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={1}
-            sx={{ minWidth: 200 }}
-          >
-            <Button
-              variant="contained"
-              fullWidth
-              sx={{
-                background: `${mainButtonColor}`,
-                color: "white",
-                height: "50px",
-                width: "200px",
-                fontWeight: "bold",
-                border: "2px solid black",
-              }}
-              onClick={handleImport}
-            >
-              Upload
-            </Button>
-          </Box>
-        </Box>
-      </Box>
-
-      <Box
-        p={4}
-        display="grid"
-        gridTemplateColumns="1fr 1fr"
-        gap={4}
-        style={{
-          marginLeft: "-1rem",
-          height: "calc(90vh - 120px)",
-          width: "100rem",
-        }}
-      >
-        {/* Available Courses */}
-        <Box
-          component={Paper}
-          backgroundColor={"#f1f1f1"}
-          p={2}
-          sx={{
-            border: `1px solid ${borderColor}`,
-            overflowX: "auto",
-            width: "100%",
-          }}
-        >
-          {/* Search Student */}
-
-          <Box>
-            <Typography variant="h6">
-              Name: &emsp;
-              {first_name} {middle_name} {last_name}
-              <br />
-              Department/Course/Section: &emsp;
-              <br />
-              {courseCode || courseDescription || sectionDescription ? (
-                isenrolled ? (
-                  <>
-                    {courseCode && `(${courseCode}) `} -
-                    {courseDescription && courseDescription} -
-                    {sectionDescription && sectionDescription}
-                  </>
-                ) : (
-                  "Not currently enrolled"
-                )
-              ) : (
-                ""
-              )}
-            </Typography>
-
-            <TextField
-              label="Student Number"
-              fullWidth
-              margin="normal"
-              value={studentNumber}
-              onChange={(e) => setStudentNumber(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearchStudent();
-                }
-              }}
-            />
-            <Typography variant="h6">
-              Search Course Code / Description:
-            </Typography>
-            <TextField
-              label="Search Course (Code or Description)"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-            />
-
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleSearchStudent}
-            >
-              Search
-            </Button>
-          </Box>
-
-          <Typography variant="h6" mt={2} gutterBottom>
-            Available Courses
-          </Typography>
-
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  style={{
-                    border: `1px solid ${borderColor}`,
-                    textAlign: "center",
-                    width: 120,
-                  }}
-                >
-                  Course Code
-                </TableCell>
-                <TableCell
-                  style={{
-                    border: `1px solid ${borderColor}`,
-                    textAlign: "center",
-                  }}
-                >
-                  Description
-                </TableCell>
-
-                <TableCell
-                  style={{
-                    border: `1px solid ${borderColor}`,
-                    textAlign: "center",
-                  }}
-                >
-                  Credit Unit
-                </TableCell>
-                <TableCell
-                  style={{
-                    border: `1px solid ${borderColor}`,
-                    textAlign: "center",
-                  }}
-                >
-                  Prerequisites
-                </TableCell>
-                <TableCell
-                  style={{
-                    border: `1px solid ${borderColor}`,
-                    textAlign: "center",
-                  }}
-                >
-                  Enrolled <br /> Students
-                </TableCell>
-
-                <TableCell
-                  style={{
-                    border: `1px solid ${borderColor}`,
-                    textAlign: "center",
-                  }}
-                >
-                  Action
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {courses
-                .filter((c) => {
-                  const text = searchQuery.toLowerCase();
-                  return (
-                    c.course_code.toLowerCase().includes(text) ||
-                    c.course_description.toLowerCase().includes(text)
-                  );
-                })
-                .map((c) => (
-                  <TableRow key={c.course_id} sx={getCourseRowSx(c)}>
-                    <TableCell
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                      }}
-                    >
-                      {c.course_code}
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                      }}
-                    >
-                      {c.course_description}
-                    </TableCell>
-
-                    <TableCell
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                      }}
-                    >
-                      {c.course_unit}
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                      }}
-                    >
-                      {c.prereq
-                        ? c.prereq
-                          .split(",")
-                          .map((p) => p.trim())
-                          .join(", ")
-                        : "None"}
-                    </TableCell>
-
-                    <TableCell
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                      }}
-                    >
-                      {subjectCounts[c.course_id] || 0}
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        textAlign: "center",
-                      }}
-                    >
-                      {!isEnrolledCourse(c.course_id) ? (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={() => handleEnrollClick(c)}
-                          disabled={!userId}
-                        >
-                          Enroll
-                        </Button>
-                      ) : (
-                        <Typography color="textSecondary">Enrolled</Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </Box>
-
-        <Box
-          component={Paper}
-          backgroundColor="#f1f1f1"
-          p={2}
-          sx={{
-            border: `1px solid ${borderColor}`,
-            width: "100%",
-            overflowX: "auto", // ✅ horizontal scroll here
-          }}
-        >
-          <Box
+          <input type="file" accept=".xlsx,.xls" onChange={handleFileChange} style={{ display: "none" }} id="excel-upload" />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => document.getElementById("excel-upload").click()}
+            startIcon={<FaFileExcel color={TOKEN.green} size={14} />}
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              width: "100%",
-              mb: 1,
+              borderColor: TOKEN.green,
+              color: TOKEN.green,
+              fontSize: "12px",
+              fontWeight: 600,
+              height: 38,
+              px: 2,
+              textTransform: "none",
+              maxWidth: 200,
+              overflow: "hidden",
+              "&:hover": { backgroundColor: TOKEN.greenSoft },
             }}
           >
-            {/* LEFT SIDE — LABEL */}
-            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-              Department Section:
-            </Typography>
+            {selectedFile ? selectedFile.name.substring(0, 18) + "…" : "Choose Excel"}
+          </Button>
 
-            {/* RIGHT SIDE — COR BUTTON */}
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleImport}
+            sx={{
+              backgroundColor: TOKEN.accent,
+              color: "#fff",
+              fontSize: "12px",
+              fontWeight: 700,
+              height: 38,
+              px: 2.5,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: TOKEN.accentHover, boxShadow: "none" },
+            }}
+          >
+            Upload
+          </Button>
+        </Stack>
+      </Box>
+
+      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+      <br />
+      <br />
+
+      {/* ── MAIN TWO-PANEL LAYOUT ── */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", xl: "1fr 1fr" },
+          gap: 3,
+        }}
+      >
+        {/* ═══════ LEFT PANEL — Available Courses ═══════ */}
+        <Card sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+          <SectionHeader headerColor={headerColor}>Available Courses</SectionHeader>
+
+          {/* Student search */}
+          <Box sx={{ p: 2, borderBottom: `1px solid ${TOKEN.border}`, backgroundColor: "#fafafa" }}>
+            {/* Student name badge */}
+            {first_name && (
+              <Box
+                sx={{
+                  mb: 1.5,
+                  p: 1.5,
+                  backgroundColor: TOKEN.accentSoft,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: headerColor,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: "14px" }}>
+                    {first_name?.[0]}{last_name?.[0]}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 700, textAlign: "left", fontSize: "13px", color: headerColor, lineHeight: 1.2 }}>
+                    Name: {first_name} {middle_name} {last_name}
+                  </Typography>
+                  <Typography sx={{ fontSize: "11px", color: TOKEN.textMid }}>
+                    {courseCode || courseDescription || sectionDescription
+                      ? isenrolled
+                        ? `(${courseCode}) ${courseDescription} · ${sectionDescription}`
+                        : "Not currently enrolled"
+                      : "—"}
+                  </Typography>
+                </Box>
+                {isenrolled && (
+                  <Chip
+                    label="Enrolled"
+                    size="small"
+                    sx={{ ml: "auto", backgroundColor: TOKEN.green, color: "#fff", fontWeight: 700, fontSize: "10px" }}
+                  />
+                )}
+              </Box>
+            )}
+
+            <Stack spacing={1}>
+              <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Student Number:
+              </Typography>
+              <TextField
+                label="Student Number"
+                fullWidth
+                size="small"
+                value={studentNumber}
+                onChange={(e) => setStudentNumber(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSearchStudent(); }}
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px" } }}
+              />
+              <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Search by Course Code or Description:
+              </Typography>
+              <TextField
+                label="Search by Course Code or Description"
+                size="small"
+                fullWidth
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px", marginBottom: 3 } }}
+              />
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleSearchStudent}
+                sx={{
+                  backgroundColor: headerColor,
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  mt: 3,
+                  textTransform: "none",
+                  height: 38,
+                  boxShadow: "none",
+                }}
+              >
+                Search Student
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Courses table */}
+          <Box sx={{ overflowX: "auto" }}>
+            <Table size="small" sx={{ minWidth: 520 }}>
+              <TableHead sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                <TableRow>
+                  {["Code", "Description", "Units", "Prerequisites", "Enrolled", "Add Subject"].map((h) => (
+                    <StyledTh key={h} headerColor={headerColor}>{h}</StyledTh>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {courses
+                  .filter((c) => {
+                    const text = searchQuery.toLowerCase();
+                    return c.course_code.toLowerCase().includes(text) || c.course_description.toLowerCase().includes(text);
+                  })
+                  .map((c) => (
+                    <TableRow key={c.course_id} sx={{ ...getCourseRowSx(c), transition: "background-color .12s" }}>
+                      <StyledTd sx={{ fontWeight: 700, whiteSpace: "nowrap", border: `1px solid ${borderColor}`, textAlign: "center" }}>{c.course_code}</StyledTd>
+                      <StyledTd sx={{ textAlign: "left", px: 1.5, maxWidth: 180, border: `1px solid ${borderColor}` }}>{c.course_description}</StyledTd>
+                      <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{c.course_unit}</StyledTd>
+                      <StyledTd sx={{ fontSize: "11px", color: TOKEN.textMid, border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                        {c.prereq ? c.prereq.split(",").map((p) => p.trim()).join(", ") : "—"}
+                      </StyledTd>
+                      <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                        <Chip
+                          label={subjectCounts[c.course_id] || 0}
+                          size="small"
+                          sx={{ fontSize: "11px", height: 20, backgroundColor: TOKEN.accentSoft, color: TOKEN.accent, fontWeight: 700 }}
+                        />
+                      </StyledTd>
+                      <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                        {!isEnrolledCourse(c.course_id) ? (
+                          <Button
+                            variant="contained"
+                            onClick={() => handleEnrollClick(c)}
+                            disabled={!userId}
+                            sx={{
+                              fontSize: "14px",
+                              fontWeight: 600,
+                              textTransform: "none",
+                              height: 36,
+                              px: 2,
+                            }}
+                          >
+                            <AddIcon sx={{ fontSize: 18, mr: 0.5 }} />
+                            Enroll
+                          </Button>
+                        ) : (
+                          <Chip
+                            label="✓ Enrolled"
+                            sx={{ fontSize: "13px", height: 32, px: 1, backgroundColor: TOKEN.green, color: "#fff", fontWeight: 600 }}
+                          />
+                        )}
+                      </StyledTd>
+                    </TableRow>
+                  ))}
+                {courses.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ textAlign: "center", color: TOKEN.textLight, py: 4, fontSize: "13px" }}>
+                      No courses available. Search for a student to load courses.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Box>
+        </Card>
+
+        {/* ═══════ RIGHT PANEL — Enrolled Courses ═══════ */}
+        <Card sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 1.5, backgroundColor: headerColor }}>
+            <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: "13px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Enrolled Courses
+            </Typography>
             <Button
-              style={{
-                background: `${mainButtonColor}`,
-                color: "white",
-                fontWeight: "bold",
-              }}
+              size="small"
               onClick={() => {
-                if (studentNumber) {
-                  localStorage.setItem("studentNumberForCOR", studentNumber);
-                  window.open("/search_cor_for_college", "_blank");
-                } else {
-                  setSnack({
-                    open: true,
-                    message: "Please select or provide a student number first",
-                    severity: "warning",
-                  });
-                }
+                if (studentNumber) { localStorage.setItem("studentNumberForCOR", studentNumber); window.open("/search_cor_for_college", "_blank"); }
+                else { setSnack({ open: true, message: "Please select or provide a student number first", severity: "warning" }); }
+              }}
+              sx={{
+                backgroundColor: TOKEN.gold,
+                color: headerColor,
+                fontWeight: 800,
+                fontSize: "11px",
+                textTransform: "none",
+                height: 28,
+                px: 1.5,
+                boxShadow: "none",
+                "&:hover": { backgroundColor: "#d97706", boxShadow: "none" },
               }}
             >
-              COR
+              📄 COR
             </Button>
           </Box>
 
-          {/* Department Sections Dropdown */}
-          {loading ? (
-            <Box sx={{ width: "100%", mt: 2 }}>
-              <LinearWithValueLabel />
-            </Box>
-          ) : error ? (
-            <Typography color="error">{error}</Typography>
-          ) : (
-            <TextField
-              select
-              fullWidth
-              sx={{ width: 830 }}
-              value={selectedSection}
-              onChange={handleSectionChange}
-              variant="outlined"
-              margin="normal"
-              label="Select a Department Section"
-            >
-              <MenuItem value="">
-                <em>Select a department section</em>
-              </MenuItem>
-              {sections.map((section) => (
-                <MenuItem
-                  key={section.department_and_program_section_id}
-                  value={section.department_and_program_section_id}
-                >
-                  (<strong>{section.program_code}</strong>) -{" "}
-                  {section.program_description} {section.major || ""} -{" "}
-                  {section.description}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
+          {/* Section picker */}
+          <Box sx={{ p: 2, borderBottom: `1px solid ${TOKEN.border}`, backgroundColor: "#fafafa" }}>
+            <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Department Section
+            </Typography>
+            {loading ? (
+              <Box sx={{ width: "100%", mt: 1 }}><LinearWithValueLabel /></Box>
+            ) : error ? (
+              <Typography color="error" sx={{ fontSize: "12px" }}>{error}</Typography>
+            ) : (
+              <TextField
+                select fullWidth value={selectedSection} onChange={handleSectionChange}
+                size="small" label="Select a Department Section"
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px" } }}
+              >
+                <MenuItem value=""><em>Select a department section</em></MenuItem>
+                {sections.map((section) => (
+                  <MenuItem key={section.department_and_program_section_id} value={section.department_and_program_section_id} sx={{ fontSize: "13px" }}>
+                    <strong>({section.program_code})</strong>&nbsp;{section.program_description} {section.major || ""} — {section.description}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
 
-          <Typography variant="h6">Year Level Button</Typography>
-          <Box sx={{ mb: 2 }}>
-            <Box display="flex" gap={2} mt={2}>
+            {/* Year level / bulk buttons */}
+            <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mt: 1.5, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Bulk Enroll by Year Level
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
               {yearLevel.map((year_level, index) => (
                 <Button
                   key={index}
                   variant="contained"
-                  color="success"
                   disabled={disableYearButtons || isBulkEnrollDisabled}
-                  onClick={() =>
-                    handleBulkEnrollClick(
-                      year_level.year_level_id,
-                      formatSemester(activeSemester),
-                    )
-                  }
+                  onClick={() => handleBulkEnrollClick(year_level.year_level_id, formatSemester(activeSemester))}
                   sx={{
-                    minWidth: 125,
-                    fontWeight: "bold",
-                    textAlign: "center",
+                    backgroundColor: "green",
+                    color: "#fff",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    height: 40,
+                    px: 2.5,
+                    lineHeight: 1.2,
+                    boxShadow: "none",
+                    "&.Mui-disabled": { backgroundColor: TOKEN.borderStrong, color: TOKEN.textLight },
                   }}
                 >
-                  {formatYear(year_level.year_level_description)} <br />
-                  {formatSemester(activeSemester)}
+                  {formatYear(year_level.year_level_description)} · {formatSemester(activeSemester)}
                 </Button>
               ))}
 
               <Button
                 variant="contained"
-                color="warning"
-                sx={{ minWidth: 125 }}
                 onClick={deleteAllCart}
+                sx={{
+                  backgroundColor: "#b91c1c",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  height: 40,
+                  px: 2.5,
+                }}
               >
                 Unenroll All
               </Button>
             </Box>
-            <Box
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            ></Box>
           </Box>
 
-          <Typography variant="h6" gutterBottom>
-            Enrolled Courses
-          </Typography>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  style={{
-                    display: "none",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  Enrolled Subject ID
-                </TableCell>
-                <TableCell
-                  style={{
-                    display: "none",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  Subject ID
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  SUBJECT CODE
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  LEC UNIT
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  LAB UNIT
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  CREDIT UNIT
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  SECTION
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  DAY
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  TIME
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  ROOM
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  FACULTY
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  ENROLLED STUDENTS
-                </TableCell>
-                <TableCell
-                  style={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  Action
-                </TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {enrolled.map((e, idx) => (
-                <TableRow key={idx}>
-                  <TableCell
-                    style={{
-                      display: "none",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.id}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      display: "none",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.course_id}
-                  </TableCell>
-
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.course_code}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.lec_unit}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.lab_unit}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.course_unit}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.program_code}-{e.description}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.day_description}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.school_time_start}-{e.school_time_end}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {e.room_description}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    Prof. {e.lname}
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    ({e.number_of_enrolled})
-                  </TableCell>
-                  <TableCell
-                    style={{
-                      textAlign: "center",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    <Button
-                      style={{ textAlign: "center" }}
-                      variant="contained"
-                      color="error"
-                      size="small"
-                      onClick={() => deleteFromCart(e.id)}
-                    >
-                      Unenroll
-                    </Button>
-                  </TableCell>
+          {/* Enrolled table */}
+          <Box sx={{ overflowX: "auto" }}>
+            <Table size="small" sx={{ minWidth: 700 }}>
+              <TableHead sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                <TableRow>
+                  {["Code", "Lec", "Lab", "Units", "Section", "Day", "Time", "Room", "Faculty", "No.", "Remove Subject"].map((h) => (
+                    <StyledTh key={h} headerColor={headerColor}>{h}</StyledTh>
+                  ))}
                 </TableRow>
-              ))}
-              <TableRow>
-                <TableCell
-                  colSpan={1}
-                  sx={{
-                    textAlign: "center",
-                    fontWeight: "600",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  Total Unit
-                </TableCell>
-
-                <TableCell
-                  colSpan={2}
-                  sx={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {enrolled.reduce(
-                    (sum, item) => sum + (parseFloat(item.course_unit) || 0),
-                    0,
-                  ) +
-                    enrolled.reduce(
-                      (sum, item) => sum + (parseFloat(item.lab_unit) || 0),
-                      0,
-                    )}
-                </TableCell>
-
-                {/* Spacer */}
-                <TableCell
-                  colSpan={7}
-                  sx={{ border: `1px solid ${borderColor}` }}
-                />
-
-                {/* ACTION CELL — must fit remaining columns */}
-                <TableCell
-                  colSpan={1}
-                  sx={{
-                    textAlign: "center",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  <Button
-                    variant="contained"
-                    color="error"
-                    size="small"
-                    onClick={deleteAllCart}
+              </TableHead>
+              <TableBody>
+                {enrolled.map((e, idx) => (
+                  <TableRow
+                    key={idx}
+                    sx={{
+                      "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
+                      "&:hover": { backgroundColor: TOKEN.accentSoft },
+                      transition: "background-color .1s",
+                    }}
                   >
-                    Unenroll All
-                  </Button>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </Box>
+                    <StyledTd sx={{ fontWeight: 700, whiteSpace: "nowrap", color: headerColor, border: `1px solid ${borderColor}` }}>{e.course_code}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.lec_unit}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.lab_unit}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.course_unit}</StyledTd>
+                    <StyledTd sx={{ whiteSpace: "nowrap", border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.program_code}-{e.description}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.day_description}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.school_time_start}–{e.school_time_end}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.room_description}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>Prof. {e.lname}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                      <Chip
+                        label={e.number_of_enrolled}
+                        size="small"
+                        sx={{ fontSize: "10px", height: 20, backgroundColor: TOKEN.accentSoft, color: TOKEN.accent, fontWeight: 700 }}
+                      />
+                    </StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                      <Button
+                        variant="contained"
+                        onClick={() => deleteFromCart(e.id)}
+                        sx={{
+                          backgroundColor: "#b91c1c",
+                          color: "#fff",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          textTransform: "none",
+                          height: 36,
+                          px: 2,
+                        }}
+                      >
+                        <DeleteIcon sx={{ fontSize: 18, mr: 0.5 }} />
+                        Delete
+                      </Button>
+                    </StyledTd>
+                  </TableRow>
+                ))}
+                {enrolled.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={11} sx={{ textAlign: "center", color: TOKEN.textLight, py: 4, fontSize: "13px" }}>
+                      No subjects enrolled yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Box>
+
+          {/* Total row */}
+          {enrolled.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                px: 2.5,
+                py: 1.25,
+                borderTop: `2px solid ${TOKEN.border}`,
+                backgroundColor: "#fafafa",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: "13px", color: headerColor }}>
+                  Total Units:
+                </Typography>
+                <Chip
+                  label={totalUnits}
+                  sx={{ backgroundColor: headerColor, color: "#fff", fontWeight: 800, fontSize: "13px", height: 26 }}
+                />
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={deleteAllCart}
+                sx={{
+                  borderColor: TOKEN.red,
+                  color: TOKEN.red,
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  textTransform: "none",
+                  height: 30,
+                  "&:hover": { backgroundColor: TOKEN.redSoft },
+                }}
+              >
+                Unenroll All
+              </Button>
+            </Box>
+          )}
+        </Card>
       </Box>
 
-      {/* Confirm modal for enrolling courses with prerequisites */}
+      {/* ── CONFIRM DIALOG ── */}
       <Dialog
         open={confirmDialogOpen}
         onClose={handleConfirmDialogClose}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { boxShadow: TOKEN.shadowMd } }}
       >
-        <DialogTitle>Confirm Enrollment</DialogTitle>
-        <DialogContent>
-          <DialogContentText style={{ whiteSpace: "pre-line" }}>
+        <DialogTitle
+          sx={{
+            backgroundColor: headerColor,
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: "15px",
+            py: 2,
+          }}
+        >
+          ⚠ Confirm Enrollment
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}>
+          <DialogContentText sx={{ whiteSpace: "pre-line", color: TOKEN.text, fontSize: "13px", lineHeight: 1.7 }}>
             {confirmDialogMessage}
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button
-            color="error"
             variant="outlined"
-
-
-            onClick={handleConfirmDialogClose}>Cancel</Button>
-          <Button
-            onClick={handleConfirmDialogProceed}
-            variant="contained"
+            onClick={handleConfirmDialogClose}
+            sx={{
+              borderColor: TOKEN.red,
+              color: TOKEN.red,
+              fontWeight: 700,
+              textTransform: "none",
+              "&:hover": { backgroundColor: TOKEN.redSoft },
+            }}
           >
-            Continue
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDialogProceed}
+            sx={{
+              backgroundColor: TOKEN.accent,
+              color: "#fff",
+              fontWeight: 700,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: TOKEN.accentHover, boxShadow: "none" },
+            }}
+          >
+            Yes, Continue
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* ── SNACKBAR ── */}
       <Snackbar
         open={snack.open}
         autoHideDuration={3000}
@@ -1950,7 +1229,7 @@ const CourseTaggingForSummerCollege = () => {
         <Alert
           severity={snack.severity}
           onClose={() => setSnack({ ...snack, open: false })}
-          sx={{ width: "100%" }}
+          sx={{ width: "100%", fontWeight: 600 }}
         >
           {snack.message}
         </Alert>

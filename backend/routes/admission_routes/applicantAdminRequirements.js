@@ -51,6 +51,74 @@ router.use((err, req, res, next) => {
   next(err);
 });
 
+const applicantAuditLabel = (applicant) => {
+  const applicantName = [
+    applicant?.last_name,
+    applicant?.first_name,
+    applicant?.middle_name,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    applicant?.applicant_number ||
+    applicantName ||
+    applicant?.emailAddress ||
+    `person_id ${applicant?.person_id || "unknown"}`
+  );
+};
+
+
+const insertRequirementAuditLog = async ({
+  actorId,
+  actorRole,
+  message,
+  severity = "INFO",
+}) => {
+  await insertAuditLogAdmission({
+    actorId: actorId || "unknown",
+    role: actorRole || "registrar",
+    action: "APPLICANT_REQUIREMENTS",
+    severity,
+    message,
+  });
+};
+
+const formatAuditActorRole = (role) => {
+  const safeRole = String(role || "registrar").trim();
+  if (!safeRole) return "Registrar";
+
+  return safeRole
+    .split(/[\s_-]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
+
+const getApplicantDocumentStatusInfo = async (applicantNumber) => {
+  const [rows] = await db.query(
+    `
+    SELECT
+      ant.applicant_number,
+      pt.person_id,
+      pt.first_name,
+      pt.middle_name,
+      pt.last_name,
+      pt.emailAddress,
+      ru.document_status
+    FROM applicant_numbering_table ant
+    INNER JOIN person_table pt ON pt.person_id = ant.person_id
+    LEFT JOIN requirement_uploads ru ON ru.person_id = pt.person_id
+    WHERE ant.applicant_number = ?
+    ORDER BY ru.upload_id DESC
+    LIMIT 1
+    `,
+    [applicantNumber],
+  );
+
+  return rows?.[0] || null;
+};
+
 
 const getShortLabel = async (desc) => {
   try {

@@ -59,11 +59,11 @@ const applicantDocsDir = path.join(
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://192.168.50.53:5173",
+  "http://192.168.50.43:5173",
   "http://192.168.50.55:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.50.53:5173",
+  "http://192.168.50.43:5173",
   "http://192.168.1.9:5173",
 ];
 
@@ -760,123 +760,7 @@ app.put("/uploads/status/:upload_id", async (req, res) => {
   }
 });
 
-app.get("/api/document_status/:applicant_number", async (req, res) => {
-  const { applicant_number } = req.params;
 
-  try {
-    const [rows] = await db.query(
-      `
-      SELECT
-        COALESCE(ru.document_status, 'On process') AS document_status,
-        ua.email AS evaluator_email,
-        pr.lname AS evaluator_lname,
-        pr.fname AS evaluator_fname,
-        pr.mname AS evaluator_mname,
-        ru.created_at
-      FROM applicant_numbering_table ant
-      INNER JOIN person_table pt ON pt.person_id = ant.person_id
-      LEFT JOIN requirement_uploads ru ON ru.person_id = pt.person_id
-      LEFT JOIN enrollment.user_accounts ua ON ua.person_id = ru.last_updated_by
-      LEFT JOIN enrollment.prof_table pr ON pr.person_id = ua.person_id
-      WHERE ant.applicant_number = ?
-      ORDER BY ru.upload_id DESC
-      LIMIT 1
-      `,
-      [applicant_number],
-    );
-
-    const row = rows?.[0] || {};
-    res.json({
-      document_status: row.document_status || "On process",
-      evaluator: row.evaluator_email
-        ? {
-          evaluator_email: row.evaluator_email,
-          evaluator_lname: row.evaluator_lname,
-          evaluator_fname: row.evaluator_fname,
-          evaluator_mname: row.evaluator_mname,
-          created_at: row.created_at,
-        }
-        : null,
-    });
-  } catch (err) {
-    console.error("Error fetching document status:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-app.put("/api/document_status/:applicant_number", async (req, res) => {
-  const { applicant_number } = req.params;
-  const {
-    document_status,
-    user_id,
-    audit_actor_id,
-    audit_actor_role,
-  } = req.body;
-
-  if (!document_status || !user_id) {
-    return res.status(400).json({
-      message: "document_status and user_id are required",
-    });
-  }
-
-  try {
-    const applicantBefore = await getApplicantDocumentStatusInfo(applicant_number);
-
-    if (!applicantBefore) {
-      return res.status(404).json({ message: "Applicant not found" });
-    }
-
-    let statusSyncSql = "";
-    const updateParams = [document_status, user_id];
-
-    if (document_status === "Documents Verified & ECAT") {
-      statusSyncSql = ", ru.status = ?";
-      updateParams.push(1);
-    } else if (document_status === "Disapproved / Program Closed") {
-      statusSyncSql = ", ru.status = ?";
-      updateParams.push(2);
-    }
-
-    updateParams.push(applicant_number);
-
-    const [result] = await db.query(
-      `
-      UPDATE requirement_uploads ru
-      INNER JOIN applicant_numbering_table ant ON ant.person_id = ru.person_id
-      SET ru.document_status = ?, ru.last_updated_by = ?${statusSyncSql}
-      WHERE ant.applicant_number = ?
-      `,
-      updateParams,
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Applicant uploads not found" });
-    }
-
-    if (
-      String(applicantBefore.document_status || "On process") !==
-      String(document_status || "On process")
-    ) {
-      const safeActor = audit_actor_id || user_id || "unknown";
-      const roleLabel = formatAuditActorRole(audit_actor_role || "registrar");
-
-      await insertRequirementAuditLog({
-        actorId: safeActor,
-        actorRole: audit_actor_role || "registrar",
-        message: `${roleLabel} (${safeActor}) changed overall document status of Applicant (${applicantAuditLabel(applicantBefore)}) from ${applicantBefore.document_status || "On process"} to ${document_status}.`,
-      });
-    }
-
-    res.json({
-      success: true,
-      document_status,
-      message: "Document status updated successfully",
-    });
-  } catch (err) {
-    console.error("Error updating document status:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
 
 // Update submitted_documents by upload_id (apply to ALL docs of that applicant)
 app.put("/api/submitted-documents/:upload_id", async (req, res) => {
@@ -2105,15 +1989,15 @@ app.get("/api/person_with_applicant/:id", async (req, res) => {
     // get latest document status + evaluator
     const [rows] = await db.query(
       `
-      SELECT
-        ru.document_status    AS upload_document_status,
-        rt.id                 AS requirement_id,
-        ua.email              AS evaluator_email,
-        ua.role               AS evaluator_role,
-        ua.first_name              AS evaluator_fname,
-        ua.middle_name              AS evaluator_mname,
-        ua.last_name              AS evaluator_lname,
-        ru.created_at,
+    SELECT
+  ru.document_status AS upload_document_status,
+  ua.email AS evaluator_email,
+
+  COALESCE(pr.lname, ua.last_name) AS evaluator_lname,
+  COALESCE(pr.fname, ua.first_name) AS evaluator_fname,
+  COALESCE(pr.mname, ua.middle_name) AS evaluator_mname,
+
+  ru.created_at,
         ru.last_updated_by
       FROM requirement_uploads AS ru
       LEFT JOIN requirements_table AS rt ON ru.requirements_id = rt.id
@@ -2784,30 +2668,6 @@ const getRequirementUploadAuditInfo = async (uploadId) => {
     LIMIT 1
     `,
     [uploadId],
-  );
-
-  return rows?.[0] || null;
-};
-
-const getApplicantDocumentStatusInfo = async (applicantNumber) => {
-  const [rows] = await db.query(
-    `
-    SELECT
-      ant.applicant_number,
-      pt.person_id,
-      pt.first_name,
-      pt.middle_name,
-      pt.last_name,
-      pt.emailAddress,
-      ru.document_status
-    FROM applicant_numbering_table ant
-    INNER JOIN person_table pt ON pt.person_id = ant.person_id
-    LEFT JOIN requirement_uploads ru ON ru.person_id = pt.person_id
-    WHERE ant.applicant_number = ?
-    ORDER BY ru.upload_id DESC
-    LIMIT 1
-    `,
-    [applicantNumber],
   );
 
   return rows?.[0] || null;

@@ -22,6 +22,7 @@ import {
   useMediaQuery,
   useTheme,
   Stack,
+  Chip,
 } from "@mui/material";
 import LinearWithValueLabel from "../components/LinearWithValueLabel";
 import { Snackbar, Alert } from "@mui/material";
@@ -29,20 +30,124 @@ import { FaFileExcel } from "react-icons/fa";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from '@mui/icons-material/Add';
 
+/* ─── Design tokens ─── */
+const TOKEN = {
+  navyLight: "#1a3260",
+  accent: "#2563eb",
+  accentHover: "#1d4ed8",
+  accentSoft: "#eff6ff",
+  gold: "#f59e0b",
+  green: "#16a34a",
+  greenSoft: "#f0fdf4",
+  red: "#dc2626",
+  redSoft: "#fef2f2",
+  orange: "#ea580c",
+  orangeSoft: "#fff7ed",
+  bg: "#f4f6fb",
+  surface: "#ffffff",
+  border: "#e2e8f0",
+  borderStrong: "#cbd5e1",
+  text: "#0f172a",
+  textMid: "#475569",
+  textLight: "#94a3b8",
+  shadow: "0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06)",
+  shadowMd: "0 4px 24px rgba(0,0,0,.10)",
+};
+
+/* ─── Tiny helpers ─── */
+const Card = ({ children, sx = {} }) => (
+  <Box
+    sx={{
+      backgroundColor: TOKEN.surface,
+      boxShadow: TOKEN.shadow,
+      overflow: "hidden",
+      ...sx,
+    }}
+  >
+    {children}
+  </Box>
+);
+
+const SectionHeader = ({ children, headerColor, sx = {} }) => (
+  <Box
+    sx={{
+      px: 2.5,
+      py: 1.5,
+      backgroundColor: headerColor,
+      ...sx,
+    }}
+  >
+    <Typography
+      sx={{
+        color: "#fff",
+        fontWeight: 700,
+        fontSize: "13px",
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+      }}
+    >
+      {children}
+    </Typography>
+  </Box>
+);
+
+const StyledTh = ({ children, headerColor, style = {} }) => (
+  <TableCell
+    sx={{
+      backgroundColor: headerColor,
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: "11px",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+      textAlign: "center",
+      whiteSpace: "nowrap",
+      py: 1.25,
+      px: 1,
+      border: "none",
+      borderRight: `1px solid rgba(255,255,255,0.1)`,
+      "&:last-child": { borderRight: "none" },
+      ...style,
+    }}
+  >
+    {children}
+  </TableCell>
+);
+
+const StyledTd = ({ children, sx = {}, ...rest }) => (
+  <TableCell
+    sx={{
+      fontSize: "12px",
+      textAlign: "center",
+      py: 0.9,
+      px: 1,
+      borderBottom: `1px solid ${TOKEN.border}`,
+      color: TOKEN.text,
+      ...sx,
+    }}
+    {...rest}
+  >
+    {children}
+  </TableCell>
+);
+
+/* ─── Main component ─── */
 const CourseTagging = () => {
   const settings = useContext(SettingsContext);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
+  /* ── settings state (unchanged) ── */
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
   const [subButtonColor, setSubButtonColor] = useState("#ffffff");
   const [stepperColor, setStepperColor] = useState("#000000");
-
   const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [shortTerm, setShortTerm] = useState("");
@@ -62,6 +167,10 @@ const CourseTagging = () => {
     if (settings.campus_address) setCampusAddress(settings.campus_address);
   }, [settings]);
 
+  /* derived header color from settings */
+  const headerColor = settings?.header_color || "#1976d2";
+
+  /* ── all original state (unchanged) ── */
   const [data, setdata] = useState([]);
   const [currentDate, setCurrentDate] = useState("");
   const [personID, setPersonID] = useState("");
@@ -75,6 +184,7 @@ const CourseTagging = () => {
   const [canDelete, setCanDelete] = useState(false);
   const pageId = 17;
   const [employeeID, setEmployeeID] = useState("");
+
   const auditConfig = {
     headers: {
       "x-audit-actor-id":
@@ -96,11 +206,8 @@ const CourseTagging = () => {
       setUserRole(storedRole);
       setUserID(storedID);
       setEmployeeID(storedEmployeeID);
-      if (storedRole === "registrar") {
-        checkAccess(storedEmployeeID);
-      } else {
-        window.location.href = "/login";
-      }
+      if (storedRole === "registrar") checkAccess(storedEmployeeID);
+      else window.location.href = "/login";
     } else {
       window.location.href = "/login";
     }
@@ -140,7 +247,7 @@ const CourseTagging = () => {
       const minutes = String(now.getMinutes()).padStart(2, "0");
       const seconds = String(now.getSeconds()).padStart(2, "0");
       const ampm = now.getHours() >= 12 ? "PM" : "AM";
-      setCurrentDate(`${month} ${day}, ${year} ${hours}:${minutes}:${seconds} ${ampm}`);
+      setCurrentDate(`${month}/${day}/${year} ${hours}:${minutes}:${seconds} ${ampm}`);
     };
     updateDate();
     const interval = setInterval(updateDate, 1000);
@@ -178,6 +285,7 @@ const CourseTagging = () => {
   const [pendingAction, setPendingAction] = useState(null);
   const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
 
+  /* ── all original logic (unchanged) ── */
   const fetchSubjectCounts = async (sectionId) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/subject-enrollment-count`, { params: { sectionId } });
@@ -384,8 +492,8 @@ const CourseTagging = () => {
   const getCourseRowSx = (course) => {
     const status = prereqMap[course.course_id];
     if (!status) return {};
-    if (!status.hasPrereq || status.allowed) return { backgroundColor: "#e6ffe6" };
-    return { backgroundColor: "#ffeacc" };
+    if (!status.hasPrereq || status.allowed) return { backgroundColor: TOKEN.greenSoft, "&:hover": { backgroundColor: "#dcfce7" } };
+    return { backgroundColor: TOKEN.orangeSoft, "&:hover": { backgroundColor: "#fed7aa" } };
   };
 
   const handleEnrollClick = async (course) => {
@@ -413,11 +521,8 @@ const CourseTagging = () => {
     const balanceWarning = getBalanceWarningMessage(await checkStudentBalance(userId));
     const coursesWithPrereq = newCourses.filter((c) => hasCoursePrereq(c));
     if (coursesWithPrereq.length === 0) {
-      if (balanceWarning) {
-        setPendingAction({ type: "bulk", yearLevelId }); setConfirmDialogMessage(balanceWarning); setConfirmDialogOpen(true);
-      } else {
-        await addAllToCart(yearLevelId);
-      }
+      if (balanceWarning) { setPendingAction({ type: "bulk", yearLevelId }); setConfirmDialogMessage(balanceWarning); setConfirmDialogOpen(true); }
+      else { await addAllToCart(yearLevelId); }
       return;
     }
     const listText = coursesWithPrereq.map((c) => { const status = prereqMap[c.course_id]; let tag = status ? (status.allowed ? " (qualified)" : " (NOT qualified)") : ""; return `• ${c.course_code}${tag}`; }).join("\n");
@@ -452,264 +557,670 @@ const CourseTagging = () => {
     return () => clearTimeout(delayDebounce);
   }, [studentNumber]);
 
+  /* ── total units ── */
+  const totalUnits = enrolled.reduce((sum, item) => sum + (parseFloat(item.course_unit) || 0), 0)
+    + enrolled.reduce((sum, item) => sum + (parseFloat(item.lab_unit) || 0), 0);
+
   if (loading || hasAccess === null) return <LoadingOverlay open={loading} message="Loading..." />;
   if (!hasAccess) return <Unauthorized />;
 
+  /* ════════════════════════════════════════════════════
+     RENDER
+  ════════════════════════════════════════════════════ */
   return (
-    <Box sx={{ overflowY: "auto", backgroundColor: "transparent", mt: 1, p: { xs: 1, sm: 2 } }}>
-      {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 2, px: 1 }}>
-        <Typography variant="h4" sx={{ fontWeight: "bold", color: titleColor, fontSize: { xs: "22px", sm: "28px", md: "36px" } }}>
-          COURSE TAGGING PANEL
-        </Typography>
-      </Box>
-
-      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
-      <br />
-
-      {/* Top Action Bar */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1, flexWrap: "wrap", gap: 2, px: 1 }}>
-        {/* Download Template */}
-        <button
-          onClick={() => { window.location.href = `${API_BASE_URL}/grade_report_template`; }}
-          style={{ padding: "5px 16px", border: "2px solid black", backgroundColor: "#f0f0f0", color: "black", borderRadius: "5px", cursor: "pointer", fontSize: "13px", fontWeight: "bold", height: "40px", display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}
+    <Box
+      sx={{
+        height: "calc(100vh - 150px)",
+        overflowY: "auto",
+        paddingRight: 1,
+        backgroundColor: "transparent",
+        mt: 1,
+        padding: 2,
+      }}
+    >
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+      >
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: titleColor,
+            fontSize: "36px",
+          }}
         >
-          📥 Download Template
-        </button>
+          COURSE TAGGING
+        </Typography>
 
-        {/* Excel Upload Controls */}
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
-          <input type="file" accept=".xlsx,.xls" onChange={handleFileChange} style={{ display: "none" }} id="excel-upload" />
-          <button
-            onClick={() => document.getElementById("excel-upload").click()}
-            style={{ border: "2px solid green", backgroundColor: "#f0fdf4", color: "green", borderRadius: "5px", cursor: "pointer", fontSize: "13px", fontWeight: "bold", height: "44px", display: "flex", alignItems: "center", gap: "8px", justifyContent: "center", userSelect: "none", padding: "0 16px", whiteSpace: "nowrap" }}
-            type="button"
+        {/* Upload controls */}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => { window.location.href = `${API_BASE_URL}/grade_report_template`; }}
+            sx={{
+              height: 40,
+              mb: 2,
+              color: "black",
+              border: "2px solid black",
+              backgroundColor: "#f0f0f0",
+              textTransform: "none",
+              fontWeight: "bold",
+              minWidth: 165,
+            }}
           >
-            <FaFileExcel size={18} />
-            {selectedFile ? selectedFile.name.substring(0, 20) + "..." : "Choose Excel"}
-          </button>
-          <Button variant="contained" sx={{ background: mainButtonColor, color: "white", height: "44px", fontWeight: "bold", border: "2px solid black", whiteSpace: "nowrap" }} onClick={handleImport}>
+            📥 Download Template
+          </Button>
+
+          <input type="file" accept=".xlsx,.xls" onChange={handleFileChange} style={{ display: "none" }} id="excel-upload" />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => document.getElementById("excel-upload").click()}
+            startIcon={<FaFileExcel color={TOKEN.green} size={14} />}
+            sx={{
+              borderColor: TOKEN.green,
+              color: TOKEN.green,
+              fontSize: "12px",
+              fontWeight: 600,
+              height: 38,
+              px: 2,
+              textTransform: "none",
+              maxWidth: 200,
+              overflow: "hidden",
+              "&:hover": { backgroundColor: TOKEN.greenSoft },
+            }}
+          >
+            {selectedFile ? selectedFile.name.substring(0, 18) + "…" : "Choose Excel"}
+          </Button>
+
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleImport}
+            sx={{
+              backgroundColor: TOKEN.accent,
+              color: "#fff",
+              fontSize: "12px",
+              fontWeight: 700,
+              height: 38,
+              px: 2.5,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: TOKEN.accentHover, boxShadow: "none" },
+            }}
+          >
             Upload
           </Button>
         </Stack>
+
       </Box>
 
-      {/* Select Department */}
-      <Typography variant="h5" fontWeight="bold" sx={{ color: subtitleColor, fontSize: { xs: "24px", sm: "32px", md: "42px" } }} textAlign="center" gutterBottom>
-        Select Department
-      </Typography>
-      <Box sx={{ backgroundColor: "white", p: 2, mb: 1 }}>
-        <Grid container spacing={1} gap={1} justifyContent="center" textAlign="center">
-          {departments.map((dept, index) => (
-            <Grid key={dept.dprtmnt_id}>
+
+      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+
+      <br />
+      <br />
+
+
+
+      {/* ── DEPARTMENT SELECTOR ── */}
+      <Card sx={{ mb: 3, border: `1px solid ${borderColor}`, textAlign: "center" }}>
+        <SectionHeader headerColor={headerColor}>Select Department</SectionHeader>
+
+        <Box
+          sx={{
+            p: 2,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 1,
+            justifyContent: "center", // <-- center items horizontally
+            textAlign: "center",
+          }}
+        >
+          {departments.map((dept) => {
+            const active = selectedDepartment === dept.dprtmnt_id;
+
+            return (
               <Button
-                variant="contained"
-                value={dept.dprtmnt_id}
+                key={dept.dprtmnt_id}
+                variant={active ? "contained" : "outlined"}
                 onClick={() => handleSelect(dept.dprtmnt_id)}
                 sx={{
-                  mt: 1, width: "auto", height: 50, fontWeight: "bold",
-                  backgroundColor: selectedDepartment === dept.dprtmnt_id ? mainButtonColor : "white",
-                  color: selectedDepartment === dept.dprtmnt_id ? "white" : mainButtonColor,
-                  border: `1px solid ${borderColor}`,
-                  "&:hover": { backgroundColor: mainButtonColor, color: "white" },
-                  fontSize: { xs: "11px", sm: "13px" },
-                  whiteSpace: "normal",
-                  wordBreak: "break-word",
-                  lineHeight: 1.3,
-                  py: 0.75,
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  height: 38,
+                  textAlign: "center",
+                  px: 2,
+                  textTransform: "none",
+                  transition: "all .15s",
+                  ...(active
+                    ? {
+                      backgroundColor: headerColor,
+                      color: "#fff",
+                      border: "none",
+                      boxShadow: "0 2px 8px rgba(15,31,61,.25)",
+                      "&:hover": { backgroundColor: TOKEN.navyLight },
+                    }
+                    : {
+                      backgroundColor: "#fff",
+                      color: headerColor,
+                      border: `1px solid ${TOKEN.borderStrong}`,
+                      "&:hover": {
+                        backgroundColor: TOKEN.accentSoft,
+                        borderColor: TOKEN.accent,
+                        color: TOKEN.accent,
+                      },
+                    }),
                 }}
               >
                 {dept.dprtmnt_code}
               </Button>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+            );
+          })}
+        </Box>
+      </Card>
 
-      {/* Main Two-Panel Layout */}
+      {/* ── MAIN TWO-PANEL LAYOUT ── */}
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+          gridTemplateColumns: { xs: "1fr", xl: "1fr 1fr" },
           gap: 3,
-          width: "100%",
         }}
       >
-        {/* LEFT PANEL — Available Courses */}
-        <Box component={Paper} sx={{ backgroundColor: "#f1f1f1", p: { xs: 1.5, sm: 2 }, border: `1px solid ${borderColor}`, overflowX: "auto", width: "100%" }}>
-          {/* Student Info */}
-          <Box mb={2}>
-            <Typography variant="h6" sx={{ fontSize: { xs: "13px", sm: "20px" }, mb: 1 }}>
-              Name: {first_name} {middle_name} {last_name}
-            </Typography>
-            <Typography variant="h6" sx={{ fontSize: { xs: "12px", sm: "20px" }, color: "text.secondary", mb: 1 }}>
-              Dept/Course/Section: {" "}
-              {courseCode || courseDescription || sectionDescription ? (
-                isenrolled ? `(${courseCode}) - ${courseDescription} - ${sectionDescription}` : "Not currently enrolled"
-              ) : "—"}
-            </Typography>
-            <TextField label="Student Number" fullWidth margin="dense" size="small" value={studentNumber} onChange={(e) => setStudentNumber(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSearchStudent(); }} />
-            <TextField label="Search Course (Code or Description)" variant="outlined" fullWidth margin="dense" size="small" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value.toLowerCase())} />
-            <Button variant="contained" color="primary" fullWidth size="small" sx={{ mt: 1 }} onClick={handleSearchStudent}>
-              Search
-            </Button>
+        {/* ═══════ LEFT PANEL — Available Courses ═══════ */}
+        <Card sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+          <SectionHeader headerColor={headerColor}>Available Courses</SectionHeader>
+
+          {/* Student search */}
+          <Box sx={{ p: 2, borderBottom: `1px solid ${TOKEN.border}`, backgroundColor: "#fafafa" }}>
+            {/* Student name badge */}
+            {first_name && (
+              <Box
+                sx={{
+                  mb: 1.5,
+                  p: 1.5,
+                  backgroundColor: TOKEN.accentSoft,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: headerColor,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: "14px" }}>
+                    {first_name?.[0]}{last_name?.[0]}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 700, textAlign: "left", fontSize: "13px", color: headerColor, lineHeight: 1.2 }}>
+                    Name: {first_name} {middle_name} {last_name}
+                  </Typography>
+                  <Typography sx={{ fontSize: "11px", color: TOKEN.textMid }}>
+                    {courseCode || courseDescription || sectionDescription
+                      ? isenrolled
+                        ? `(${courseCode}) ${courseDescription} · ${sectionDescription}`
+                        : "Not currently enrolled"
+                      : "—"}
+                  </Typography>
+                </Box>
+                {isenrolled && (
+                  <Chip
+                    label="Enrolled"
+                    size="small"
+                    sx={{ ml: "auto", backgroundColor: TOKEN.green, color: "#fff", fontWeight: 700, fontSize: "10px" }}
+                  />
+                )}
+              </Box>
+            )}
+
+            <Stack spacing={1}>
+              <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Student Number:
+              </Typography>
+              <TextField
+                label="Student Number"
+                fullWidth
+                size="small"
+                value={studentNumber}
+                onChange={(e) => setStudentNumber(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSearchStudent(); }}
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px" } }}
+              />
+              <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Search by Course Code or Description:
+              </Typography>
+              <TextField
+                label="Search by Course Code or Description"
+                size="small"
+                fullWidth
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px", marginBottom: 3 } }}
+              />
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleSearchStudent}
+                sx={{
+                  backgroundColor: headerColor,
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  mt: 3,
+                  textTransform: "none",
+                  height: 38,
+                  boxShadow: "none",
+
+                }}
+              >
+                Search Student
+              </Button>
+            </Stack>
           </Box>
 
-          <Typography variant="h6" sx={{ fontSize: { xs: "14px", sm: "16px" } }} mt={1} gutterBottom>Available Courses</Typography>
-
+          {/* Courses table */}
           <Box sx={{ overflowX: "auto" }}>
-            <Table size="small" sx={{ minWidth: 500 }}>
-              <TableHead>
+            <Table size="small" sx={{ minWidth: 520 }}>
+              <TableHead sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
                 <TableRow>
-                  {["Course Code", "Description", "Credit Unit", "Prerequisites", "Enrolled Students", "Action"].map((h) => (
-                    <TableCell key={h} style={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap" }}>{h}</TableCell>
+                  {["Code", "Description", "Units", "Prerequisites", "Enrolled", "Add Subject"].map((h) => (
+                    <StyledTh key={h} headerColor={headerColor}>{h}</StyledTh>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {courses.filter((c) => {
-                  const text = searchQuery.toLowerCase();
-                  return c.course_code.toLowerCase().includes(text) || c.course_description.toLowerCase().includes(text);
-                }).map((c) => (
-                  <TableRow key={c.course_id} sx={getCourseRowSx(c)}>
-                    <TableCell style={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>{c.course_code}</TableCell>
-                    <TableCell style={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>{c.course_description}</TableCell>
-                    <TableCell style={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>{c.course_unit}</TableCell>
-                    <TableCell style={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>{c.prereq ? c.prereq.split(",").map(p => p.trim()).join(", ") : "None"}</TableCell>
-                    <TableCell style={{ border: `1px solid ${borderColor}`, textAlign: "center", fontSize: "12px" }}>{subjectCounts[c.course_id] || 0}</TableCell>
-                    <TableCell style={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
-                      {!isEnrolledCourse(c.course_id) ? (
-                        <Button variant="contained" size="small" sx={{ fontSize: "11px", py: 0.3 }} onClick={() => handleEnrollClick(c)} disabled={!userId}>Enroll</Button>
-                      ) : (
-                        <Typography color="textSecondary" sx={{ fontSize: "12px" }}>Enrolled</Typography>
-                      )}
+                {courses
+                  .filter((c) => {
+                    const text = searchQuery.toLowerCase();
+                    return c.course_code.toLowerCase().includes(text) || c.course_description.toLowerCase().includes(text);
+                  })
+                  .map((c) => (
+                    <TableRow
+                      key={c.course_id}
+                      sx={{
+                        ...getCourseRowSx(c),
+                        transition: "background-color .12s",
+                      }}
+                    >
+
+                      <StyledTd sx={{ fontWeight: 700, whiteSpace: "nowrap", border: `1px solid ${borderColor}`, textAlign: "center" }}>{c.course_code}</StyledTd>
+                      <StyledTd sx={{ textAlign: "left", px: 1.5, maxWidth: 180, border: `1px solid ${borderColor}`, textAlign: "center" }}>{c.course_description}</StyledTd>
+                      <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{c.course_unit}</StyledTd>
+                      <StyledTd sx={{ fontSize: "11px", color: TOKEN.textMid, border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                        {c.prereq ? c.prereq.split(",").map((p) => p.trim()).join(", ") : "—"}
+                      </StyledTd>
+                      <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                        <Chip
+                          label={subjectCounts[c.course_id] || 0}
+                          size="small"
+                          sx={{ fontSize: "11px", height: 20, backgroundColor: TOKEN.accentSoft, color: TOKEN.accent, fontWeight: 700 }}
+                        />
+                      </StyledTd>
+                      <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                        {!isEnrolledCourse(c.course_id) ? (
+                          <Button
+                            variant="contained"
+                            onClick={() => handleEnrollClick(c)}
+                            disabled={!userId}
+                            sx={{
+                              fontSize: "14px",
+                              fontWeight: 600,
+                              textTransform: "none",
+                              height: 36,
+                              px: 2,
+
+
+
+                            }}
+                          >
+                            <AddIcon sx={{ fontSize: 18, mr: 0.5 }} />
+                            Enroll
+                          </Button>
+                        ) : (
+                          <Chip
+                            label="✓ Enrolled"
+                            sx={{
+                              fontSize: "13px",
+                              height: 32,
+                              px: 1,
+                              backgroundColor: TOKEN.green,
+                              color: "#fff",
+                              fontWeight: 600,
+                            }}
+                          />
+                        )}
+                      </StyledTd>
+                    </TableRow>
+                  ))}
+                {courses.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ textAlign: "center", color: TOKEN.textLight, py: 4, fontSize: "13px" }}>
+                      No courses available. Search for a student to load courses.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </Box>
-        </Box>
+        </Card>
 
-        {/* RIGHT PANEL — Enrolled Courses */}
-        <Box component={Paper} sx={{ backgroundColor: "#f1f1f1", p: { xs: 1.5, sm: 2 }, border: `1px solid ${borderColor}`, overflowX: "auto", width: "100%" }}>
-          {/* Header row */}
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: "bold", fontSize: { xs: "14px", sm: "16px" } }}>Department Section:</Typography>
+        {/* ═══════ RIGHT PANEL — Enrolled Courses ═══════ */}
+        <Card sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 1.5, backgroundColor: headerColor }}>
+            <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: "13px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Enrolled Courses
+            </Typography>
             <Button
-              style={{ background: mainButtonColor, color: "white", fontWeight: "bold", fontSize: "13px" }}
               size="small"
               onClick={() => {
                 if (studentNumber) { localStorage.setItem("studentNumberForCOR", studentNumber); window.open("/search_cor", "_blank"); }
                 else { setSnack({ open: true, message: "Please select or provide a student number first", severity: "warning" }); }
               }}
+              sx={{
+                backgroundColor: TOKEN.gold,
+                color: headerColor,
+                fontWeight: 800,
+                fontSize: "11px",
+                textTransform: "none",
+                height: 28,
+                px: 1.5,
+                boxShadow: "none",
+                "&:hover": { backgroundColor: "#d97706", boxShadow: "none" },
+              }}
             >
-              COR
+              📄 COR
             </Button>
           </Box>
 
-          {/* Section Dropdown */}
-          {loading ? (
-            <Box sx={{ width: "100%", mt: 2 }}><LinearWithValueLabel /></Box>
-          ) : error ? (
-            <Typography color="error">{error}</Typography>
-          ) : (
-            <TextField
-              select fullWidth value={selectedSection} onChange={handleSectionChange}
-              variant="outlined" margin="dense" size="small" label="Select a Department Section"
-            >
-              <MenuItem value=""><em>Select a department section</em></MenuItem>
-              {sections.map((section) => (
-                <MenuItem key={section.department_and_program_section_id} value={section.department_and_program_section_id}>
-                  (<strong>{section.program_code}</strong>) - {section.program_description} {section.major || ""} - {section.description}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-
-          {/* Year Level Buttons */}
-          <Typography variant="body1" sx={{ fontWeight: "bold", mt: 1, mb: 0.5, fontSize: { xs: "13px", sm: "15px" } }}>Year Level</Typography>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
-            {yearLevel.map((year_level, index) => (
-              <Button
-                key={index} variant="contained" color="success"
-                disabled={disableYearButtons || isBulkEnrollDisabled}
-                onClick={() => handleBulkEnrollClick(year_level.year_level_id, formatSemester(activeSemester))}
-                sx={{ minWidth: { xs: 90, sm: 115 }, fontWeight: "bold", fontSize: { xs: "10px", sm: "12px" }, lineHeight: 1.3 }}
+          {/* Section picker */}
+          <Box sx={{ p: 2, borderBottom: `1px solid ${TOKEN.border}`, backgroundColor: "#fafafa" }}>
+            <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Department Section
+            </Typography>
+            {loading ? (
+              <Box sx={{ width: "100%", mt: 1 }}><LinearWithValueLabel /></Box>
+            ) : error ? (
+              <Typography color="error" sx={{ fontSize: "12px" }}>{error}</Typography>
+            ) : (
+              <TextField
+                select fullWidth value={selectedSection} onChange={handleSectionChange}
+                size="small" label="Select a Department Section"
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px" } }}
               >
-                {formatYear(year_level.year_level_description)}<br />{formatSemester(activeSemester)}
+                <MenuItem value=""><em>Select a department section</em></MenuItem>
+                {sections.map((section) => (
+                  <MenuItem key={section.department_and_program_section_id} value={section.department_and_program_section_id} sx={{ fontSize: "13px" }}>
+                    <strong>({section.program_code})</strong>&nbsp;{section.program_description} {section.major || ""} — {section.description}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+
+            {/* Year level / bulk buttons */}
+            <Typography sx={{ fontSize: "11px", textAlign: "left", fontWeight: 700, color: TOKEN.textMid, mt: 1.5, mb: 0.75, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Bulk Enroll by Year Level
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+              {yearLevel.map((year_level, index) => (
+                <Button
+                  key={index}
+                  variant="contained"
+                  disabled={disableYearButtons || isBulkEnrollDisabled}
+                  onClick={() =>
+                    handleBulkEnrollClick(
+                      year_level.year_level_id,
+                      formatSemester(activeSemester)
+                    )
+                  }
+                  sx={{
+                    backgroundColor: "green",
+                    color: "#fff",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    height: 40,
+                    px: 2.5,
+
+                    lineHeight: 1.2,
+                    boxShadow: "none",
+
+                    "&.Mui-disabled": {
+                      backgroundColor: TOKEN.borderStrong,
+                      color: TOKEN.textLight,
+                    },
+                  }}
+                >
+                  {formatYear(year_level.year_level_description)} ·{" "}
+                  {formatSemester(activeSemester)}
+                </Button>
+              ))}
+
+              <Button
+                variant="contained"
+                onClick={deleteAllCart}
+                sx={{
+                  backgroundColor: "#b91c1c",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  height: 40,
+                  px: 2.5,
+
+                }}
+              >
+                Unenroll All
               </Button>
-            ))}
-            <Button variant="contained" color="warning" sx={{ minWidth: { xs: 90, sm: 115 }, fontSize: { xs: "10px", sm: "12px" } }} onClick={deleteAllCart}>
-              Unenroll All
-            </Button>
+            </Box>
           </Box>
 
-          <Typography variant="h6" sx={{ fontSize: { xs: "14px", sm: "16px" } }} gutterBottom>Enrolled Courses</Typography>
-
+          {/* Enrolled table */}
           <Box sx={{ overflowX: "auto" }}>
             <Table size="small" sx={{ minWidth: 700 }}>
-              <TableHead>
+              <TableHead sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
                 <TableRow>
-                  {["SUBJECT CODE", "COMPONENTS", "LEC UNIT", "LAB UNIT", "CREDIT UNIT", "SECTION", "DAY", "TIME", "ROOM", "FACULTY", "ENROLLED", "ACTION"].map((h) => (
-                    <TableCell key={h} style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px", fontWeight: "bold", whiteSpace: "nowrap" }}>{h}</TableCell>
+                  {["Code", "Comp", "Lec", "Lab", "Units", "Section", "Day", "Time", "Room", "Faculty", "No.", "Remove Subject"].map((h) => (
+                    <StyledTh key={h} headerColor={headerColor}>{h}</StyledTh>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {enrolled.map((e, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.course_code}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.components}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.lec_unit}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.lab_unit}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.course_unit}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.program_code}-{e.description}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.day_description}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px", whiteSpace: "nowrap" }}>{e.school_time_start}-{e.school_time_end}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>{e.room_description}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>Prof. {e.lname}</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "11px" }}>({e.number_of_enrolled})</TableCell>
-                    <TableCell style={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
-                      <Button variant="contained" color="error" size="small" sx={{ fontSize: "10px", py: 0.3 }} onClick={() => deleteFromCart(e.id)}>Unenroll</Button>
-                    </TableCell>
+                  <TableRow
+                    key={idx}
+                    sx={{
+                      "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
+                      "&:hover": { backgroundColor: TOKEN.accentSoft },
+                      transition: "background-color .1s",
+                    }}
+                  >
+                    <StyledTd sx={{ fontWeight: 700, whiteSpace: "nowrap", color: headerColor, border: `1px solid ${borderColor}` }}>{e.course_code}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.components}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.lec_unit}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.lab_unit}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.course_unit}</StyledTd>
+                    <StyledTd sx={{ whiteSpace: "nowrap", border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.program_code}-{e.description}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.day_description}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.school_time_start}–{e.school_time_end}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>{e.room_description}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>Prof. {e.lname}</StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                      <Chip
+                        label={e.number_of_enrolled}
+                        size="small"
+                        sx={{ fontSize: "10px", height: 20, backgroundColor: TOKEN.accentSoft, color: TOKEN.accent, fontWeight: 700 }}
+                      />
+                    </StyledTd>
+                    <StyledTd sx={{ border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                      <Button
+                        variant="contained"
+                        onClick={() => deleteFromCart(e.id)}
+                        sx={{
+                          backgroundColor: "#b91c1c",
+                          color: "#fff",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          textTransform: "none",
+                          height: 36,
+                          px: 2,
+
+
+                        }}
+                      >
+                        <DeleteIcon sx={{ fontSize: 18, mr: 0.5 }} />
+                        Delete
+                      </Button>
+                    </StyledTd>
                   </TableRow>
                 ))}
-                {/* Total Row */}
-                <TableRow>
-                  <TableCell colSpan={1} sx={{ textAlign: "center", fontWeight: "600", border: `1px solid ${borderColor}`, fontSize: "12px" }}>Total Unit</TableCell>
-                  <TableCell colSpan={2} sx={{ textAlign: "center", border: `1px solid ${borderColor}`, fontSize: "12px" }}>
-                    {enrolled.reduce((sum, item) => sum + (parseFloat(item.course_unit) || 0), 0) + enrolled.reduce((sum, item) => sum + (parseFloat(item.lab_unit) || 0), 0)}
-                  </TableCell>
-                  <TableCell colSpan={7} sx={{ border: `1px solid ${borderColor}` }} />
-                  <TableCell colSpan={1} sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
-                    <Button variant="contained" color="error" size="small" sx={{ fontSize: "10px" }} onClick={deleteAllCart}>Unenroll All</Button>
-                  </TableCell>
-                </TableRow>
+                {enrolled.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={12} sx={{ textAlign: "center", color: TOKEN.textLight, py: 4, fontSize: "13px" }}>
+                      No subjects enrolled yet.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Box>
-        </Box>
+
+          {/* Total row */}
+          {enrolled.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                px: 2.5,
+                py: 1.25,
+                borderTop: `2px solid ${TOKEN.border}`,
+                backgroundColor: "#fafafa",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: "13px", color: headerColor }}>
+                  Total Units:
+                </Typography>
+                <Chip
+                  label={totalUnits}
+                  sx={{
+                    backgroundColor: headerColor,
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    height: 26,
+                  }}
+                />
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={deleteAllCart}
+                sx={{
+                  borderColor: TOKEN.red,
+                  color: TOKEN.red,
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  textTransform: "none",
+                  height: 30,
+                  "&:hover": { backgroundColor: TOKEN.redSoft },
+                }}
+              >
+                Unenroll All
+              </Button>
+            </Box>
+          )}
+        </Card>
       </Box>
 
-      {/* Confirm Dialog */}
-      <Dialog open={confirmDialogOpen} onClose={handleConfirmDialogClose} fullWidth maxWidth="sm">
-        <DialogTitle>Confirm Enrollment</DialogTitle>
-        <DialogContent>
-          <DialogContentText style={{ whiteSpace: "pre-line" }}>{confirmDialogMessage}</DialogContentText>
+      {/* ── CONFIRM DIALOG ── */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleConfirmDialogClose}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            boxShadow: TOKEN.shadowMd,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: headerColor,
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: "15px",
+            py: 2,
+          }}
+        >
+          ⚠ Confirm Enrollment
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}>
+          <DialogContentText sx={{ whiteSpace: "pre-line", color: TOKEN.text, fontSize: "13px", lineHeight: 1.7 }}>
+            {confirmDialogMessage}
+          </DialogContentText>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button
-      color="error"
             variant="outlined"
-
-            onClick={handleConfirmDialogClose}>Cancel</Button>
-          <Button onClick={handleConfirmDialogProceed} variant="contained">Yes, Continue</Button>
+            onClick={handleConfirmDialogClose}
+            sx={{
+              borderColor: TOKEN.red,
+              color: TOKEN.red,
+              fontWeight: 700,
+              textTransform: "none",
+              "&:hover": { backgroundColor: TOKEN.redSoft },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDialogProceed}
+            sx={{
+              backgroundColor: TOKEN.accent,
+              color: "#fff",
+              fontWeight: 700,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: TOKEN.accentHover, boxShadow: "none" },
+            }}
+          >
+            Yes, Continue
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack({ ...snack, open: false })} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
-        <Alert severity={snack.severity} onClose={() => setSnack({ ...snack, open: false })} sx={{ width: "100%" }}>{snack.message}</Alert>
+      {/* ── SNACKBAR ── */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={() => setSnack({ ...snack, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={snack.severity}
+          onClose={() => setSnack({ ...snack, open: false })}
+          sx={{ width: "100%", fontWeight: 600 }}
+        >
+          {snack.message}
+        </Alert>
       </Snackbar>
     </Box>
   );
