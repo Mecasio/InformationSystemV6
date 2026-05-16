@@ -1663,9 +1663,9 @@ const ApplicantDashboard = (props) => {
                             <span
                               style={{
                                 color:
-                                  qualifyingInterviewScore === "Passed"
+                                  qualifyingInterviewScore === "PASSED"
                                     ? "green"
-                                    : qualifyingInterviewScore === "Failed"
+                                    : qualifyingInterviewScore === "FAILED"
                                       ? "red"
                                       : "orange",
                               }}
@@ -1678,9 +1678,9 @@ const ApplicantDashboard = (props) => {
                             <span
                               style={{
                                 color:
-                                  qualifyingExamScore === "Passed"
+                                  qualifyingExamScore === "PASSED"
                                     ? "green"
-                                    : qualifyingExamScore === "Failed"
+                                    : qualifyingExamScore === "FAILED"
                                       ? "red"
                                       : "orange",
                               }}
