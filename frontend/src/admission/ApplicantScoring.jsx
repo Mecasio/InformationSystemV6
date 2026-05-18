@@ -111,18 +111,27 @@ const ApplicantScoring = () => {
 
     const location = useLocation();
 
-    const handleRowClick = (person_id) => {
-        if (!person_id) return;
+    const handleRowClick = (applicant) => {
+        const personId = applicant?.person_id;
+        if (!personId) return;
 
-        sessionStorage.setItem("admin_edit_person_id", String(person_id));
-        sessionStorage.setItem(
-            "admin_edit_person_id_source",
-            "/applicant_list_admin",
-        );
+        const searchValue =
+            applicant?.applicant_number ||
+            `${applicant?.last_name ?? ""}, ${applicant?.first_name ?? ""}`.trim();
+
+        sessionStorage.setItem("admin_edit_person_id", String(personId));
+        sessionStorage.setItem("edit_person_id", String(personId));
+        sessionStorage.setItem("admin_edit_person_id_source", "applicant_list");
         sessionStorage.setItem("admin_edit_person_id_ts", String(Date.now()));
+        sessionStorage.setItem("admin_edit_person_data", JSON.stringify(applicant));
+
+        if (searchValue) {
+            sessionStorage.setItem("admin_edit_search_query", String(searchValue));
+            sessionStorage.setItem("edit_applicant_number", String(searchValue));
+        }
 
         // ✅ Always pass person_id in the URL
-        navigate(`/admin_dashboard1?person_id=${person_id}`);
+        navigate(`/admin_dashboard1?person_id=${personId}`);
     };
 
     const tabs = [
@@ -327,47 +336,6 @@ const ApplicantScoring = () => {
         // ⭐ CASE 3: No URL ID and no last selected → start blank
         setUserID("");
     }, [queryPersonId]);
-
-
-
-
-    useEffect(() => {
-        let consumedFlag = false;
-
-        const tryLoad = async () => {
-            if (queryPersonId) {
-                await fetchByPersonId(queryPersonId);
-                setExplicitSelection(true);
-                consumedFlag = true;
-                return;
-            }
-
-            // fallback only if it's a fresh selection from Applicant List
-            const source = sessionStorage.getItem("admin_edit_person_id_source");
-            const tsStr = sessionStorage.getItem("admin_edit_person_id_ts");
-            const id = sessionStorage.getItem("admin_edit_person_id");
-            const ts = tsStr ? parseInt(tsStr, 10) : 0;
-            const isFresh = source === "applicant_list" && Date.now() - ts < 5 * 60 * 1000;
-
-            if (id && isFresh) {
-                await fetchByPersonId(id);
-                setExplicitSelection(true);
-                consumedFlag = true;
-            }
-        };
-
-        tryLoad().finally(() => {
-            // consume the freshness so it won't auto-load again later
-            if (consumedFlag) {
-                sessionStorage.removeItem("admin_edit_person_id_source");
-                sessionStorage.removeItem("admin_edit_person_id_ts");
-            }
-        });
-    }, [queryPersonId]);
-
-
-
-
 
     useEffect(() => {
         const storedUser = localStorage.getItem("email");
@@ -600,6 +568,9 @@ const ApplicantScoring = () => {
 
     // helper to make string comparisons robust
     const normalize = (s) => (s ?? "").toString().trim().toLowerCase();
+    const selectedSemester = semesters.find(
+        (sem) => String(sem.semester_id) === String(selectedSchoolSemester)
+    );
     const parseDateOnlyLocal = (value) => {
         if (!value) return null;
         const datePart = String(value).split("T")[0];
@@ -664,7 +635,7 @@ const ApplicantScoring = () => {
             /* 🕒 SEMESTER */
             const matchesSemester =
                 selectedSchoolSemester === "" ||
-                String(personData.middle_code) === String(selectedSchoolSemester);
+                normalize(personData.middle_code) === normalize(selectedSemester?.semester_code);
 
             /* 📆 DATE RANGE */
             let matchesDateRange = true;
@@ -1022,7 +993,7 @@ const ApplicantScoring = () => {
                         ? ((totalScore / maxTotal) * 50) + 50
                         : 0;
 
-        
+
 
                 return `
                 <tr>
@@ -1044,8 +1015,10 @@ const ApplicantScoring = () => {
                     }).join("")}
                   <td>${totalScore}</td>
                   <td>${Number(computedConvertedRating).toFixed(2)}</td>
-                  <td>${computedFinalRating.toFixed(2)}</td>
-                  <td>${person.status || ""}</td>
+    
+                  <td>${person.status === 0 ? "PASSED" :
+                        person.status === 1 ? "FAILED" :
+                            ""}</td>
                 </tr>
               `;
             }).join("")}
@@ -1147,8 +1120,12 @@ const ApplicantScoring = () => {
                 });
             }
 
-            fetchApplicants();
+            await fetchApplicants();
             setSelectedFile(null);
+
+            // ✅ Reset the file input so the same file can be re-imported without reload
+            const fileInput = document.getElementById("excel-upload");
+            if (fileInput) fileInput.value = "";
 
         } catch (err) {
             console.error("❌ Import error:", err);
@@ -1231,11 +1208,13 @@ const ApplicantScoring = () => {
             scores: subjectScores,
             total,
             percentage,
-          
+
             status:
-                editedScores.status ??
-                person.status ??
-                ""
+                editedScores.status !== undefined
+                    ? editedScores.status      // 0, 1, or ""
+                    : person.status !== null && person.status !== undefined
+                        ? person.status
+                        : null
         };
     };
 
@@ -1282,7 +1261,7 @@ const ApplicantScoring = () => {
                             scores: updatedScores,
                             total_score: payload.total,
                             percentage: payload.percentage,
-                    
+
                             status: payload.status
                         }
                         : p
@@ -2103,7 +2082,7 @@ const ApplicantScoring = () => {
                                 onChange={(e) => setMinScorePercent(e.target.value)}
                             />
 
-                           
+
                         </Box>
                     </Box>
 
@@ -2164,7 +2143,7 @@ const ApplicantScoring = () => {
                                 Score %
                             </TableCell>
 
-                        
+
 
                             <TableCell sx={{ color: "white", textAlign: "center", width: "5%", py: 0.5, fontSize: "12px", border: `1px solid ${borderColor}` }}>
                                 Date Applied
@@ -2215,7 +2194,7 @@ const ApplicantScoring = () => {
                                     ? ((totalScore / maxTotal) * 50) + 50
                                     : 0;
 
-                
+
                             return (
                                 <TableRow
                                     key={person.person_id}
@@ -2241,7 +2220,7 @@ const ApplicantScoring = () => {
                                             color: "blue",
                                             fontSize: "12px",
                                         }}
-                                        onClick={() => handleRowClick(person.person_id)}
+                                        onClick={() => handleRowClick(person)}
                                     >
 
 
@@ -2257,7 +2236,7 @@ const ApplicantScoring = () => {
                                             color: "blue",
                                             fontSize: "12px",
                                         }}
-                                        onClick={() => handleRowClick(person.person_id)}
+                                        onClick={() => handleRowClick(person)}
                                     >
 
                                         {`${person.last_name}, ${person.first_name} ${person.middle_name ?? ""}`}
@@ -2360,7 +2339,7 @@ const ApplicantScoring = () => {
 
 
 
-                                
+
 
 
 
@@ -2399,13 +2378,13 @@ const ApplicantScoring = () => {
                                                     ...prev,
                                                     [person.person_id]: {
                                                         ...prev[person.person_id],
-                                                        status: e.target.value
+                                                        status: e.target.value   // stores 0, 1, or ""
                                                     }
                                                 }))}
                                             >
-                                                <MenuItem value=""><em>Select Status</em></MenuItem>
-                                                <MenuItem value="PASSED">✅ Passed</MenuItem>
-                                                <MenuItem value="FAILED">❌ Failed</MenuItem>
+                                                <MenuItem value=""><em>— No Status —</em></MenuItem>
+                                                <MenuItem value={0}>✅ Passed</MenuItem>
+                                                <MenuItem value={1}>❌ Failed</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </TableCell>
@@ -2623,4 +2602,3 @@ const ApplicantScoring = () => {
 };
 
 export default ApplicantScoring;
-

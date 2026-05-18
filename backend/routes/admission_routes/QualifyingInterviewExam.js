@@ -17,6 +17,12 @@ const formatAuditActorRole = (role) => {
     .join(" ");
 };
 
+const INTERVIEW_APPLICANT_STATUS = {
+  WAITING_LIST: 0,
+  ACCEPTED: 1,
+  REJECTED: 2,
+};
+
 const getAuditActor = (req) => ({
   actorId:
     req.body?.audit_actor_id ||
@@ -571,9 +577,9 @@ router.put("/api/interview_applicants/assign", async (req, res) => {
   try {
     const [result] = await db3.query(
       `UPDATE admission.interview_applicants
-       SET status = 'Accepted'
+       SET status = ?
        WHERE applicant_id IN (?)`,
-      [applicant_numbers],
+      [INTERVIEW_APPLICANT_STATUS.ACCEPTED, applicant_numbers],
     );
 
     await insertInterviewStatusAuditLog({
@@ -606,9 +612,9 @@ router.put(
     try {
       const [result] = await db3.query(
         `UPDATE admission.interview_applicants
-       SET status = 'Accepted'
+       SET status = ?
        WHERE applicant_id = ?`,
-        [applicant_number],
+        [INTERVIEW_APPLICANT_STATUS.ACCEPTED, applicant_number],
       );
 
       await insertInterviewStatusAuditLog({
@@ -642,9 +648,9 @@ router.put(
     try {
       const [result] = await db3.query(
         `UPDATE admission.interview_applicants
-       SET status = 'Waiting List'
+       SET status = ?
        WHERE applicant_id = ?`,
-        [applicant_number],
+        [INTERVIEW_APPLICANT_STATUS.WAITING_LIST, applicant_number],
       );
 
       await insertInterviewStatusAuditLog({
@@ -677,9 +683,9 @@ router.put("/api/interview_applicants/unassign-all", async (req, res) => {
   try {
     const [result] = await db3.query(
       `UPDATE admission.interview_applicants
-       SET status = 'Waiting List'
+       SET status = ?
        WHERE applicant_id IN (?)`,
-      [applicant_numbers],
+      [INTERVIEW_APPLICANT_STATUS.WAITING_LIST, applicant_numbers],
     );
 
     await insertInterviewStatusAuditLog({

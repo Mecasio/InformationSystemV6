@@ -94,6 +94,44 @@ const isDifferent = (oldVal, newVal) => {
   return (oldVal ?? null) != (newVal ?? null);
 };
 
+const formatResultStatus = (value) => {
+  if (value === null || value === undefined || value === "") return "No Result";
+
+  const normalized = Number(value);
+  if (normalized === 1) return "Passed";
+  if (normalized === 0) return "Failed";
+
+  return String(value);
+};
+
+const normalizeCollegeApprovalStatus = (value) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (normalized === "1" || normalized === "accepted") return 1;
+  if (normalized === "2" || normalized === "rejected") return 2;
+  if (
+    normalized === "0" ||
+    normalized === "waiting list" ||
+    normalized === "waiting_list" ||
+    normalized === "on process" ||
+    normalized === ""
+  ) {
+    return 0;
+  }
+
+  return value;
+};
+
+const formatCollegeApprovalStatus = (value) => {
+  const normalized = normalizeCollegeApprovalStatus(value);
+
+  if (Number(normalized) === 1) return "Accepted";
+  if (Number(normalized) === 2) return "Rejected";
+  if (Number(normalized) === 0) return "Waiting List";
+
+  return String(value ?? "NONE");
+};
+
 const formatAuditActorRole = (role) => {
   const safeRole = String(role || "registrar").trim();
   if (!safeRole) return "Registrar";
@@ -178,9 +216,10 @@ const getApplicantAuditDetails = async (applicantNumber) => {
 
   return rows[0] || null;
 };
+
+
 router.get("/api/applicants-with-number", async (req, res) => {
   try {
-    // Get active subjects dynamically
     const [subjects] = await db.query(`
       SELECT id, name, max_score
       FROM subjects
@@ -188,7 +227,6 @@ router.get("/api/applicants-with-number", async (req, res) => {
       ORDER BY id ASC
     `);
 
-    // Main applicants query
     const [rows] = await db.query(`
       SELECT DISTINCT
         p.person_id,
@@ -211,7 +249,11 @@ router.get("/api/applicants-with-number", async (req, res) => {
         er.final_rating,
         er.status AS exam_status,
 
-        ia.status AS interview_status,
+        CASE
+          WHEN ia.status = 1 OR ia.status = 'Accepted' THEN 'Accepted'
+          WHEN ia.status = 2 OR ia.status = 'Rejected' THEN 'Rejected'
+          ELSE 'Waiting List'
+        END AS college_approval_status,
         ia.action,
         ia.email_sent,
         ia.qualifying_status,
@@ -238,7 +280,6 @@ router.get("/api/applicants-with-number", async (req, res) => {
       ORDER BY p.person_id ASC
     `);
 
-    // Get exam subject scores
     const [details] = await db.query(`
       SELECT exam_result_id, subject_id, score
       FROM exam_result_details
@@ -247,25 +288,19 @@ router.get("/api/applicants-with-number", async (req, res) => {
     const formatted = rows.map((row) => {
       const scores = {};
 
-      // initialize all subjects to 0
+      // ✅ Initialize with subject ID as key
       subjects.forEach((sub) => {
-        scores[sub.name.toLowerCase()] = 0;
+        scores[sub.id] = 0;
       });
 
-      // assign actual scores dynamically
+      // ✅ Fill actual scores using subject ID as key
       details
         .filter(
           (detail) =>
             Number(detail.exam_result_id) === Number(row.exam_result_id)
         )
         .forEach((detail) => {
-          const subject = subjects.find(
-            (s) => Number(s.id) === Number(detail.subject_id)
-          );
-
-          if (subject) {
-            scores[subject.name.toLowerCase()] = Number(detail.score);
-          }
+          scores[detail.subject_id] = Number(detail.score);
         });
 
       const computedTotal = Object.values(scores).reduce(
@@ -278,24 +313,21 @@ router.get("/api/applicants-with-number", async (req, res) => {
         0
       );
 
+      // ✅ Same formula as api-applicant-scoring
+      const percentage =
+        maxTotal > 0
+          ? ((computedTotal / maxTotal) * 50) + 50
+          : 0;
+
       return {
         ...row,
-
-        // dynamic scores object
         scores,
-
-        // keep existing saved values if available
-        total: row.total_score ?? computedTotal,
-        percentage:
-          row.percentage ??
-          (maxTotal > 0 ? ((computedTotal / maxTotal) * 100).toFixed(2) : 0),
-
+        total: computedTotal,
+        percentage,
         final_rating:
-          row.final_rating ??
-          (subjects.length > 0
-            ? (computedTotal / subjects.length).toFixed(2)
-            : 0),
-
+          subjects.length > 0
+            ? computedTotal / subjects.length
+            : 0,
         exam_status: row.exam_status || "Pending",
       };
     });
@@ -306,9 +338,7 @@ router.get("/api/applicants-with-number", async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching applicants:", err);
-    res.status(500).json({
-      error: "Server Error",
-    });
+    res.status(500).json({ error: "Server Error" });
   }
 });
 
@@ -499,7 +529,9 @@ router.post(
       const hasStatusPayload =
         status !== undefined && String(status).trim() !== "";
 
-      const newStatus = hasStatusPayload ? String(status).trim() : oldStatus;
+      const newStatus = hasStatusPayload
+        ? normalizeCollegeApprovalStatus(status)
+        : oldStatus;
 
       // ✅ Normalize pass/fail: keep null if not provided, else 0 or 1
       const newQualifyingStatus =
@@ -540,24 +572,22 @@ router.post(
         );
       }
 
-      if (isDifferent(oldStatus, newStatus)) {
-        changes.push(`Status: ${oldStatus ?? "NONE"} -> ${newStatus ?? "NONE"}`);
+      if (isDifferent(normalizeCollegeApprovalStatus(oldStatus), newStatus)) {
+        changes.push(
+          `Status: ${formatCollegeApprovalStatus(oldStatus)} -> ${formatCollegeApprovalStatus(newStatus)}`
+        );
       }
 
       // ✅ Change detection for new pass/fail columns
       if (isDifferent(oldData.qualifying_status, newQualifyingStatus)) {
-        const label = (v) =>
-          v === null ? "No Result" : v === 1 ? "Passed" : "Failed";
         changes.push(
-          `Qualifying Result: ${label(oldData.qualifying_status)} -> ${label(newQualifyingStatus)}`
+          `Qualifying Result: ${formatResultStatus(oldData.qualifying_status)} -> ${formatResultStatus(newQualifyingStatus)}`
         );
       }
 
       if (isDifferent(oldData.interview_status_result, newInterviewStatusResult)) {
-        const label = (v) =>
-          v === null ? "No Result" : v === 1 ? "Passed" : "Failed";
         changes.push(
-          `Interview Result: ${label(oldData.interview_status_result)} -> ${label(newInterviewStatusResult)}`
+          `Interview Result: ${formatResultStatus(oldData.interview_status_result)} -> ${formatResultStatus(newInterviewStatusResult)}`
         );
       }
 

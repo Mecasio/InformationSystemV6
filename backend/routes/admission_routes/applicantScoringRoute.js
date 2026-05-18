@@ -15,6 +15,18 @@ const formatAuditActorRole = (role) => {
     .join(" ");
 };
 
+const formatExamStatus = (status) => {
+  if (status === null || status === undefined || status === "") return "N/A";
+  if (Number(status) === 0) return "PASSED";
+  if (Number(status) === 1) return "FAILED";
+  return String(status);
+};
+
+const normalizeExamStatus = (status) => {
+  if (status === null || status === undefined || status === "") return "";
+  return String(Number(status));
+};
+
 // -----------------------------
 // VERIFY TOKEN
 // -----------------------------
@@ -98,7 +110,11 @@ router.get("/api-applicant-scoring", async (req, res) => {
         COALESCE(ps.qualifying_result, 0) AS qualifying_exam_score,
         COALESCE(ps.interview_result, 0) AS qualifying_interview_score,
 
-        ia.status AS college_approval_status
+        CASE
+          WHEN ia.status = 1 OR ia.status = 'Accepted' THEN 'Accepted'
+          WHEN ia.status = 2 OR ia.status = 'Rejected' THEN 'Rejected'
+          ELSE 'Waiting List'
+        END AS college_approval_status
 
       FROM person_table p
       INNER JOIN applicant_numbering_table a
@@ -313,7 +329,7 @@ router.post("/api/exam/save", verifyToken, async (req, res) => {
     // CHECK EXISTING EXAM RESULT
     //--------------------------------------
     const [existingRows] = await db.query(
-      `SELECT id
+      `SELECT id, status
        FROM exam_results
        WHERE person_id = ?
        LIMIT 1`,
@@ -322,9 +338,11 @@ router.post("/api/exam/save", verifyToken, async (req, res) => {
 
     let examResultId;
     let previousScoreMap = {};
+    let previousStatus = "";
 
     if (existingRows.length) {
       examResultId = existingRows[0].id;
+      previousStatus = existingRows[0].status;
 
       const [previousScoreRows] = await db.query(
         `SELECT subject_id, score
@@ -423,9 +441,19 @@ router.post("/api/exam/save", verifyToken, async (req, res) => {
       actorId: actor.actorId,
       role: actor.role,
       action: "SAVE_EXAM",
-      message: `${roleLabel} (${actor.actorId}) saved entrance examination result for Applicant (${applicant_number}${applicantName ? ` - ${applicantName}` : ""}). Total score: ${totalScore}. Status: ${status || "N/A"}.`,
+      message: `${roleLabel} (${actor.actorId}) saved entrance examination result for Applicant (${applicant_number}${applicantName ? ` - ${applicantName}` : ""}). Total score: ${totalScore}. Status: ${formatExamStatus(status)}.`,
       severity: "INFO"
     });
+
+    if (normalizeExamStatus(previousStatus) !== normalizeExamStatus(status)) {
+      await insertAuditLogAdmission({
+        actorId: actor.actorId,
+        role: actor.role,
+        action: "UPDATE_EXAM_STATUS",
+        message: `${roleLabel} (${actor.actorId}) changed ECAT status of Applicant (${applicant_number}${applicantName ? ` - ${applicantName}` : ""}): ${formatExamStatus(previousStatus)} -> ${formatExamStatus(status)}.`,
+        severity: "INFO"
+      });
+    }
 
     for (const item of scores) {
       const previousScore = previousScoreMap[item.subject_id] ?? 0;

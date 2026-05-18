@@ -75,7 +75,7 @@ const RequirementsForm = () => {
     if (settings.logo_url) {
       setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
     } else {
-      setFetchedLogo(EaristLogo);
+      setFetchedLogo(null);
     }
 
     // 🏷️ School Information
@@ -173,6 +173,8 @@ const RequirementsForm = () => {
   const [requirements, setRequirements] = useState([]);
   const [shortLabel, setShortLabel] = useState("");
   const [documentStatus, setDocumentStatus] = useState("On Process");
+  const [requiresOriginal, setRequiresOriginal] = useState(false);
+  const [xeroxCopies, setXeroxCopies] = useState(0);
 
 
   // ✅ Snackbar state
@@ -251,6 +253,8 @@ const RequirementsForm = () => {
     setDescription(req.description);
     setShortLabel(req.short_label || "");
     setCategory(req.category || "Main");
+    setRequiresOriginal(req.requires_original === true || req.requires_original === 1);
+    setXeroxCopies(Number(req.xerox_copies || 0));
 
     setIsOptional(req.is_optional);
     setApplicantType(req.applicant_type || "0");

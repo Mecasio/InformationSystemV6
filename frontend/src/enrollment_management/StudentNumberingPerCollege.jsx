@@ -208,6 +208,16 @@ const StudentNumbering = () => {
     const [semesters, setSchoolSemester] = useState([]);
     const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
     const [selectedSchoolSemester, setSelectedSchoolSemester] = useState('');
+    const selectedSchoolYearValue = schoolYears.some(
+        (sy) => String(sy.year_id) === String(selectedSchoolYear),
+    )
+        ? selectedSchoolYear
+        : "";
+    const selectedSchoolSemesterValue = semesters.some(
+        (sem) => String(sem.semester_id) === String(selectedSchoolSemester),
+    )
+        ? selectedSchoolSemester
+        : "";
     const [sortBy, setSortBy] = useState("name");
     const [sortOrder, setSortOrder] = useState("asc");
 
@@ -376,6 +386,11 @@ const StudentNumbering = () => {
 
     const filteredPersons = persons
         .filter((personData) => {
+            const normalize = (value) => String(value ?? "").trim().toLowerCase();
+            const selectedSemester = semesters.find(
+                (sem) => String(sem.semester_id) === String(selectedSchoolSemester),
+            );
+
             // ✅ Build searchable text (name, email, applicant number)
             const fullText = `${personData.first_name} ${personData.middle_name} ${personData.last_name} ${personData.emailAddress ?? ''} ${personData.applicant_number ?? ''}`.toLowerCase();
 
@@ -408,7 +423,7 @@ const StudentNumbering = () => {
             // ✅ Semester filtering
             const matchesSemester =
                 selectedSchoolSemester === "" ||
-                String(personData.middle_code) === String(selectedSchoolSemester);
+                normalize(personData.middle_code) === normalize(selectedSemester?.semester_code);
 
             return (
                 matchesSearch &&
@@ -880,7 +895,7 @@ const StudentNumbering = () => {
                                 <InputLabel id="school-year-label">School Years</InputLabel>
                                 <Select
                                     labelId="school-year-label"
-                                    value={selectedSchoolYear}
+                                    value={selectedSchoolYearValue}
                                     onChange={handleSchoolYearChange}
                                     displayEmpty
                                 >
@@ -903,7 +918,7 @@ const StudentNumbering = () => {
                                 <InputLabel id="semester-label">School Semester</InputLabel>
                                 <Select
                                     labelId="semester-label"
-                                    value={selectedSchoolSemester}
+                                    value={selectedSchoolSemesterValue}
                                     onChange={handleSchoolSemesterChange}
                                     displayEmpty
                                 >

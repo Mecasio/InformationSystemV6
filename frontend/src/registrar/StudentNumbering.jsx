@@ -367,6 +367,16 @@ const StudentNumbering = () => {
   const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
   const [selectedSchoolSemester, setSelectedSchoolSemester] = useState("");
   const [selectedActiveSchoolYear, setSelectedActiveSchoolYear] = useState("");
+  const selectedSchoolYearValue = schoolYears.some(
+    (sy) => String(sy.year_id) === String(selectedSchoolYear),
+  )
+    ? selectedSchoolYear
+    : "";
+  const selectedSchoolSemesterValue = semesters.some(
+    (sem) => String(sem.semester_id) === String(selectedSchoolSemester),
+  )
+    ? selectedSchoolSemester
+    : "";
 
   const [department, setDepartment] = useState([]);
 
@@ -388,6 +398,10 @@ const StudentNumbering = () => {
   }
 
   const [allCurriculums, setAllCurriculums] = useState([]);
+  const normalize = (value) => String(value ?? "").trim().toLowerCase();
+  const selectedSemester = semesters.find(
+    (sem) => String(sem.semester_id) === String(selectedSchoolSemester),
+  );
 
   const filteredPersons = persons.filter((personData) => {
     const query = searchQuery.toLowerCase();
@@ -427,8 +441,8 @@ const StudentNumbering = () => {
 
     const matchesSemester =
       !selectedSchoolSemester ||
-      !personData.middle_code ||
-      String(personData.middle_code) === String(selectedSchoolSemester);
+      normalize(personData.middle_code) ===
+        normalize(selectedSemester?.semester_code);
 
     return (
       (matchesApplicantID || matchesName || matchesEmail) &&
@@ -854,7 +868,7 @@ const StudentNumbering = () => {
                 <InputLabel id="school-year-label">School Years</InputLabel>
                 <Select
                   labelId="school-year-label"
-                  value={selectedSchoolYear}
+                  value={selectedSchoolYearValue}
                   onChange={handleSchoolYearChange}
                   displayEmpty
                 >
@@ -879,7 +893,7 @@ const StudentNumbering = () => {
                 <InputLabel id="semester-label">School Semester</InputLabel>
                 <Select
                   labelId="semester-label"
-                  value={selectedSchoolSemester}
+                  value={selectedSchoolSemesterValue}
                   onChange={handleSchoolSemesterChange}
                   displayEmpty
                 >

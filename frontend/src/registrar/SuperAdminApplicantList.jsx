@@ -137,18 +137,35 @@ const SuperAdminApplicantList = () => {
   const queryParams = new URLSearchParams(location.search);
   const queryPersonId = (queryParams.get("person_id") || "").trim();
 
-  const handleRowClick = (person_id) => {
-    if (!person_id) return;
+  const handleRowClick = (applicant) => {
+    const personId = applicant?.person_id;
+    if (!personId) return;
 
-    sessionStorage.setItem("admin_edit_person_id", String(person_id));
-    sessionStorage.setItem(
-      "admin_edit_person_id_source",
-      "super_admin_applicant_list",
-    );
+    const searchValue =
+      applicant?.student_number ||
+      applicant?.applicant_number ||
+      `${applicant?.last_name ?? ""}, ${applicant?.first_name ?? ""}`.trim();
+
+    sessionStorage.setItem("admin_edit_person_id", String(personId));
+    sessionStorage.setItem("edit_person_id", String(personId));
+    sessionStorage.setItem("admin_edit_person_id_source", "applicant_list");
     sessionStorage.setItem("admin_edit_person_id_ts", String(Date.now()));
+    sessionStorage.setItem("admin_edit_person_data", JSON.stringify(applicant));
+    if (searchValue) {
+      sessionStorage.setItem("admin_edit_search_query", String(searchValue));
+    }
+    if (applicant?.student_number) {
+      sessionStorage.setItem("edit_student_number", String(applicant.student_number));
+    }
+    if (applicant?.applicant_number) {
+      sessionStorage.setItem("edit_applicant_number", String(applicant.applicant_number));
+    }
 
-    // ✅ Always pass person_id in the URL
-    navigate(`/readmission_dashboard1?person_id=${person_id}`);
+    const studentQuery = applicant?.student_number
+      ? `&student_number=${encodeURIComponent(applicant.student_number)}`
+      : "";
+
+    navigate(`/readmission_dashboard1?person_id=${personId}${studentQuery}`);
   };
 
   const navigate = useNavigate();
@@ -535,6 +552,9 @@ const SuperAdminApplicantList = () => {
 
   // helper to make string comparisons robust
   const normalize = (s) => (s ?? "").toString().trim().toLowerCase();
+  const selectedSemester = semesters.find(
+    (sem) => String(sem.semester_id) === String(selectedSchoolSemester),
+  );
   const parseDateOnlyLocal = (value) => {
     if (!value) return null;
     const datePart = String(value).split("T")[0];
@@ -606,7 +626,8 @@ const SuperAdminApplicantList = () => {
       const matchesSemester =
         overrideBySearch ||
         selectedSchoolSemester === "" ||
-        String(personData.middle_code) === String(selectedSchoolSemester);
+        normalize(personData.middle_code) ===
+          normalize(selectedSemester?.semester_code);
 
       /* 📆 FROM–TO DATE RANGE (fixed 100%) */
       let matchesDateRange = true;
@@ -1884,7 +1905,7 @@ const SuperAdminApplicantList = () => {
                     color: "blue",
                     fontSize: "12px",
                   }}
-                  onClick={() => handleRowClick(person.person_id)}
+                  onClick={() => handleRowClick(person)}
                 >
                   {person.applicant_number ?? "N/A"}
                 </TableCell>
@@ -1899,7 +1920,7 @@ const SuperAdminApplicantList = () => {
                     color: "blue",
                     fontSize: "12px",
                   }}
-                  onClick={() => handleRowClick(person.person_id)}
+                  onClick={() => handleRowClick(person)}
                 >
                   {`${person.last_name}, ${person.first_name} ${person.middle_name ?? ""} ${person.extension ?? ""}`}
                 </TableCell>

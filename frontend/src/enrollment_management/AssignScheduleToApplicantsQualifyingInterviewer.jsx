@@ -475,15 +475,28 @@ const AssignScheduleToApplicantsInterviewer = () => {
   }, []);
 
 
-  const handleRowClick = (person_id) => {
-    if (!person_id) return;
+  const handleRowClick = (applicant) => {
+    const personId = applicant?.person_id;
+    if (!personId) return;
 
-    sessionStorage.setItem("admin_edit_person_id", String(person_id));
+    const searchValue =
+      applicant?.applicant_number ||
+      `${applicant?.last_name ?? ""}, ${applicant?.first_name ?? ""}`.trim();
+
+    sessionStorage.setItem("admin_edit_person_id", String(personId));
+    sessionStorage.setItem("edit_person_id", String(personId));
     sessionStorage.setItem("admin_edit_person_id_source", "applicant_list");
     sessionStorage.setItem("admin_edit_person_id_ts", String(Date.now()));
 
     // ✅ Always pass person_id in the URL
-    navigate(`/student_dashboard1?person_id=${person_id}`);
+    sessionStorage.setItem("admin_edit_person_data", JSON.stringify(applicant));
+
+    if (searchValue) {
+      sessionStorage.setItem("admin_edit_search_query", String(searchValue));
+      sessionStorage.setItem("edit_applicant_number", String(searchValue));
+    }
+
+    navigate(`/registrar_dashboard1?person_id=${personId}`);
   };
 
   // ================= FUNCTIONS =================
@@ -523,6 +536,7 @@ const AssignScheduleToApplicantsInterviewer = () => {
           severity: "success",
         });
         fetchAllApplicants();
+        fetchSchedulesWithCount();
       } else {
         setSnack({
           open: true,
@@ -600,25 +614,15 @@ const AssignScheduleToApplicantsInterviewer = () => {
       ...auditActor(),
     });
 
-    socket.current.once("update_schedule_result", (res) => {
+    socket.current.once("update_schedule_result", async (res) => {
       if (res.success) {
         setSnack({
           open: true,
           message: `Assigned: ${res.assigned?.length || 0}, Updated: ${res.updated?.length || 0}, Skipped: ${res.skipped?.length || 0}. Total unassigned applicants: ${filteredPersons.length}`,
           severity: "success",
         });
-        fetchAllApplicants();
-        setSchedules((prev) =>
-          prev.map((s) =>
-            Number(s.schedule_id) === Number(selectedSchedule)
-              ? {
-                ...s,
-                current_occupancy:
-                  s.current_occupancy + (res.assigned?.length || 0),
-              }
-              : s,
-          ),
-        );
+        await fetchAllApplicants();
+        await fetchSchedulesWithCount();
       } else {
         setSnack({
           open: true,
@@ -646,13 +650,8 @@ const AssignScheduleToApplicantsInterviewer = () => {
         ...auditActor(),
       });
 
-      setPersons((prev) =>
-        prev.map((p) =>
-          p.applicant_number === applicant_number
-            ? { ...p, schedule_id: null }
-            : p,
-        ),
-      );
+      await fetchAllApplicants();
+      await fetchSchedulesWithCount();
 
       setSelectedApplicants((prev) => {
         const newSet = new Set(prev);
@@ -759,6 +758,7 @@ const AssignScheduleToApplicantsInterviewer = () => {
         });
 
         fetchAllApplicants();
+        fetchSchedulesWithCount();
 
         // Update schedule occupancy
         setSchedules((prev) =>
@@ -1335,6 +1335,11 @@ ${requirementsSection}
   const [minScorePercent, setMinScorePercent] = useState("");
  
   // ✅ Step 1: Filtering
+  const normalize = (value) => String(value ?? "").trim().toLowerCase();
+  const selectedSemester = semesters.find(
+    (sem) => String(sem.semester_id) === String(selectedSchoolSemester)
+  );
+
   const filteredPersons = persons.filter((personData) => {
 
     /* 🧮 COMPUTE SCORES (same as ApplicantScoring) */
@@ -1413,7 +1418,7 @@ ${requirementsSection}
 
     const matchesSemester =
       selectedSchoolSemester === "" ||
-      String(personData.middle_code ?? "") === String(selectedSchoolSemester);
+      normalize(personData.middle_code) === normalize(selectedSemester?.semester_code);
 
     /* 📅 DATE */
     const createdAtDate = new Date(personData.created_at);
@@ -2504,7 +2509,7 @@ ${requirementsSection}
                         border: `1px solid ${borderColor}`,
                         fontSize: "12px",
                       }}
-                      onClick={() => handleRowClick(person.person_id)}
+                      onClick={() => handleRowClick(person)}
                     >
                       {person.applicant_number ?? "N/A"}
                     </TableCell>
@@ -2518,7 +2523,7 @@ ${requirementsSection}
                         border: `1px solid ${borderColor}`,
                         fontSize: "12px",
                       }}
-                      onClick={() => handleRowClick(person.person_id)}
+                      onClick={() => handleRowClick(person)}
                     >
                       {`${person.last_name}, ${person.first_name} ${person.middle_name ?? ""} ${person.extension ?? ""}`}
                     </TableCell>

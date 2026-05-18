@@ -239,44 +239,6 @@ const AssignScheduleToApplicants = () => {
     setUserID("");
   }, [queryPersonId]);
 
-
-
-
-  useEffect(() => {
-    let consumedFlag = false;
-
-    const tryLoad = async () => {
-      if (queryPersonId) {
-        await fetchByPersonId(queryPersonId);
-        setExplicitSelection(true);
-        consumedFlag = true;
-        return;
-      }
-
-      // fallback only if it's a fresh selection from Applicant List
-      const source = sessionStorage.getItem("admin_edit_person_id_source");
-      const tsStr = sessionStorage.getItem("admin_edit_person_id_ts");
-      const id = sessionStorage.getItem("admin_edit_person_id");
-      const ts = tsStr ? parseInt(tsStr, 10) : 0;
-      const isFresh = source === "applicant_list" && Date.now() - ts < 5 * 60 * 1000;
-
-      if (id && isFresh) {
-        await fetchByPersonId(id);
-        setExplicitSelection(true);
-        consumedFlag = true;
-      }
-    };
-
-    tryLoad().finally(() => {
-      // consume the freshness so it won't auto-load again later
-      if (consumedFlag) {
-        sessionStorage.removeItem("admin_edit_person_id_source");
-        sessionStorage.removeItem("admin_edit_person_id_ts");
-      }
-    });
-  }, [queryPersonId]);
-
-
   const [applicants, setApplicants] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [selectedApplicants, setSelectedApplicants] = useState(new Set());
@@ -528,6 +490,7 @@ const AssignScheduleToApplicants = () => {
           severity: "success",
         });
         fetchAllApplicants();
+        fetchSchedulesWithCount();
       } else {
         setSnack({
           open: true,
@@ -586,6 +549,7 @@ const AssignScheduleToApplicants = () => {
           severity: "success"
         });
         fetchAllApplicants();
+        fetchSchedulesWithCount();
         setSchedules(prev =>
           prev.map(s =>
             Number(s.schedule_id) === Number(selectedSchedule)
@@ -603,6 +567,10 @@ const AssignScheduleToApplicants = () => {
   // handleUnassignImmediate
   const handleUnassignImmediate = async (applicant_number) => {
     try {
+      const assignedScheduleId =
+        persons.find((p) => p.applicant_number === applicant_number)?.schedule_id ||
+        selectedSchedule;
+
       await axios.post(`${API_BASE_URL}/unassign_schedule`, {
         applicant_number,
         ...auditActor(),
@@ -621,6 +589,20 @@ const AssignScheduleToApplicants = () => {
         newSet.delete(applicant_number);
         return newSet;
       });
+
+      setSchedules(prev =>
+        prev.map(s =>
+          Number(s.schedule_id) === Number(assignedScheduleId)
+            ? {
+              ...s,
+              current_occupancy: Math.max(Number(s.current_occupancy || 0) - 1, 0),
+            }
+            : s
+        )
+      );
+
+      await fetchAllApplicants();
+      await fetchSchedulesWithCount();
 
       setSnack({ open: true, message: `Applicant ${applicant_number} unassigned successfully.`, severity: "success" });
     } catch (err) {
@@ -681,6 +663,7 @@ const AssignScheduleToApplicants = () => {
           severity: "success"
         });
         fetchAllApplicants();
+        fetchSchedulesWithCount();
         setSchedules(prev =>
           prev.map(s =>
             Number(s.schedule_id) === Number(selectedSchedule)
@@ -870,15 +853,28 @@ This printed permit must be presented to your proctor on the exam day to verify 
 
   const [schedules, setSchedules] = useState([]);
 
-  const handleRowClick = (person_id) => {
-    if (!person_id) return;
+  const handleRowClick = (applicant) => {
+    const personId = applicant?.person_id;
+    if (!personId) return;
 
-    sessionStorage.setItem("admin_edit_person_id", String(person_id));
+    const searchValue =
+      applicant?.applicant_number ||
+      `${applicant?.last_name ?? ""}, ${applicant?.first_name ?? ""}`.trim();
+
+    sessionStorage.setItem("admin_edit_person_id", String(personId));
+    sessionStorage.setItem("edit_person_id", String(personId));
     sessionStorage.setItem("admin_edit_person_id_source", "applicant_list");
     sessionStorage.setItem("admin_edit_person_id_ts", String(Date.now()));
 
     // ✅ Always pass person_id in the URL
-    navigate(`/admin_dashboard1?person_id=${person_id}`);
+    sessionStorage.setItem("admin_edit_person_data", JSON.stringify(applicant));
+
+    if (searchValue) {
+      sessionStorage.setItem("admin_edit_search_query", String(searchValue));
+      sessionStorage.setItem("edit_applicant_number", String(searchValue));
+    }
+
+    navigate(`/admin_dashboard1?person_id=${personId}`);
   };
 
 
@@ -952,6 +948,11 @@ This printed permit must be presented to your proctor on the exam day to verify 
   };
 
   // ✅ Step 1: Filtering
+  const normalize = (value) => String(value ?? "").trim().toLowerCase();
+  const selectedSemester = semesters.find(
+    (sem) => String(sem.semester_id) === String(selectedSchoolSemester)
+  );
+
   const filteredPersons = persons.filter((personData) => {
     const query = searchQuery.toLowerCase();
     const fullName = `${personData.first_name ?? ""} ${personData.middle_name ?? ""} ${personData.last_name ?? ""}`.toLowerCase();
@@ -990,7 +991,8 @@ This printed permit must be presented to your proctor on the exam day to verify 
       selectedSchoolYear === "" || (schoolYear && (String(applicantAppliedYear) === String(schoolYear.current_year)))
 
     const matchesSemester =
-      selectedSchoolSemester === "" || String(personData.middle_code) === String(selectedSchoolSemester);
+      selectedSchoolSemester === "" ||
+      normalize(personData.middle_code) === normalize(selectedSemester?.semester_code);
 
 
     return (
@@ -1838,7 +1840,7 @@ This printed permit must be presented to your proctor on the exam day to verify 
                         py: 0.5,
                         fontSize: "12px",
                       }}
-                      onClick={() => handleRowClick(person.person_id)}
+                      onClick={() => handleRowClick(person)}
                     >
                       {person.applicant_number ?? "N/A"}
                     </TableCell>
@@ -1853,7 +1855,7 @@ This printed permit must be presented to your proctor on the exam day to verify 
                         py: 0.5,
                         fontSize: "12px",
                       }}
-                      onClick={() => handleRowClick(person.person_id)}
+                      onClick={() => handleRowClick(person)}
                     >
                       {`${person.last_name}, ${person.first_name} ${person.middle_name ?? ""} ${person.extension ?? ""}`}
                     </TableCell>

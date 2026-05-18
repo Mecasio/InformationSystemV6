@@ -127,15 +127,27 @@ const QualifyingExamScore = () => {
 
   const queryPersonId = (queryParams.get("person_id") || "").trim();
 
-  const handleRowClick = (person_id) => {
-    if (!person_id) return;
+  const handleRowClick = (applicant) => {
+    const personId = applicant?.person_id;
+    if (!personId) return;
 
-    sessionStorage.setItem("admin_edit_person_id", String(person_id));
+    const searchValue =
+      applicant?.applicant_number ||
+      `${applicant?.last_name ?? ""}, ${applicant?.first_name ?? ""}`.trim();
+
+    sessionStorage.setItem("admin_edit_person_id", String(personId));
+    sessionStorage.setItem("edit_person_id", String(personId));
     sessionStorage.setItem("admin_edit_person_id_source", "applicant_list");
     sessionStorage.setItem("admin_edit_person_id_ts", String(Date.now()));
+    sessionStorage.setItem("admin_edit_person_data", JSON.stringify(applicant));
+
+    if (searchValue) {
+      sessionStorage.setItem("admin_edit_search_query", String(searchValue));
+      sessionStorage.setItem("edit_applicant_number", String(searchValue));
+    }
 
     // ✅ Always pass person_id in the URL
-    navigate(`/registrar_dashboard1?person_id=${person_id}`);
+    navigate(`/registrar_dashboard1?person_id=${personId}`);
   };
 
   const tabs = [
@@ -189,9 +201,10 @@ const QualifyingExamScore = () => {
     }
   };
 
-  const buildPayload = (person) => {
-    const edits = editScores[person.person_id] || {};
+  const buildPayload = (person, overrides = {}, options = {}) => {
+    const edits = { ...(editScores[person.person_id] || {}), ...overrides };
     const selectedStatus = edits.status ?? person.college_approval_status ?? person.status ?? "";
+    const includeStatus = options.includeStatus !== false;
 
     return {
       applicant_number: person.applicant_number,
@@ -199,7 +212,9 @@ const QualifyingExamScore = () => {
       qualifying_interview_score: edits.qualifying_interview_score ?? person.qualifying_interview_score ?? 0,
       qualifying_status: edits.qualifying_status !== undefined ? edits.qualifying_status : (person.qualifying_status ?? null),   // ✅ NEW
       interview_status_result: edits.interview_status_result !== undefined ? edits.interview_status_result : (person.interview_status_result ?? null), // ✅ NEW
-      status: selectedStatus && selectedStatus !== "On Process" ? selectedStatus : "Waiting List",
+      ...(includeStatus
+        ? { status: selectedStatus && selectedStatus !== "On Process" ? selectedStatus : "Waiting List" }
+        : {}),
       user_person_id: userID,
       audit_actor_id: employeeID || localStorage.getItem("employee_id") || localStorage.getItem("email") || "unknown",
       audit_actor_role: localStorage.getItem("access_description") || userRole || localStorage.getItem("role") || "registrar",
@@ -578,6 +593,9 @@ const QualifyingExamScore = () => {
 
   // helper to make string comparisons robust
   const normalize = (s) => (s ?? "").toString().trim().toLowerCase();
+  const selectedSemester = semesters.find(
+    (sem) => String(sem.semester_id) === String(selectedSchoolSemester)
+  );
   const [showSubmittedOnly, setShowSubmittedOnly] = useState(false);
   const [topCount, setTopCount] = useState(100);
   const [itemsPerPage, setItemsPerPage] = useState(100);
@@ -641,7 +659,7 @@ const QualifyingExamScore = () => {
 
     const matchesSemester =
       selectedSchoolSemester === "" ||
-      String(personData.middle_code) === String(selectedSchoolSemester);
+      normalize(personData.middle_code) === normalize(selectedSemester?.semester_code);
 
     /* 🧮 SCORE COMPUTATION (MUST COME BEFORE FILTERS) */
     const subjectScores = subjects.map((subject) =>
@@ -836,6 +854,15 @@ const QualifyingExamScore = () => {
 
   const handleStatusChange = async (applicantId, newStatus) => {
     try {
+      // ✅ Optimistic update first so UI doesn't flicker
+      setPersons((prev) =>
+        prev.map((p) =>
+          p.applicant_number === applicantId
+            ? { ...p, college_approval_status: newStatus }
+            : p,
+        ),
+      );
+
       await axios.put(
         `${API_BASE_URL}/api/interview_applicants/${applicantId}/status`,
         {
@@ -844,23 +871,21 @@ const QualifyingExamScore = () => {
         },
       );
 
-      setPersons((prev) =>
-        prev.map((p) =>
-          p.applicant_number === applicantId
-            ? { ...p, college_approval_status: newStatus } // 👈 update correct field
-            : p,
-        ),
-      );
-
       setSnack({
         open: true,
         message: "Status updated successfully.",
         severity: "success",
       });
 
-      fetchApplicants();
+      // ✅ Re-fetch to sync with DB (will now return correct string labels)
+      await fetchApplicants();
+
     } catch (err) {
       console.error("Error updating status:", err);
+
+      // ✅ Revert optimistic update on failure
+      await fetchApplicants();
+
       setSnack({
         open: true,
         message: "Failed to update status.",
@@ -868,6 +893,7 @@ const QualifyingExamScore = () => {
       });
     }
   };
+
 
   const divToPrintRef = useRef();
 
@@ -1020,8 +1046,10 @@ const QualifyingExamScore = () => {
               <th style="width:12%">Applicant ID</th>
               <th style="width:25%">Applicant Name</th>
               <th style="width:12%">Program</th>
-              <th style="width:10%">Qualifying</th>
-              <th style="width:10%">Interview</th>
+              <th style="width:10%">Qualifying Exam Score</th>
+              <th style="width:10%">Qualifying Status</th>
+              <th style="width:10%">Interview Exam Score</th>
+              <th style="width:10%">Interview Status</th>
               <th style="width:10%">Total Avg</th>
               <th style="width:10%">Status</th>
             </tr>
@@ -1044,9 +1072,13 @@ const QualifyingExamScore = () => {
                 <tr>
                   <td>${person.applicant_number ?? "N/A"}</td>
                   <td>${person.last_name}, ${person.first_name} ${person.middle_name ?? ""} ${person.extension ?? ""}</td>
-                  <td>${person.program_code || ""}</td>
+                  <td>${allCurriculums.find(
+        (item) => item.curriculum_id?.toString() === person.program?.toString()
+      )?.program_code ?? "N/A"}</td>
                   <td>${qualifyingExam}</td>
+              <td>${person.qualifying_status === 1 ? "Passed" : person.qualifying_status === 0 ? "Failed" : "—"}</td>
                   <td>${qualifyingInterview}</td>
+<td>${person.interview_status_result === 1 ? "Passed" : person.interview_status_result === 0 ? "Failed" : "—"}</td>
                   <td>${computedTotalAve.toFixed(2)}</td>
                   <td>${person.college_approval_status ?? "N/A"}</td>
                 </tr>
@@ -1103,11 +1135,32 @@ const QualifyingExamScore = () => {
       sheet = sheet
         .filter((row) => row["Applicant ID"])
         .map((row) => ({
-          applicant_number: String(row["Applicant ID"]).trim(),
-          qualifying_exam_score: Number(row["Qualifying Exam Score"]) || 0,
-          qualifying_interview_score: Number(row["Qualifying Interview Score"]) || 0,
-          status: row["Status"] ? String(row["Status"]).trim() : "Waiting List",
+          applicant_number: String(
+            row["Applicant ID"] || ""
+          ).trim(),
+
+          qualifying_exam_score:
+            Number(row["Qualifying Exam Score"]) || 0,
+
+          qualifying_interview_score:
+            Number(row["Interview Exam Score"]) || 0,
+
+          qualifying_status:
+            String(
+              row["Qualifying Result"] || ""
+            ).trim(),
+
+          interview_status_result:
+            String(
+              row["Interview Result"] || ""
+            ).trim(),
+
+          status:
+            String(
+              row["College Status"] || ""
+            ).trim(),
         }));
+
 
       if (sheet.length === 0) {
         setSnack({ open: true, message: "Excel file had no valid rows!", severity: "warning" });
@@ -1118,7 +1171,7 @@ const QualifyingExamScore = () => {
 
       const res = await axios.post(
         `${API_BASE_URL}/api/qualifying_exam/import`,
-        { userID, data: sheet },
+        { userID, data: sheet, ...auditPayload() },
         { headers: { "Content-Type": "application/json" } }
       );
 
@@ -1208,6 +1261,62 @@ const QualifyingExamScore = () => {
   const debounceTimers = useRef({});
   const manualSaveRef = useRef({});
 
+  const saveResultStatusChange = async (person, field, value) => {
+    try {
+      const payload = buildPayload(person, { [field]: value }, { includeStatus: false });
+
+      const res = await axios.post(
+        `${API_BASE_URL}/api/interview/save`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!res.data?.success) {
+        throw new Error("Saving failed");
+      }
+
+      setPersons((prev) =>
+        prev.map((p) =>
+          p.person_id === person.person_id ? { ...p, [field]: value } : p,
+        ),
+      );
+
+      setSnack({
+        open: true,
+        message: "Result status updated successfully.",
+        severity: "success",
+      });
+    } catch (err) {
+      console.error("Error updating result status:", err);
+
+      setEditScores((prev) => {
+        const next = { ...prev };
+        const row = { ...(next[person.person_id] || {}) };
+        delete row[field];
+
+        if (Object.keys(row).length === 0) {
+          delete next[person.person_id];
+        } else {
+          next[person.person_id] = row;
+        }
+
+        return next;
+      });
+
+      await fetchApplicants();
+
+      setSnack({
+        open: true,
+        message: "Failed to update result status.",
+        severity: "error",
+      });
+    }
+  };
+
   const handleScoreChange = (person, field, value) => {
     setEditScores((prev) => ({
       ...prev,
@@ -1216,6 +1325,10 @@ const QualifyingExamScore = () => {
         [field]: value,
       },
     }));
+
+    if (field === "qualifying_status" || field === "interview_status_result") {
+      saveResultStatusChange(person, field, value);
+    }
   };
 
 
@@ -1225,7 +1338,7 @@ const QualifyingExamScore = () => {
   useEffect(() => {
     socket.current.on("schedule_updated", ({ schedule_id }) => {
       console.log("📢 Schedule updated:", schedule_id);
-      fetchSchedulesWithCount(); // ✅ always refresh counts
+
       fetchApplicants();
     });
 
@@ -1299,7 +1412,7 @@ const QualifyingExamScore = () => {
 
       const matchesSemester =
         !selectedSchoolSemester ||
-        String(p.middle_code) === String(selectedSchoolSemester);
+        normalize(p.middle_code) === normalize(selectedSemester?.semester_code);
 
       return (
         matchesDepartment &&
@@ -1395,7 +1508,7 @@ const QualifyingExamScore = () => {
 
       const matchesSemester =
         !selectedSchoolSemester ||
-        String(p.middle_code) === String(selectedSchoolSemester);
+        normalize(p.middle_code) === normalize(selectedSemester?.semester_code);
 
       return (
         matchesDepartment &&
@@ -2081,7 +2194,7 @@ Thank you, best regards
 
         const matchesSemester =
           !selectedSchoolSemester ||
-          String(p.middle_code) === String(selectedSchoolSemester);
+          normalize(p.middle_code) === normalize(selectedSemester?.semester_code);
 
         return (
           matchesDepartment &&
@@ -3044,7 +3157,7 @@ Thank you, best regards
             value={minScorePercent}
             onChange={(e) => setMinScorePercent(e.target.value)}
           />
-         
+
         </Box>
       </TableContainer>
 
@@ -3141,7 +3254,7 @@ Thank you, best regards
               >
                 Score %
               </TableCell>
-             
+
               {/* Exam Columns */}
               <TableCell
                 sx={{
@@ -3285,7 +3398,7 @@ Thank you, best regards
                   (Number(qualifyingExam) + Number(qualifyingInterview)) / 2;
                 const applicantId = person.applicant_number;
                 const isAssigned = !!person.schedule_id; // ✅ check if already assigned
-          
+
 
                 const totalScore = subjectScores.reduce(
                   (sum, score) => sum + score,
@@ -3302,7 +3415,7 @@ Thank you, best regards
                     ? ((totalScore / maxTotal) * 50) + 50
                     : 0;
 
-          
+
 
 
                 return (
@@ -3332,7 +3445,7 @@ Thank you, best regards
                         color: "blue",
                         cursor: "pointer",
                       }}
-                      onClick={() => handleRowClick(person.person_id)}
+                      onClick={() => handleRowClick(person)}
                     >
                       {person.applicant_number ?? "N/A"}
                     </TableCell>
@@ -3346,7 +3459,7 @@ Thank you, best regards
                         color: "blue",
                         cursor: "pointer",
                       }}
-                      onClick={() => handleRowClick(person.person_id)}
+                      onClick={() => handleRowClick(person)}
                     >
                       {`${person.last_name}, ${person.first_name} ${person.middle_name ?? ""} ${person.extension ?? ""}`}
                     </TableCell>
@@ -3359,10 +3472,8 @@ Thank you, best regards
                         fontSize: "12px",
                       }}
                     >
-                      {curriculumOptions.find(
-                        (item) =>
-                          item.curriculum_id?.toString() ===
-                          person.program?.toString(),
+                      {allCurriculums.find(
+                        (item) => item.curriculum_id?.toString() === person.program?.toString()
                       )?.program_code ?? "N/A"}
                     </TableCell>
 
@@ -3399,7 +3510,7 @@ Thank you, best regards
 
 
 
-                
+
 
                     {/* Qualifying Exam Score */}
                     <TableCell
@@ -4486,4 +4597,3 @@ Thank you, best regards
 };
 
 export default QualifyingExamScore;
-

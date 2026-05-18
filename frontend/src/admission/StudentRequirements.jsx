@@ -723,35 +723,60 @@ const StudentRequirements = () => {
       return;
     }
 
+    const applicantNumber =
+      person?.applicant_number || selectedPerson?.applicant_number || "";
+
+    if (!applicantNumber) {
+      showSnackbar("Please select an applicant before updating document status.", "warning");
+      return;
+    }
+
+    if (uploads.length === 0) {
+      showSnackbar(
+        "Cannot update document status yet. This applicant has no uploaded requirements to update.",
+        "warning"
+      );
+      return;
+    }
+
     try {
       await axios.put(
-        `${API_BASE_URL}/api/document_status/${person.applicant_number}`,
+        `${API_BASE_URL}/api/document_status/${applicantNumber}`,
         withAuditActor({
           document_status: newStatus,
           user_id: localStorage.getItem("person_id"),
-        })
+        }),
+        { headers: getAuditHeaders() }
       );
 
       setDocumentStatus(newStatus);
 
-      await fetchDocumentStatus(person.applicant_number);
+      await fetchDocumentStatus(applicantNumber);
 
-      if (person.applicant_number) {
-        await fetchUploadsByApplicantNumber(person.applicant_number);
-      }
+      await fetchUploadsByApplicantNumber(applicantNumber);
 
       // ✅ BUILD FULL NAME
       const fullName = `${(person.last_name || "").toUpperCase()}, ${(person.first_name || "").toUpperCase()} ${(person.middle_name || "").toUpperCase()} ${(person.extension || "").toUpperCase()}`;
 
       // ✅ SNACKBAR SUCCESS MESSAGE
       showSnackbar(
-        `✅ Status updated to "${newStatus}" for Applicant [${person.applicant_number}] ${fullName}`,
+        `✅ Status updated to "${newStatus}" for Applicant [${applicantNumber}] ${fullName}`,
         "success"
       );
 
     } catch (err) {
-      console.error("Error updating document status:", err);
-      showSnackbar("❌ Failed to update document status.", "error");
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Failed to update document status.";
+
+      console.error("Error updating document status:", {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        applicantNumber,
+        error: err,
+      });
+      showSnackbar(`❌ ${message}`, "error");
     }
   };
 

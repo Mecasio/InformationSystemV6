@@ -5,7 +5,7 @@ const MB = 1024 * 1024;
 
 const XLSX_IMPORT_LIMITS = {
   MAX_FILE_SIZE_MB: Number(process.env.MAX_XLSX_FILE_SIZE_MB || 120),
-  MAX_ROWS: Number(process.env.MAX_XLSX_ROWS || 10000),
+  MAX_ROWS: Number(process.env.MAX_XLSX_ROWS || 900000),
   MAX_COLS: Number(process.env.MAX_XLSX_COLS || 120),
   BATCH_SIZE: Number(process.env.XLSX_BATCH_SIZE || 100),
 };
@@ -163,10 +163,7 @@ function filterRowsWithMandatoryColumns(rows, mandatoryColumns = []) {
 }
 
 function getDynamicRowLimitByFileSize(sizeInBytes = 0) {
-  const sizeMb = getFileSizeMB(sizeInBytes);
-  if (sizeMb > 10) return 2000;
-  if (sizeMb > 5) return 1000;
-  return 500;
+  return XLSX_IMPORT_LIMITS.MAX_ROWS;
 }
 
 function prepareRowsForInsert(rows, sizeInBytes) {

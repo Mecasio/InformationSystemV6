@@ -248,44 +248,6 @@ const AssignScheduleToApplicants = () => {
         setUserID("");
     }, [queryPersonId]);
 
-
-
-
-    useEffect(() => {
-        let consumedFlag = false;
-
-        const tryLoad = async () => {
-            if (queryPersonId) {
-                await fetchByPersonId(queryPersonId);
-                setExplicitSelection(true);
-                consumedFlag = true;
-                return;
-            }
-
-            // fallback only if it's a fresh selection from Applicant List
-            const source = sessionStorage.getItem("admin_edit_person_id_source");
-            const tsStr = sessionStorage.getItem("admin_edit_person_id_ts");
-            const id = sessionStorage.getItem("admin_edit_person_id");
-            const ts = tsStr ? parseInt(tsStr, 10) : 0;
-            const isFresh = source === "applicant_list" && Date.now() - ts < 5 * 60 * 1000;
-
-            if (id && isFresh) {
-                await fetchByPersonId(id);
-                setExplicitSelection(true);
-                consumedFlag = true;
-            }
-        };
-
-        tryLoad().finally(() => {
-            // consume the freshness so it won't auto-load again later
-            if (consumedFlag) {
-                sessionStorage.removeItem("admin_edit_person_id_source");
-                sessionStorage.removeItem("admin_edit_person_id_ts");
-            }
-        });
-    }, [queryPersonId]);
-
-
     const [applicants, setApplicants] = useState([]);
     const [selectedSchedule, setSelectedSchedule] = useState("");
     const [selectedApplicants, setSelectedApplicants] = useState(new Set());
@@ -592,6 +554,8 @@ const AssignScheduleToApplicants = () => {
                     message: `Applicant ${applicantNumber} assigned successfully.`,
                     severity: "success",
                 });
+                fetchAllApplicants();
+                fetchSchedulesWithCount();
             } else {
                 setSnack({
                     open: true,
@@ -726,9 +690,10 @@ const AssignScheduleToApplicants = () => {
                     severity: "success"
                 });
                 fetchAllApplicants();
+                fetchSchedulesWithCount();
                 setSchedules(prev =>
                     prev.map(s =>
-                        s.schedule_id === selectedSchedule
+                        Number(s.schedule_id) === Number(selectedSchedule)
                             ? { ...s, current_occupancy: currentCount + (res.assigned?.length || 0) }
                             : s
                     )
@@ -988,15 +953,28 @@ ${officeName}`;
     const [schedules, setSchedules] = useState([]);
 
 
-    const handleRowClick = (person_id) => {
-        if (!person_id) return;
+    const handleRowClick = (applicant) => {
+        const personId = applicant?.person_id;
+        if (!personId) return;
 
-        sessionStorage.setItem("admin_edit_person_id", String(person_id));
+        const searchValue =
+            applicant?.applicant_number ||
+            `${applicant?.last_name ?? ""}, ${applicant?.first_name ?? ""}`.trim();
+
+        sessionStorage.setItem("admin_edit_person_id", String(personId));
+        sessionStorage.setItem("edit_person_id", String(personId));
         sessionStorage.setItem("admin_edit_person_id_source", "applicant_list");
         sessionStorage.setItem("admin_edit_person_id_ts", String(Date.now()));
 
         // ✅ Always pass person_id in the URL
-        navigate(`/admin_dashboard1?person_id=${person_id}`);
+        sessionStorage.setItem("admin_edit_person_data", JSON.stringify(applicant));
+
+        if (searchValue) {
+            sessionStorage.setItem("admin_edit_search_query", String(searchValue));
+            sessionStorage.setItem("edit_applicant_number", String(searchValue));
+        }
+
+        navigate(`/admin_dashboard1?person_id=${personId}`);
     };
 
 
@@ -1071,6 +1049,11 @@ ${officeName}`;
     };
 
     // ✅ Step 1: Filtering
+    const normalize = (value) => String(value ?? "").trim().toLowerCase();
+    const selectedSemester = semesters.find(
+        (sem) => String(sem.semester_id) === String(selectedSchoolSemester)
+    );
+
     const filteredPersons = persons.filter((personData) => {
         const query = searchQuery.toLowerCase();
         const fullName = `${personData.first_name ?? ""} ${personData.middle_name ?? ""} ${personData.last_name ?? ""}`.toLowerCase();
@@ -1108,7 +1091,8 @@ ${officeName}`;
             selectedSchoolYear === "" || (schoolYear && (String(applicantAppliedYear) === String(schoolYear.current_year)))
 
         const matchesSemester =
-            selectedSchoolSemester === "" || String(personData.middle_code) === String(selectedSchoolSemester);
+            selectedSchoolSemester === "" ||
+            normalize(personData.middle_code) === normalize(selectedSemester?.semester_code);
 
         return (
             (matchesApplicantID || matchesName || matchesEmail || matchesProgramQuery) &&
@@ -1978,7 +1962,7 @@ ${officeName}`;
                                                 py: 0.5,
                                                 fontSize: "12px",
                                             }}
-                                            onClick={() => handleRowClick(person.person_id)}
+                                            onClick={() => handleRowClick(person)}
                                         >
                                             {person.applicant_number ?? "N/A"}
                                         </TableCell>
@@ -1994,7 +1978,7 @@ ${officeName}`;
                                                 py: 0.5,
                                                 fontSize: "12px",
                                             }}
-                                            onClick={() => handleRowClick(person.person_id)}
+                                            onClick={() => handleRowClick(person)}
                                         >
                                             {`${person.last_name}, ${person.first_name} ${person.middle_name ?? ""} ${person.extension ?? ""}`}
                                         </TableCell>

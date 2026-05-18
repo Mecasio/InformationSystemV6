@@ -89,27 +89,43 @@ const ScheduleFilterer = () => {
       <br />
       <Grid
         container
-        spacing={4}
-        gap={2}
+        spacing={2}
         justifyContent="center"
-        textAlign="center"
-        style={{ backgroundColor: "white", padding: "1rem 0rem" }}
+        alignItems="stretch"
+        sx={{
+          backgroundColor: "white",
+          columnGap: 2,
+          rowGap: 2,
+          px: 2,
+          py: 2,
+        }}
       >
         {departmentList.map((department, index) => (
-          <Grid key={department.dprtmnt_id}>
+          <Grid
+            key={department.dprtmnt_id}
+            size={{ xs: 12, sm: "auto" }}
+            sx={{ display: "flex", justifyContent: "center" }}
+          >
             <Button
-              fullWidth
               key={index}
               variant="contained"
               value={department.dprtmnt_id}
               onClick={() => handleFilterID(department.dprtmnt_id)}
               sx={{
                 border: `2px solid ${borderColor}`,
-                width: 100,
-                height: 45,
+                minWidth: { xs: "100%", sm: 180 },
+                maxWidth: { xs: "100%", sm: 240 },
+                minHeight: 48,
+                px: 2,
+                py: 1,
                 backgroundColor:
                   filterDepId === department.dprtmnt_id ? settings?.header_color || "#1976d2" : "white",
                 color: filterDepId === department.dprtmnt_id ? "white" : "maroon",
+                fontSize: "0.8rem",
+                lineHeight: 1.2,
+                textAlign: "center",
+                whiteSpace: "normal",
+                wordBreak: "break-word",
 
                 "&:hover": {
                   backgroundColor: mainButtonColor,

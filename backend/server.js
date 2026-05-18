@@ -59,11 +59,11 @@ const applicantDocsDir = path.join(
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://192.168.0.180:5173",
+  "http://192.168.50.55:5173",
   "http://192.168.50.55:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.0.180:5173",
+  "http://192.168.50.55:5173",
   "http://192.168.1.9:5173",
 ];
 
@@ -608,9 +608,38 @@ app.get("/api/requirements/by-status/:status", async (req, res) => {
 });
 
 
+const normalizeInterviewApplicantStatus = (value) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (normalized === "1" || normalized === "accepted") return 1;
+  if (normalized === "2" || normalized === "rejected") return 2;
+  if (
+    normalized === "0" ||
+    normalized === "waiting list" ||
+    normalized === "waiting_list" ||
+    normalized === "on process" ||
+    normalized === ""
+  ) {
+    return 0;
+  }
+
+  return value;
+};
+
+const formatInterviewApplicantStatus = (value) => {
+  const normalized = normalizeInterviewApplicantStatus(value);
+
+  if (Number(normalized) === 1) return "Accepted";
+  if (Number(normalized) === 2) return "Rejected";
+  if (Number(normalized) === 0) return "Waiting List";
+
+  return String(value ?? "NONE");
+};
+
 app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
   const { applicant_id } = req.params;
   const { status } = req.body;
+  const nextStatusValue = normalizeInterviewApplicantStatus(status);
 
   try {
     const [[applicantBefore]] = await db.query(
@@ -637,15 +666,15 @@ app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
 
     const [result] = await db.query(
       "UPDATE interview_applicants SET status = ? WHERE applicant_id = ?",
-      [status, applicant_id],
+      [nextStatusValue, applicant_id],
     );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Applicant not found" });
     }
 
-    const previousStatus = applicantBefore.status || "NONE";
-    const nextStatus = status || "NONE";
+    const previousStatus = formatInterviewApplicantStatus(applicantBefore.status);
+    const nextStatus = formatInterviewApplicantStatus(nextStatusValue);
 
     if (previousStatus !== nextStatus) {
       const actor = await getAuditActorFromRequest(req);
@@ -1200,6 +1229,8 @@ app.get("/api/medical-students", async (req, res) => {
         p.strand,
         a.applicant_number,
         SUBSTRING(a.applicant_number, 5, 1) AS middle_code,
+        app_sem.semester_id AS applicant_semester_id,
+        app_sem.semester_code AS applicant_semester_code,
         ea.schedule_id,
         ees.day_description AS exam_day,
         ees.room_description AS exam_room,
@@ -1229,6 +1260,8 @@ app.get("/api/medical-students", async (req, res) => {
         ON ua.person_id = p.person_id
       LEFT JOIN admission.applicant_numbering_table AS a
         ON p.person_id = a.person_id
+      LEFT JOIN enrollment.semester_table AS app_sem
+        ON app_sem.semester_code = SUBSTRING(a.applicant_number, 5, 1)
       LEFT JOIN admission.exam_applicants AS ea
         ON a.applicant_number = ea.applicant_id
       LEFT JOIN admission.entrance_exam_schedule AS ees
@@ -1564,6 +1597,8 @@ app.get("/api/all-applicants", async (req, res) => {
         p.strand,
         a.applicant_number,
         SUBSTRING(a.applicant_number, 5, 1) AS middle_code,
+        app_sem.semester_id AS applicant_semester_id,
+        app_sem.semester_code AS applicant_semester_code,
         ea.schedule_id,
         ees.day_description AS exam_day,
         ees.room_description AS exam_room,
@@ -1594,6 +1629,8 @@ app.get("/api/all-applicants", async (req, res) => {
         ON ua.person_id = p.person_id
       LEFT JOIN admission.applicant_numbering_table AS a
         ON p.person_id = a.person_id
+      LEFT JOIN enrollment.semester_table AS app_sem
+        ON app_sem.semester_code = SUBSTRING(a.applicant_number, 5, 1)
       LEFT JOIN admission.exam_applicants AS ea
         ON a.applicant_number = ea.applicant_id
       LEFT JOIN admission.entrance_exam_schedule AS ees
@@ -1631,7 +1668,7 @@ app.get("/api/all-applicants", async (req, res) => {
 
       LEFT JOIN admission.person_status_table AS ps
         ON p.person_id = ps.person_id
-      INNER JOIN admission.user_accounts AS aua
+      LEFT JOIN admission.user_accounts AS aua
         ON p.person_id = aua.person_id
 
       LEFT JOIN (
@@ -1640,7 +1677,8 @@ app.get("/api/all-applicants", async (req, res) => {
           COUNT(rt.id) AS total_required_docs
         FROM admission.person_table p2
         LEFT JOIN admission.requirements_table rt
-          ON rt.applicant_type = p2.applyingAs
+          ON rt.applicant_type COLLATE utf8mb4_unicode_ci =
+             p2.applyingAs COLLATE utf8mb4_unicode_ci
          AND rt.category = 'Main'
          AND rt.is_verifiable = 1
         GROUP BY p2.person_id
@@ -1655,7 +1693,8 @@ app.get("/api/all-applicants", async (req, res) => {
         INNER JOIN admission.requirements_table rt
           ON ru.requirements_id = rt.id
         INNER JOIN admission.person_table p3
-          ON rt.applicant_type = p3.applyingAs
+          ON rt.applicant_type COLLATE utf8mb4_unicode_ci =
+             p3.applyingAs COLLATE utf8mb4_unicode_ci
          AND p3.person_id = ru.person_id
         WHERE ru.document_status = 'Documents Verified & ECAT'
           AND rt.category = 'Main'

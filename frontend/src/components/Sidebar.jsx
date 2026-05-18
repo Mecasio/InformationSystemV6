@@ -144,19 +144,20 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 /* section label */
 .sb-section-label {
   font-size:12px; font-weight:700; text-transform:uppercase;
-  letter-spacing:.07em; color:#000; padding:9px 8px 3px;
+  letter-spacing:.07em; color:#000; padding:${collapsed ? "0" : "9px 8px 3px"};
   white-space:nowrap; overflow:hidden;
   max-width:${collapsed ? "0" : "220px"};
+  height:${collapsed ? "0" : "auto"};
   opacity:${collapsed ? "0" : "1"};
   transform:translateX(${collapsed ? "-6px" : "0"});
-  transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease;
+  transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease, padding .34s cubic-bezier(.22,1,.36,1);
 }
 
 /* nav item */
 .sb-item {
   display:flex; align-items:center;
   gap:${collapsed ? "0" : "10px"};
-  padding:${collapsed ? "6px 0" : "8px 10px"};
+  padding:${collapsed ? "3px 0" : "8px 10px"};
   border-radius:8px; cursor:pointer;
   color:#111; font-size:13px; font-weight:400;
   transition:background .18s ease, color .18s ease, padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
@@ -186,7 +187,7 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 .sb-group-btn {
   display:flex; align-items:center;
   gap:${collapsed ? "0" : "10px"};
-  width:100%; padding:${collapsed ? "6px 0" : "8px 10px"};
+  width:100%; padding:${collapsed ? "3px 0" : "8px 10px"};
   border-radius:8px; border:none; background:transparent; cursor:pointer;
   color:#111; font-size:13px; font-weight:400;
   font-family:'Poppins',sans-serif;
@@ -214,7 +215,8 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease;
 }
 
-.sb-divider { height:1px; background:#f0f0f0; margin:6px 0; }
+.sb-divider { height:1px; background:#f0f0f0; margin:${collapsed ? "2px 0" : "6px 0"}; }
+.sb-scroll .MuiDivider-root { margin:${collapsed ? "2px 0 !important" : "5px 0 !important"}; }
 
 /* footer */
 .sb-footer {
@@ -225,7 +227,7 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 .sb-logout {
   display:flex; align-items:center;
   gap:${collapsed ? "0" : "10px"};
-  padding:${collapsed ? "6px 0" : "8px 10px"};
+  padding:${collapsed ? "3px 0" : "8px 10px"};
   border-radius:8px; cursor:pointer;
   font-size:13px; font-weight:500; color:#111;
   transition:background .18s ease, padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
@@ -900,6 +902,11 @@ const SideBar = ({
           link: "/migration_data_panel",
           icon: CloudUpload,
           page_id: 114,
+        },
+        {
+          title: "Upload Enrolled Subject",
+          link: "/upload_enrolled_subject",
+          icon: CloudUpload,
         },
       ],
     },

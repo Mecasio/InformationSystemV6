@@ -322,6 +322,22 @@ const RoomRegistration = () => {
     "& svg": { color: "white" },
   };
 
+  const resetRoomForm = () => {
+    setEditingRoom(null);
+    setRoomName("");
+    setBuildingName("");
+    setFloor("");
+    setType("");
+    setBranch(1);
+    setIsAircon(0);
+  };
+
+  const handleCloseFormDialog = () => {
+    setOpenFormDialog(false);
+    setOpenUpdateDialog(false);
+    resetRoomForm();
+  };
+
   const handleEditRoom = (room) => {
     setEditingRoom(room);
     setBuildingName(room.building_description || "");
@@ -359,8 +375,8 @@ const RoomRegistration = () => {
         severity: "success",
       });
 
-      setEditingRoom(null);
-      fetchRoomList();
+      handleCloseFormDialog();
+      await fetchRoomList();
     } catch (err) {
       console.error("Error updating room:", err);
       setSnack({
@@ -1069,7 +1085,7 @@ const RoomRegistration = () => {
 
       <Dialog
         open={openFormDialog}
-        onClose={() => setOpenFormDialog(false)}
+        onClose={handleCloseFormDialog}
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -1200,7 +1216,7 @@ const RoomRegistration = () => {
           }}
         >
           <Button
-            onClick={() => setOpenFormDialog(false)}
+            onClick={handleCloseFormDialog}
             color="error"
             variant="outlined"
           >
@@ -1220,7 +1236,7 @@ const RoomRegistration = () => {
                   setOpenUpdateDialog(true);
                 } else {
                   handleAddRoom();
-                  setOpenFormDialog(false);
+                  handleCloseFormDialog();
                 }
               }}
             >
