@@ -143,9 +143,15 @@ const NSTPTagging = () => {
 
   // ── Dropdown data ─────────────────────────────────────────────────────────
   const [departmentSections, setDepartmentSections] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [curriculumList, setCurriculumList] = useState([]);
+  const [yearLevels, setYearLevels] = useState([]);
   const [schoolYears, setSchoolYears] = useState([]);
   const [semesters, setSemesters] = useState([]);
 
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedCurriculum, setSelectedCurriculum] = useState("");
+  const [selectedYearLevel, setSelectedYearLevel] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
@@ -154,13 +160,19 @@ const NSTPTagging = () => {
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
-        const [secRes, yrRes, semRes, activeRes] = await Promise.all([
+        const [secRes, deptRes, curRes, yearLevelRes, yrRes, semRes, activeRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/department_section`),
+          axios.get(`${API_BASE_URL}/get_department`),
+          axios.get(`${API_BASE_URL}/get_active_curriculum`),
+          axios.get(`${API_BASE_URL}/api/year-levels`),
           axios.get(`${API_BASE_URL}/get_school_year`),
           axios.get(`${API_BASE_URL}/get_school_semester`),
           axios.get(`${API_BASE_URL}/active_school_year`),
         ]);
         setDepartmentSections(secRes.data || []);
+        setDepartments(deptRes.data || []);
+        setCurriculumList(curRes.data || []);
+        setYearLevels(yearLevelRes.data || []);
         setSchoolYears(yrRes.data || []);
         setSemesters(semRes.data || []);
 
@@ -201,12 +213,77 @@ const NSTPTagging = () => {
       .catch(() => { });
   }, [selectedYear, selectedSemester]);
 
+  useEffect(() => {
+    setSelectedCurriculum("");
+    setSelectedSection("");
+    setAllSectionStudents([]);
+    setTaggedStudents([]);
+    setTaggedNumbers(new Set());
+    setSearched(false);
+  }, [selectedDepartment]);
+
+  useEffect(() => {
+    setSelectedSection("");
+    setAllSectionStudents([]);
+    setTaggedStudents([]);
+    setTaggedNumbers(new Set());
+    setSearched(false);
+  }, [selectedCurriculum]);
+
+  useEffect(() => {
+    setAllSectionStudents([]);
+    setTaggedStudents([]);
+    setTaggedNumbers(new Set());
+    setSearched(false);
+  }, [selectedYearLevel]);
+
+  const formatSchoolYear = (yearDesc) => {
+    if (!yearDesc) return "";
+    const startYear = Number(yearDesc);
+    return Number.isNaN(startYear) ? yearDesc : `${startYear} - ${startYear + 1}`;
+  };
+
+  const filteredCurriculums = React.useMemo(
+    () => {
+      const filtered = curriculumList.filter(
+        (curriculum) =>
+          !selectedDepartment ||
+          String(curriculum.dprtmnt_id || "") === String(selectedDepartment),
+      );
+
+      return Array.from(
+        new Map(filtered.map((curriculum) => [curriculum.curriculum_id, curriculum])).values(),
+      );
+    },
+    [curriculumList, selectedDepartment],
+  );
+
+  const filteredDepartmentSections = React.useMemo(
+    () => {
+      const filtered = departmentSections.filter(
+        (section) =>
+          (!selectedDepartment ||
+            String(section.dprtmnt_id || "") === String(selectedDepartment)) &&
+          (!selectedCurriculum ||
+            String(section.curriculum_id || "") === String(selectedCurriculum)),
+      );
+
+      return Array.from(
+        new Map(
+          filtered.map((section) => [section.department_section_id, section]),
+        ).values(),
+      );
+    },
+    [departmentSections, selectedDepartment, selectedCurriculum],
+  );
+
   // ── Fetch all students in section — left panel never filters anyone out ───
   const fetchSectionStudents = async () => {
     const res = await axios.get(`${API_BASE_URL}/get_student_per_section`, {
       params: {
         department_section_id: selectedSection,
         active_school_year_id: activeSYID,
+        year_level_id: selectedYearLevel || undefined,
       },
     });
     setAllSectionStudents(res.data || []);
@@ -218,6 +295,7 @@ const NSTPTagging = () => {
         params: {
           department_section_id: selectedSection,
           active_school_year_id: activeSYID,
+          year_level_id: selectedYearLevel || undefined,
         },
       });
       const tagged = Array.isArray(res.data) ? res.data : [];
@@ -554,6 +632,62 @@ const NSTPTagging = () => {
           }}
         >
           {/* Department Section — coerce to string to fix MUI value mismatch */}
+          <FormControl size="small" sx={{ minWidth: 220, flex: "1 1 220px" }}>
+            <InputLabel>Department</InputLabel>
+            <Select
+              value={String(selectedDepartment || "")}
+              label="Department"
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+            >
+              <MenuItem value="">All Departments</MenuItem>
+              {departments.map((dept) => (
+                <MenuItem key={dept.dprtmnt_id} value={String(dept.dprtmnt_id)}>
+                  {dept.dprtmnt_name} ({dept.dprtmnt_code})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 300, flex: "1 1 300px" }}>
+            <InputLabel>Curriculum</InputLabel>
+            <Select
+              value={String(selectedCurriculum || "")}
+              label="Curriculum"
+              onChange={(e) => setSelectedCurriculum(e.target.value)}
+            >
+              <MenuItem value="">All Active Curriculums</MenuItem>
+              {filteredCurriculums.map((curriculum) => (
+                <MenuItem
+                  key={`${curriculum.curriculum_id}-${curriculum.dprtmnt_id || "all"}`}
+                  value={String(curriculum.curriculum_id)}
+                >
+                  {formatSchoolYear(curriculum.year_description)} - ({curriculum.program_code}){" "}
+                  {curriculum.program_description}
+                  {curriculum.major ? ` (${curriculum.major})` : ""}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Year Level</InputLabel>
+            <Select
+              value={String(selectedYearLevel || "")}
+              label="Year Level"
+              onChange={(e) => setSelectedYearLevel(e.target.value)}
+            >
+              <MenuItem value="">All Year Levels</MenuItem>
+              {yearLevels.map((yearLevel) => (
+                <MenuItem
+                  key={yearLevel.year_level_id}
+                  value={String(yearLevel.year_level_id)}
+                >
+                  {yearLevel.year_level_description}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <FormControl size="small" sx={{ minWidth: 260, flex: "1 1 260px" }}>
             <InputLabel>Department Section</InputLabel>
             <Select
@@ -561,10 +695,10 @@ const NSTPTagging = () => {
               label="Department Section"
               onChange={(e) => setSelectedSection(e.target.value)}
             >
-              <MenuItem value="" disabled>
+              <MenuItem value="">
                 Select a Department Section
               </MenuItem>
-              {departmentSections.map((sec) => {
+              {filteredDepartmentSections.map((sec) => {
                 const val = String(sec.department_section_id ?? "");
                 return (
                   <MenuItem key={val} value={val}>

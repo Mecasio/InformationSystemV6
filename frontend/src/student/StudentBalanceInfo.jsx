@@ -60,7 +60,9 @@ const StudentBalanceInfo = () => {
 
         const match = (data.rows || []).find((row) => {
           if (activeSchoolYearId) {
-            return String(row.active_school_year_id || "") === activeSchoolYearId;
+            return (
+              String(row.active_school_year_id || "") === activeSchoolYearId
+            );
           }
 
           return (
@@ -152,7 +154,15 @@ const StudentBalanceInfo = () => {
             backgroundColor: "white",
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, gap: 2, flexWrap: "wrap" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mb: 2,
+              gap: 2,
+              flexWrap: "wrap",
+            }}
+          >
             <Box>
               <Typography fontWeight={700}>Student Name</Typography>
               <Typography>
@@ -168,7 +178,8 @@ const StudentBalanceInfo = () => {
             <Box>
               <Typography fontWeight={700}>Term</Typography>
               <Typography>
-                {assessmentRow.school_year} - {Number(assessmentRow.school_year) + 1} /{" "}
+                {assessmentRow.school_year} -{" "}
+                {Number(assessmentRow.school_year) + 1} /{" "}
                 {assessmentRow.semester}
               </Typography>
             </Box>
@@ -182,7 +193,15 @@ const StudentBalanceInfo = () => {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ backgroundColor: headerColor }}>
-                  {["#", "Course Code", "Description", "Units", "Lec Fee", "Lab Fee", "Total"].map((header) => (
+                  {[
+                    "#",
+                    "Course Code",
+                    "Description",
+                    "Units",
+                    "Lec Fee",
+                    "Lab Fee",
+                    "Total",
+                  ].map((header) => (
                     <TableCell
                       key={header}
                       sx={{
@@ -200,104 +219,251 @@ const StudentBalanceInfo = () => {
               <TableBody>
                 {subjects.map((subject, index) => (
                   <TableRow key={`${subject.course_id}-${index}`}>
-                    <TableCell align="center" sx={{ border: `1px solid ${borderColor}` }}>{index + 1}</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>{subject.course_code}</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>{subject.course_description}</TableCell>
-                    <TableCell align="center" sx={{ border: `1px solid ${borderColor}` }}>{subject.course_unit}</TableCell>
-                    <TableCell align="right" sx={{ border: `1px solid ${borderColor}` }}>{money(subject.lec_fee)}</TableCell>
-                    <TableCell align="right" sx={{ border: `1px solid ${borderColor}` }}>{money(subject.lab_fee)}</TableCell>
-                    <TableCell align="right" sx={{ border: `1px solid ${borderColor}` }}>
-                      {money(Number(subject.lec_fee || 0) + Number(subject.lab_fee || 0))}
+                    <TableCell
+                      align="center"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {index + 1}
+                    </TableCell>
+                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
+                      {subject.course_code}
+                    </TableCell>
+                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
+                      {subject.course_description}
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {Number(subject.course_unit).toString()}
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {money(subject.lec_fee)}
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {money(subject.lab_fee)}
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {money(
+                        Number(subject.lec_fee || 0) +
+                          Number(subject.lab_fee || 0),
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
 
                 <TableRow sx={{ backgroundColor: "#f5f5f5", fontWeight: 700 }}>
-                  <TableCell colSpan={3} align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    colSpan={3}
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     Course Totals
                   </TableCell>
-                  <TableCell align="center" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    align="center"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     {totals.courseUnits}
                   </TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     {money(totals.lectureFees)}
                   </TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     {money(totals.labFees)}
                   </TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     {money(fees.tuitionFee)}
                   </TableCell>
                 </TableRow>
 
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: `1px solid ${borderColor}`, fontWeight: 700, fontSize: 18 }}>
+                  <TableCell
+                    colSpan={7}
+                    sx={{
+                      border: `1px solid ${borderColor}`,
+                      fontWeight: 700,
+                      fontSize: 18,
+                    }}
+                  >
                     Tuition Fee
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ border: `1px solid ${borderColor}` }}>Tuition Fee</TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}` }}>{money(fees.tuitionFee)}</TableCell>
+                  <TableCell
+                    colSpan={6}
+                    sx={{ border: `1px solid ${borderColor}` }}
+                  >
+                    Tuition Fee
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}` }}
+                  >
+                    {money(fees.tuitionFee)}
+                  </TableCell>
                 </TableRow>
                 {Number(fees.nstpFee || 0) > 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ border: `1px solid ${borderColor}` }}>NSTP Fee</TableCell>
-                    <TableCell align="right" sx={{ border: `1px solid ${borderColor}` }}>{money(fees.nstpFee)}</TableCell>
+                    <TableCell
+                      colSpan={6}
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      NSTP Fee
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {money(fees.nstpFee)}
+                    </TableCell>
                   </TableRow>
                 )}
                 <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                  <TableCell colSpan={6} align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    colSpan={6}
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     Total Tuition
                   </TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     {money(fees.totalTuition)}
                   </TableCell>
                 </TableRow>
 
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: `1px solid ${borderColor}`, fontWeight: 700, fontSize: 18 }}>
+                  <TableCell
+                    colSpan={7}
+                    sx={{
+                      border: `1px solid ${borderColor}`,
+                      fontWeight: 700,
+                      fontSize: 18,
+                    }}
+                  >
                     Miscellaneous and Other Fees
                   </TableCell>
                 </TableRow>
                 {(fees.miscellaneousBreakdown || []).map((fee) => (
                   <TableRow key={fee.label}>
-                    <TableCell colSpan={6} sx={{ border: `1px solid ${borderColor}` }}>{fee.label}</TableCell>
-                    <TableCell align="right" sx={{ border: `1px solid ${borderColor}` }}>{money(fee.amount)}</TableCell>
+                    <TableCell
+                      colSpan={6}
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {fee.label}
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ border: `1px solid ${borderColor}` }}
+                    >
+                      {money(fee.amount)}
+                    </TableCell>
                   </TableRow>
                 ))}
                 <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                  <TableCell colSpan={6} align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    colSpan={6}
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     Total Miscellaneous Fee
                   </TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                  <TableCell
+                    align="right"
+                    sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}
+                  >
                     {money(fees.miscellaneousFee)}
                   </TableCell>
                 </TableRow>
                 {Number(fees.discountAmount || 0) > 0 && (
                   <>
                     <TableRow>
-                      <TableCell colSpan={6} align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                      <TableCell
+                        colSpan={6}
+                        align="right"
+                        sx={{
+                          border: `1px solid ${borderColor}`,
+                          fontWeight: 700,
+                        }}
+                      >
                         Gross Assessment
                       </TableCell>
-                      <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          border: `1px solid ${borderColor}`,
+                          fontWeight: 700,
+                        }}
+                      >
                         {money(fees.originalGrandTotal)}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={6} align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700 }}>
+                      <TableCell
+                        colSpan={6}
+                        align="right"
+                        sx={{
+                          border: `1px solid ${borderColor}`,
+                          fontWeight: 700,
+                        }}
+                      >
                         Discount / Scholarship
                       </TableCell>
-                      <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 700, color: "red" }}>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          border: `1px solid ${borderColor}`,
+                          fontWeight: 700,
+                          color: "red",
+                        }}
+                      >
                         -{money(fees.discountAmount)}
                       </TableCell>
                     </TableRow>
                   </>
                 )}
                 <TableRow sx={{ backgroundColor: "#fff1f1" }}>
-                  <TableCell colSpan={6} align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 800, fontSize: 16 }}>
+                  <TableCell
+                    colSpan={6}
+                    align="right"
+                    sx={{
+                      border: `1px solid ${borderColor}`,
+                      fontWeight: 800,
+                      fontSize: 16,
+                    }}
+                  >
                     Total Assessment
                   </TableCell>
-                  <TableCell align="right" sx={{ border: `1px solid ${borderColor}`, fontWeight: 800, color: "red", fontSize: 16 }}>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      border: `1px solid ${borderColor}`,
+                      fontWeight: 800,
+                      color: "red",
+                      fontSize: 16,
+                    }}
+                  >
                     {money(fees.grandTotal)}
                   </TableCell>
                 </TableRow>

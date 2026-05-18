@@ -79,6 +79,18 @@ const CurriculumCourseMap = () => {
   const pageId = 111;
 
   const [employeeID, setEmployeeID] = useState("");
+  const getAuditConfig = () => ({
+    headers: {
+      "x-employee-id": employeeID || localStorage.getItem("employee_id") || "",
+      "x-page-id": pageId,
+      "x-audit-actor-id":
+        employeeID ||
+        localStorage.getItem("employee_id") ||
+        localStorage.getItem("email") ||
+        "unknown",
+      "x-audit-actor-role": userRole || localStorage.getItem("role") || "registrar",
+    },
+  });
 
   useEffect(() => {
 
@@ -354,7 +366,7 @@ const CurriculumCourseMap = () => {
         semester_id: first.semester_id,
         program_id: first.program_id,
         dprtmnt_id: first.dprtmnt_id,
-      });
+      }, getAuditConfig());
 
       // 🔁 SAVE PER-COURSE FEES
       for (const course of courses) {
@@ -376,7 +388,8 @@ const CurriculumCourseMap = () => {
             iscomputer_lab: updates?.iscomputer_lab ?? course.iscomputer_lab,
             islaboratory_fee: updates?.islaboratory_fee ?? course.islaboratory_fee,
             misc_fee: miscFeeValue,
-          }
+          },
+          getAuditConfig()
         );
       }
 

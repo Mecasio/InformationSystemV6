@@ -39,6 +39,17 @@ const CoursePanelMap = () => {
 
     const [hasAccess, setHasAccess] = useState(null);
     const [loading, setLoading] = useState(false);
+    const getAuditConfig = () => ({
+        headers: {
+            "x-employee-id": localStorage.getItem("employee_id") || "",
+            "x-page-id": pageId,
+            "x-audit-actor-id":
+                localStorage.getItem("employee_id") ||
+                localStorage.getItem("email") ||
+                "unknown",
+            "x-audit-actor-role": localStorage.getItem("role") || "registrar",
+        },
+    });
     const pageId = 112; // 🔁 change if needed
 
     /* ===================== SETTINGS ===================== */
@@ -150,7 +161,8 @@ const CoursePanelMap = () => {
                         prereq: edited.prereq ?? course.prereq ?? null,
 
                         corequisite: edited.corequisite ?? course.corequisite ?? null,
-                    }
+                    },
+                    getAuditConfig()
                 );
 
             }

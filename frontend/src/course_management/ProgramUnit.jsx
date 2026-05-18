@@ -130,6 +130,18 @@ const ProgramUnit = () => {
     };
 
     const pageId = 113;
+    const getAuditConfig = () => ({
+        headers: {
+            "x-employee-id": employeeID || localStorage.getItem("employee_id") || "",
+            "x-page-id": pageId,
+            "x-audit-actor-id":
+                employeeID ||
+                localStorage.getItem("employee_id") ||
+                localStorage.getItem("email") ||
+                "unknown",
+            "x-audit-actor-role": userRole || localStorage.getItem("role") || "registrar",
+        },
+    });
 
 
 
@@ -196,7 +208,8 @@ const ProgramUnit = () => {
             for (const courseId of Object.keys(updates)) {
                 await axios.put(
                     `${API_BASE_URL}/update_course/${courseId}`,
-                    updates[courseId]
+                    updates[courseId],
+                    getAuditConfig()
                 );
             }
 

@@ -744,24 +744,7 @@ const CollegeScheduleChecker = () => {
     });
   };
 
-  const [courseSearch, setCourseSearch] = useState("");
-  const [profSearch, setProfSearch] = useState("");
 
-  const filteredCourses = courseList.filter((course) => {
-    const words = courseSearch.toLowerCase().split(" ").filter(Boolean);
-    return words.every((word) =>
-      (course.course_code?.toLowerCase() || "").includes(word) ||
-      (course.course_description?.toLowerCase() || "").includes(word)
-    );
-  });
-
-  const filteredProfessors = profList.filter((prof) => {
-    const words = profSearch.toLowerCase().split(" ").filter(Boolean);
-    return words.every((word) =>
-      (prof.fname?.toLowerCase() || "").includes(word) ||
-      (prof.lname?.toLowerCase() || "").includes(word)
-    );
-  });
 
   const filteredScheduleList = allschedules
     .filter((sched) => {
@@ -1197,60 +1180,47 @@ const CollegeScheduleChecker = () => {
               </div>
             )}
             {/* Search Course & Course Select */}
+            {/* Search Course & Course Select */}
             <div className="flex flex-col mb-2 w-full">
-              {/* Course Search Input */}
-              <div className="flex mb-2 items-center">
-                <div className="p-2 w-[12rem]">Search Course:</div>
-                <input
-                  type="text"
-                  placeholder="Search Course"
-                  value={courseSearch}
-                  onChange={(e) => setCourseSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault(); // prevent form submit
-                      // Optionally auto-select first filtered course
-                      if (filteredCourses.length > 0) {
-                        setSelectedSubject(filteredCourses[0].course_id);
-                      }
-                    }
-                  }}
-                  className="border border-gray-500 rounded w-full h-10 px-2"
-                />
-              </div>
-
-              {/* Course Select */}
               <div className="flex mb-1 items-center">
                 <div className="p-2 w-[12rem]">{isDesignationMode ? "Designation:" : "Course:"}</div>
-                <select
-                  className="border border-gray-500 outline-none rounded w-full h-10 px-2"
-                  value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
-                  required
-                >
-                  <option value="">
-                    {isDesignationMode ? "Select Designation" : "Select Course"}
-                  </option>
-                  {filteredCourses.map((subject) => (
-                    <option key={subject.course_id} value={subject.course_id}>
-                      {subject.course_code} - {subject.course_description}
-                    </option>
-                  ))}
-                </select>
+                <Autocomplete
+                  options={courseList}
+                  fullWidth
+                  getOptionLabel={(option) =>
+                    `${option.course_code || ""} - ${option.course_description || ""}`.trim()
+                  }
+                  value={
+                    courseList.find(
+                      (course) => String(course.course_id) === String(selectedSubject)
+                    ) || null
+                  }
+                  onChange={(event, newValue) => {
+                    setSelectedSubject(newValue ? newValue.course_id : "");
+                  }}
+                  isOptionEqualToValue={(option, value) =>
+                    String(option.course_id) === String(value.course_id)
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={isDesignationMode ? "Select Designation" : "Select Course"}
+                      size="small"
+                      required
+                    />
+                  )}
+                />
               </div>
             </div>
 
+            {/* Professor Select */}
             {/* Professor Select */}
             <div className="flex flex-col mb-2 w-full">
               <div className="flex mb-1 items-center">
                 <div className="p-2 w-[12rem]">Professor:</div>
                 <Autocomplete
-                  options={filteredProfessors}
+                  options={profList}
                   fullWidth
-                  inputValue={profSearch}
-                  onInputChange={(event, newInputValue) => {
-                    setProfSearch(newInputValue);
-                  }}
                   getOptionLabel={(option) =>
                     `${option.lname || ""}, ${option.fname || ""} ${option.mname || ""}`.trim()
                   }
@@ -2590,5 +2560,3 @@ const CollegeScheduleChecker = () => {
 };
 
 export default CollegeScheduleChecker;
-
-

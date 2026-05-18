@@ -239,10 +239,11 @@ router.delete("/delete_curriculum/:id", CanDelete, async (req, res) => {
 
 router.get("/get_active_curriculum", async (req, res) => {
   const readQuery = `
-    SELECT ct.*, p.*, y.* 
+    SELECT ct.*, p.*, y.*, dct.dprtmnt_id
     FROM curriculum_table ct 
     INNER JOIN program_table p ON ct.program_id = p.program_id
     INNER JOIN year_table y ON ct.year_id = y.year_id
+    LEFT JOIN dprtmnt_curriculum_table dct ON dct.curriculum_id = ct.curriculum_id
     WHERE ct.lock_status = 1
   `;
 

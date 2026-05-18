@@ -623,16 +623,15 @@ const StudentOnlineRequirements = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "#600000",
+              backgroundColor: "#800000",
               borderRadius: "8px",
-              width: 50,
-              height: 50,
+              width: 60,
+              height: 60,
               flexShrink: 0,
             }}
           >
-            <ErrorIcon sx={{ color: "white", fontSize: 36 }} />
+            <ErrorIcon sx={{ color: "white", fontSize: 40 }} />
           </Box>
-
           {/* Text */}
           <Typography
             sx={{

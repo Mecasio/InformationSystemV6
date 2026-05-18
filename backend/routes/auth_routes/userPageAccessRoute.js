@@ -220,6 +220,131 @@ router.post("/api/page_access/:userId/:pageId", async (req, res) => {
   }
 });
 
+router.post("/api/access-level/bulk-permission-audit", async (req, res) => {
+  const {
+    modal_context,
+    permission,
+    enabled,
+    access_id,
+    access_description,
+    affected_count,
+  } = req.body;
+  const allowedPermissions = ["can_create", "can_edit", "can_delete"];
+  const allowedContexts = ["create_access", "edit_access_level"];
+
+  if (!allowedPermissions.includes(permission)) {
+    return res.status(400).json({ error: "Invalid permission" });
+  }
+
+  if (!allowedContexts.includes(modal_context)) {
+    return res.status(400).json({ error: "Invalid modal context" });
+  }
+
+  try {
+    const { actorId, actorRole } = getAuditActor(req);
+    const roleLabel = formatAuditActorRole(actorRole);
+    const actionLabel = permission.replace("can_", "").toUpperCase();
+    const contextLabel =
+      modal_context === "create_access"
+        ? "Create Access modal"
+        : `Edit Access Level modal${access_id ? ` for access level ${access_id}` : ""}`;
+    const descriptionLabel = access_description
+      ? ` (${access_description})`
+      : "";
+
+    await insertAccountManagementAuditLog({
+      req,
+      action: Number(enabled) === 1
+        ? `ACCESS_LEVEL_${actionLabel}_GRANT_ALL_CLICK`
+        : `ACCESS_LEVEL_${actionLabel}_CLOSE_ALL_CLICK`,
+      severity: Number(enabled) === 1 ? "INFO" : "WARN",
+      message: `${roleLabel} (${actorId}) clicked ${Number(enabled) === 1 ? "Grant All" : "Close All"} ${actionLabel.toLowerCase()} in ${contextLabel}${descriptionLabel}. Affected page count: ${Number(affected_count || 0)}.`,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error inserting access level bulk permission audit:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+router.put("/api/page_access/:userId/bulk-permission", async (req, res) => {
+  const { userId } = req.params;
+  const { permission, enabled } = req.body;
+  const allowedPermissions = ["can_create", "can_edit", "can_delete"];
+
+  if (!allowedPermissions.includes(permission)) {
+    return res.status(400).json({ error: "Invalid permission" });
+  }
+
+  let conn;
+
+  try {
+    conn = await db3.getConnection();
+    await conn.beginTransaction();
+
+    if (Number(enabled) === 1) {
+      const [pages] = await conn.query("SELECT id FROM page_table");
+
+      for (const page of pages) {
+        const [existing] = await conn.query(
+          "SELECT id FROM page_access WHERE user_id = ? AND page_id = ? LIMIT 1",
+          [userId, page.id],
+        );
+
+        if (existing.length > 0) {
+          await conn.query(
+            `UPDATE page_access
+             SET page_privilege = 1, ${permission} = 1
+             WHERE user_id = ? AND page_id = ?`,
+            [userId, page.id],
+          );
+        } else {
+          await conn.query(
+            `INSERT INTO page_access
+             (user_id, page_id, page_privilege, can_create, can_edit, can_delete)
+             VALUES (?, ?, 1, ?, ?, ?)`,
+            [
+              userId,
+              page.id,
+              permission === "can_create" ? 1 : 0,
+              permission === "can_edit" ? 1 : 0,
+              permission === "can_delete" ? 1 : 0,
+            ],
+          );
+        }
+      }
+    } else {
+      await conn.query(
+        `UPDATE page_access SET ${permission} = 0 WHERE user_id = ?`,
+        [userId],
+      );
+    }
+
+    await conn.commit();
+
+    const { actorId, actorRole } = getAuditActor(req);
+    const roleLabel = formatAuditActorRole(actorRole);
+    const actionLabel = permission.replace("can_", "").toUpperCase();
+    await insertAccountManagementAuditLog({
+      req,
+      action: Number(enabled) === 1
+        ? `USER_PAGE_${actionLabel}_GRANT_ALL`
+        : `USER_PAGE_${actionLabel}_CLOSE_ALL`,
+      severity: Number(enabled) === 1 ? "INFO" : "WARN",
+      message: `${roleLabel} (${actorId}) ${Number(enabled) === 1 ? "granted" : "closed"} all ${actionLabel.toLowerCase()} permissions for User (${userId}).`,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("Error updating bulk page permission:", err);
+    res.status(500).json({ error: "Database error" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 router.put("/api/page_access/:userId/:pageId", async (req, res) => {
   const { userId, pageId } = req.params;
   const {

@@ -197,6 +197,25 @@ const UserPageAccess = () => {
     can_delete: false,
   });
 
+  const permissionLabels = {
+    can_create: "Create",
+    can_edit: "Edit",
+    can_delete: "Delete",
+  };
+
+  const setBulkPermissionState = (pagesList, currentAccess, permissionKey, enabled) => {
+    const nextAccess = { ...currentAccess };
+    pagesList.forEach((page) => {
+      const current = nextAccess[page.id] || createEmptyPermission(false);
+      nextAccess[page.id] = {
+        ...current,
+        access: enabled ? true : current.access,
+        [permissionKey]: enabled,
+      };
+    });
+    return nextAccess;
+  };
+
   const buildAccessLevelPermissionState = (pagesList) => {
     const defaults = {};
     pagesList.forEach((page) => {
@@ -496,6 +515,28 @@ const UserPageAccess = () => {
     setCreatePageAccess(allAccess);
   };
 
+  const handleCreateBulkPermission = async (permissionKey, enabled) => {
+    setCreatePageAccess((prev) =>
+      setBulkPermissionState(createPages, prev, permissionKey, enabled),
+    );
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/access-level/bulk-permission-audit`,
+        {
+          modal_context: "create_access",
+          permission: permissionKey,
+          enabled: enabled ? 1 : 0,
+          access_description: accessDescription,
+          affected_count: createPages.length,
+        },
+        auditConfig,
+      );
+    } catch (err) {
+      console.error("Failed to insert create access bulk permission audit:", err);
+    }
+  };
+
   const handleSelectAccessLevel = (accessId) => {
     setEditAccessId(accessId);
     const selected = accessLevels.find(
@@ -565,6 +606,29 @@ const UserPageAccess = () => {
       allAccess[p.id] = createEmptyPermission(false);
     });
     setEditPageAccess(allAccess);
+  };
+
+  const handleEditBulkPermission = async (permissionKey, enabled) => {
+    setEditPageAccess((prev) =>
+      setBulkPermissionState(editPages, prev, permissionKey, enabled),
+    );
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/access-level/bulk-permission-audit`,
+        {
+          modal_context: "edit_access_level",
+          permission: permissionKey,
+          enabled: enabled ? 1 : 0,
+          access_id: editAccessId,
+          access_description: editAccessDescription,
+          affected_count: editPages.length,
+        },
+        auditConfig,
+      );
+    } catch (err) {
+      console.error("Failed to insert edit access bulk permission audit:", err);
+    }
   };
 
   const saveEditedAccess = async () => {
@@ -715,6 +779,45 @@ const UserPageAccess = () => {
       });
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUserBulkPermission = async (permissionKey, enabled) => {
+    if (!selectedUser) return;
+
+    const previousAccess = pageAccess;
+    const nextAccess = setBulkPermissionState(
+      pages,
+      pageAccess,
+      permissionKey,
+      enabled,
+    );
+
+    setPageAccess(nextAccess);
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/api/page_access/${selectedUser.employee_id}/bulk-permission`,
+        {
+          permission: permissionKey,
+          enabled: enabled ? 1 : 0,
+        },
+        auditConfig,
+      );
+
+      setSnack({
+        open: true,
+        severity: "success",
+        message: `${enabled ? "Granted" : "Closed"} all ${permissionLabels[permissionKey]} permissions`,
+      });
+    } catch (err) {
+      console.error(err);
+      setPageAccess(previousAccess);
+      setSnack({
+        open: true,
+        severity: "error",
+        message: `Failed to update ${permissionLabels[permissionKey]} permissions`,
+      });
     }
   };
 
@@ -1410,6 +1513,31 @@ const UserPageAccess = () => {
               Remove All Access
             </Button>
           </Box>
+
+          <Box display="flex" gap={1.5} mb={2} flexWrap="wrap">
+            {Object.entries(permissionLabels).map(([permissionKey, label]) => (
+              <React.Fragment key={permissionKey}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  color="success"
+                  onClick={() => handleUserBulkPermission(permissionKey, true)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Grant All {label}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="warning"
+                  onClick={() => handleUserBulkPermission(permissionKey, false)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Close All {label}
+                </Button>
+              </React.Fragment>
+            ))}
+          </Box>
           <Paper sx={{ border: `1px solid ${borderColor}` }}>
             <TableContainer>
               <Table>
@@ -1654,6 +1782,31 @@ const UserPageAccess = () => {
             }}
           />
 
+          <Box display="flex" gap={1.5} mb={2} flexWrap="wrap">
+            {Object.entries(permissionLabels).map(([permissionKey, label]) => (
+              <React.Fragment key={permissionKey}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  color="success"
+                  onClick={() => handleCreateBulkPermission(permissionKey, true)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Grant All {label}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="warning"
+                  onClick={() => handleCreateBulkPermission(permissionKey, false)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Close All {label}
+                </Button>
+              </React.Fragment>
+            ))}
+          </Box>
+
           <Paper sx={{ border: `1px solid ${borderColor}` }}>
             <TableContainer>
               <Table>
@@ -1877,6 +2030,33 @@ const UserPageAccess = () => {
             >
               Clear All
             </Button>
+          </Box>
+
+          <Box display="flex" gap={1.5} mb={2} flexWrap="wrap">
+            {Object.entries(permissionLabels).map(([permissionKey, label]) => (
+              <React.Fragment key={permissionKey}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  color="success"
+                  onClick={() => handleEditBulkPermission(permissionKey, true)}
+                  disabled={!editAccessId}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Grant All {label}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="warning"
+                  onClick={() => handleEditBulkPermission(permissionKey, false)}
+                  disabled={!editAccessId}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Close All {label}
+                </Button>
+              </React.Fragment>
+            ))}
           </Box>
 
           <Paper sx={{ border: `1px solid ${borderColor}` }}>

@@ -354,6 +354,7 @@ const CoursePanel = () => {
       });
 
       showSnack("Course successfully added!", "success");
+      setOpenCourseDialog(false);
       fetchCourses();
     } catch (err) {
       showSnack(

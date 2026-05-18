@@ -585,7 +585,7 @@ const RegisterProf = () => {
       role: prof.role || "faculty",
       dprtmnt_id: prof.dprtmnt_id || "",
       profileImage: null,
-      preview: prof.profile_image ? `${API_BASE_URL}/uploads/${prof.profile_image}` : "",
+      preview: prof.profile_image ? `${API_BASE_URL}/uploads/Faculty1by1/${prof.profile_image}` : "",
     });
     setOpenDialog(true);
   };
@@ -1260,7 +1260,7 @@ const RegisterProf = () => {
                   <Avatar
                     src={
                       prof.profile_image
-                        ? `${API_BASE_URL}/uploads/${prof.profile_image}`
+                        ? `${API_BASE_URL}/uploads/Faculty1by1/${prof.profile_image}`
                         : undefined
                     }
                     alt={prof.fname}

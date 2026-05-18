@@ -286,10 +286,12 @@ router.get("/department_section", async (req, res) => {
         pt.program_description,
         pt.major,
         ct.curriculum_id,
+        dct.dprtmnt_id,
         yt.year_description,
         st.description AS section_description
       FROM dprtmnt_section_table dst
       INNER JOIN curriculum_table ct ON dst.curriculum_id = ct.curriculum_id
+      LEFT JOIN dprtmnt_curriculum_table dct ON dct.curriculum_id = ct.curriculum_id
       INNER JOIN program_table pt ON ct.program_id = pt.program_id
       INNER JOIN year_table yt ON ct.year_id = yt.year_id
       INNER JOIN section_table st ON dst.section_id = st.id

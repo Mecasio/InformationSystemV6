@@ -1360,7 +1360,7 @@ const AdminDashboard1 = () => {
             {index < stepsData.length - 1 && (
               <Box
                 sx={{
-                  
+
                   mx: 1, // margin to keep spacing
                 }}
               />
@@ -1452,8 +1452,22 @@ const AdminDashboard1 = () => {
             }}
           >
             <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span> Kindly type 'NA' in boxes where there are no possible answers to the information being requested. &nbsp;  &nbsp; <br />
-            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px', marginLeft: "100px", }}>➔</span> To make use of the letter 'Ñ', please press ALT while typing "165", while for 'ñ', please press ALT while typing "164"
+            <strong></strong>
+            <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
+            Please indicate “NA” or “N/A” in fields where the requested information is not applicable or no response can be provided.
+            &nbsp;&nbsp;<br />
+
+            <strong></strong>
+            <span
+              style={{
+                fontSize: '1.2em',
+                margin: '0 15px',
+                marginLeft: '100px',
+              }}
+            >
+              ➔
+            </span>
+            To enter the letter “Ñ”, press and hold the ALT key while typing “165”. For “ñ”, press and hold the ALT key while typing “164”.
 
           </Typography>
         </Box>

@@ -6,8 +6,6 @@ const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
 require("dotenv").config();
 const router = express.Router();
 
-
-
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
@@ -51,7 +49,6 @@ const insertStudentAccountAuditLog = async ({ req, action, message }) => {
     message,
   });
 };
-
 
 router.get("/student_list", async (req, res) => {
   try {
@@ -168,21 +165,16 @@ router.get("/student_list", async (req, res) => {
       page,
       totalPages: Math.ceil(countRows[0].total / limit),
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false });
   }
 });
 
-
 router.get("/student_list/:student_number", async (req, res) => {
-
-  const { student_number } =
-    req.params;
+  const { student_number } = req.params;
 
   try {
-
     const sql = `
 SELECT
     snt.student_number,
@@ -234,24 +226,18 @@ WHERE snt.student_number = ?
 LIMIT 1
 `;
 
-    const [rows] =
-      await db3.query(sql, [
-        student_number
-      ]);
+    const [rows] = await db3.query(sql, [student_number]);
 
     res.json(rows);
-
   } catch (error) {
     console.error("FULL ERROR:", error);
     console.error("RESPONSE:", error.response?.data);
 
     res.status(500).json({
-      success: false
+      success: false,
     });
   }
 });
-
-
 
 // ─── Student: Password Reset Reminder ───────────────────────────────────────
 router.put("/student_account/:person_id", async (req, res) => {
@@ -261,7 +247,9 @@ router.put("/student_account/:person_id", async (req, res) => {
   let conn;
 
   try {
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
     if (!person_id || !normalizedEmail) {
       return res.status(400).json({
@@ -290,10 +278,11 @@ router.put("/student_account/:person_id", async (req, res) => {
     }
 
     const [duplicateAccounts] = await conn.query(
-      `SELECT id
-       FROM user_accounts
-       WHERE LOWER(email) = ? AND person_id != ?
-       LIMIT 1`,
+      `SELECT ua.id
+   FROM user_accounts ua
+   WHERE LOWER(ua.email) = ? 
+     AND ua.person_id != ?
+   LIMIT 1`,
       [normalizedEmail, person_id],
     );
 
@@ -415,7 +404,7 @@ router.post("/send_student_password_reminder", async (req, res) => {
     if (!person_id || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields"
+        message: "Missing required fields",
       });
     }
 
@@ -434,7 +423,7 @@ router.post("/send_student_password_reminder", async (req, res) => {
         ON pt.person_id = snt.person_id
       WHERE pt.person_id = ?
       `,
-      [person_id]
+      [person_id],
     );
 
     if (student.length === 0) {
@@ -446,15 +435,15 @@ router.post("/send_student_password_reminder", async (req, res) => {
     `);
 
     const company_name = companyRows[0]?.company_name || "Company";
-    const short_term   = companyRows[0]?.short_term   || "System";
-    const frontendUrl  = process.env.FRONTEND_URL;
+    const short_term = companyRows[0]?.short_term || "System";
+    const frontendUrl = process.env.FRONTEND_URL;
 
     const { first_name, last_name, middle_name, student_number } = student[0];
     const fullName = `${last_name}, ${first_name} ${middle_name || ""}`.trim();
 
     await transporter.sendMail({
-      from:    `"${short_term} — Password Security" <${process.env.EMAIL_USER}>`,
-      to:      email,
+      from: `"${short_term} — Password Security" <${process.env.EMAIL_USER}>`,
+      to: email,
       subject: `${short_term} — Action Required: Change Your Password`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; color: #222;">
@@ -529,7 +518,7 @@ router.post("/send_student_password_reminder", async (req, res) => {
             contact the system administrator immediately. Do not reply to this email.
           </p>
         </div>
-      `
+      `,
     });
 
     const { actorId, actorRole } = getAuditActor(req);
@@ -540,8 +529,10 @@ router.post("/send_student_password_reminder", async (req, res) => {
       message: `${roleLabel} (${actorId}) sent student account password reminder to Student (${student_number || person_id}).`,
     });
 
-    res.json({ success: true, message: "Student password reset reminder sent" });
-
+    res.json({
+      success: true,
+      message: "Student password reset reminder sent",
+    });
   } catch (error) {
     console.error("EMAIL ERROR:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -551,4 +542,3 @@ router.post("/send_student_password_reminder", async (req, res) => {
 });
 
 module.exports = router;
-

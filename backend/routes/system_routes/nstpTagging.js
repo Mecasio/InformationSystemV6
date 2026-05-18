@@ -45,7 +45,7 @@ const insertNstpAuditLog = async ({ req, action, message }) => {
 };
 
 router.get("/get_student_per_section", async (req, res) => {
-  const { department_section_id, active_school_year_id } = req.query;
+  const { department_section_id, active_school_year_id, year_level_id } = req.query;
   console.log(
     "Received params - Department Section ID:",
     department_section_id,
@@ -58,17 +58,23 @@ router.get("/get_student_per_section", async (req, res) => {
       SELECT 
       es.student_number, p.first_name, p.last_name,
       pgt.program_code, pgt.program_id, pgt.program_description,
-      s.student_number
+      s.student_number,
+      es.year_level AS year_level_id,
+      ylt.year_level_description
       FROM enrolled_subject es
       JOIN student_numbering_table s ON es.student_number = s.student_number
       JOIN person_table p ON s.person_id = p.person_id
       JOIN curriculum_table ct ON es.curriculum_id = ct.curriculum_id
       JOIN program_table pgt ON ct.program_id = pgt.program_id
+      LEFT JOIN year_level_table ylt ON es.year_level = ylt.year_level_id
       WHERE es.department_section_id = ? AND es.active_school_year_id = ? AND course_id IN (
         SELECT course_id FROM course_table WHERE course_code IN ('NSTPROG1', 'NSTPROG2')
       )
+      ${year_level_id ? "AND es.year_level = ?" : ""}
       `,
-      [department_section_id, active_school_year_id],
+      year_level_id
+        ? [department_section_id, active_school_year_id, year_level_id]
+        : [department_section_id, active_school_year_id],
     );
 
     res.json(rows);
@@ -79,7 +85,7 @@ router.get("/get_student_per_section", async (req, res) => {
 });
 
 router.get("/get_nstp_tagged_student", async (req, res) => {
-  const { department_section_id, active_school_year_id } = req.query;
+  const { department_section_id, active_school_year_id, year_level_id } = req.query;
   console.log(
     "Received params - Department Section ID:",
     department_section_id,
@@ -96,23 +102,29 @@ router.get("/get_nstp_tagged_student", async (req, res) => {
         pgt.program_id,
         pgt.program_description,
         s.student_number,
+        es.year_level AS year_level_id,
+        ylt.year_level_description,
         es.component
       FROM enrolled_subject es
       JOIN student_numbering_table s ON es.student_number = s.student_number
       JOIN person_table p ON s.person_id = p.person_id
       JOIN curriculum_table ct ON es.curriculum_id = ct.curriculum_id
       JOIN program_table pgt ON ct.program_id = pgt.program_id
+      LEFT JOIN year_level_table ylt ON es.year_level = ylt.year_level_id
       WHERE es.department_section_id = ?
         AND es.active_school_year_id = ?
         AND es.component IS NOT NULL
         AND es.component != 0
+        ${year_level_id ? "AND es.year_level = ?" : ""}
         AND es.course_id IN (
           SELECT course_id 
           FROM course_table 
           WHERE course_code IN ('NSTPROG1', 'NSTPROG2')
         );
       `,
-      [department_section_id, active_school_year_id],
+      year_level_id
+        ? [department_section_id, active_school_year_id, year_level_id]
+        : [department_section_id, active_school_year_id],
     );
 
     res.json(rows);

@@ -103,10 +103,11 @@ const SuperAdminStudentDashboard1 = () => {
   }, [settings]);
 
   const getBranchLabel = (branchId) => {
-    const branch = branches.find((item) => String(item.id) === String(branchId));
+    const branch = branches.find(
+      (item) => String(item.id) === String(branchId),
+    );
     return branch?.branch || "—";
   };
-
 
   const [snack, setSnack] = useState({
     open: false,
@@ -202,7 +203,6 @@ const SuperAdminStudentDashboard1 = () => {
     return currentText;
   };
 
-
   const filteredYearLevels = yearLevelOptions.filter((yl) => {
     // If Graduate program → show only Master & Doctor
     if (Number(person.academicProgram) === 1) {
@@ -212,9 +212,6 @@ const SuperAdminStudentDashboard1 = () => {
     // If College/Bachelor → show only year levels
     return yl.level_type === "year";
   });
-
-
-
 
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -234,7 +231,8 @@ const SuperAdminStudentDashboard1 = () => {
         localStorage.getItem("person_id") ||
         localStorage.getItem("email") ||
         "unknown",
-      "x-audit-actor-role": userRole || localStorage.getItem("role") || "registrar",
+      "x-audit-actor-role":
+        userRole || localStorage.getItem("role") || "registrar",
       Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
     },
   });
@@ -961,8 +959,6 @@ const SuperAdminStudentDashboard1 = () => {
     }, 6000);
   };
 
-
-
   const divToPrintRef = useRef();
   const [showPrintView, setShowPrintView] = useState(false);
 
@@ -1161,8 +1157,6 @@ const SuperAdminStudentDashboard1 = () => {
       <br />
       <br />
 
-
- 
       <TableContainer component={Paper} sx={{ width: "100%", mb: 1 }}>
         <Table>
           <TableHead
@@ -1222,7 +1216,6 @@ const SuperAdminStudentDashboard1 = () => {
         </Table>
       </TableContainer>
 
-
       <Box
         sx={{
           display: "flex",
@@ -1273,11 +1266,13 @@ const SuperAdminStudentDashboard1 = () => {
             }}
           >
             <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-            <strong></strong>{" "}
-            <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>{" "}
-            Kindly type 'NA' in boxes where there are no possible answers to the
-            information being requested. &nbsp; &nbsp; <br />
-            <strong></strong>{" "}
+            <strong></strong>
+            <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+            Please indicate “NA” or “N/A” in fields where the requested
+            information is not applicable or no response can be provided.
+            &nbsp;&nbsp;
+            <br />
+            <strong></strong>
             <span
               style={{
                 fontSize: "1.2em",
@@ -1286,9 +1281,9 @@ const SuperAdminStudentDashboard1 = () => {
               }}
             >
               ➔
-            </span>{" "}
-            To make use of the letter 'Ñ', please press ALT while typing "165",
-            while for 'ñ', please press ALT while typing "164"
+            </span>
+            To enter the letter “Ñ”, press and hold the ALT key while typing
+            “165”. For “ñ”, press and hold the ALT key while typing “164”.
           </Typography>
         </Box>
       </Box>
@@ -1749,8 +1744,9 @@ const SuperAdminStudentDashboard1 = () => {
                         </MenuItem>
                         {filteredCurriculum.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            {`(${item.program_code}): ${item.program_description}${item.major ? ` (${item.major})` : ""
-                              } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
+                            {`(${item.program_code}): ${item.program_description}${
+                              item.major ? ` (${item.major})` : ""
+                            } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
                           </MenuItem>
                         ))}
                       </Select>

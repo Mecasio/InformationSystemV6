@@ -2,7 +2,29 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { SettingsContext } from "../App";
 
 import axios from "axios";
-import { Button, Box, TextField, Container, Typography, Card, TableContainer, Paper, Table, TableHead, TableRow, TableCell, FormHelperText, FormControl, InputLabel, Select, MenuItem, Modal, FormControlLabel, Checkbox, IconButton } from "@mui/material";
+import {
+  Button,
+  Box,
+  TextField,
+  Container,
+  Typography,
+  Card,
+  TableContainer,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  FormHelperText,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Modal,
+  FormControlLabel,
+  Checkbox,
+  IconButton,
+} from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import PersonIcon from "@mui/icons-material/Person";
 import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
@@ -17,14 +39,14 @@ import regions from "../data/region.json";
 import provinces from "../data/province.json";
 import cities from "../data/city.json";
 import barangays from "../data/barangay.json";
-import { useNavigate } from 'react-router-dom';
-import Search from '@mui/icons-material/Search';
+import { useNavigate } from "react-router-dom";
+import Search from "@mui/icons-material/Search";
 import { motion } from "framer-motion";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { FaFileExcel } from "react-icons/fa";
 import API_BASE_URL from "../apiConfig";
 import ExamPermit from "../applicant/ExamPermit";
-import { Snackbar, Alert } from '@mui/material';
+import { Snackbar, Alert } from "@mui/material";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import ListAltIcon from "@mui/icons-material/ListAlt";
@@ -35,23 +57,22 @@ import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import GradeIcon from "@mui/icons-material/Grade";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import DescriptionIcon from "@mui/icons-material/Description";
-import HowToRegIcon from '@mui/icons-material/HowToReg';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import HowToRegIcon from "@mui/icons-material/HowToReg";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import DateField from "../components/DateField";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 
 const MedicalDashboard1 = () => {
-
   const settings = useContext(SettingsContext);
 
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-  const [subButtonColor, setSubButtonColor] = useState("#ffffff");   // ✅ NEW
-  const [stepperColor, setStepperColor] = useState("#000000");       // ✅ NEW
+  const [subButtonColor, setSubButtonColor] = useState("#ffffff"); // ✅ NEW
+  const [stepperColor, setStepperColor] = useState("#000000"); // ✅ NEW
 
   const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
@@ -66,7 +87,8 @@ const MedicalDashboard1 = () => {
     if (settings.title_color) setTitleColor(settings.title_color);
     if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
     if (settings.border_color) setBorderColor(settings.border_color);
-    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
+    if (settings.main_button_color)
+      setMainButtonColor(settings.main_button_color);
     if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color);
     if (settings.stepper_color) setStepperColor(settings.stepper_color);
 
@@ -87,33 +109,61 @@ const MedicalDashboard1 = () => {
       setBranches(
         typeof settings.branches === "string"
           ? JSON.parse(settings.branches)
-          : settings.branches
+          : settings.branches,
       );
     }
-
   }, [settings]);
 
   const getBranchLabel = (branchId) => {
-    const branch = branches.find((item) => String(item.id) === String(branchId));
+    const branch = branches.find(
+      (item) => String(item.id) === String(branchId),
+    );
     return branch?.branch || "—";
   };
 
-
-
   const stepsData = [
- { label: "Student List", to: "/medical_student_list", icon: <SchoolIcon fontSize="large" /> },
-        { label: "Student Profile", to: "/medical_dashboard1", icon: <PersonIcon fontSize="large" /> },
-        { label: "Submitted Documents", to: "/medical_requirements", icon: <AssignmentIcon fontSize="large" /> }, // updated icon
-        { label: "Medical History", to: "/medical_requirements_form", icon: <HealthAndSafetyIcon fontSize="large" /> },
-        { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon fontSize="large" /> },
-        { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <PsychologyIcon fontSize="large" /> },
+    {
+      label: "Student List",
+      to: "/medical_student_list",
+      icon: <SchoolIcon fontSize="large" />,
+    },
+    {
+      label: "Student Profile",
+      to: "/medical_dashboard1",
+      icon: <PersonIcon fontSize="large" />,
+    },
+    {
+      label: "Submitted Documents",
+      to: "/medical_requirements",
+      icon: <AssignmentIcon fontSize="large" />,
+    }, // updated icon
+    {
+      label: "Medical History",
+      to: "/medical_requirements_form",
+      icon: <HealthAndSafetyIcon fontSize="large" />,
+    },
+    {
+      label: "Dental Assessment",
+      to: "/dental_assessment",
+      icon: <DescriptionIcon fontSize="large" />,
+    },
+    {
+      label: "Physical and Neurological Examination",
+      to: "/physical_neuro_exam",
+      icon: <PsychologyIcon fontSize="large" />,
+    },
   ];
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [visitedSteps, setVisitedSteps] = useState(Array(stepsData.length).fill(false));
+  const [visitedSteps, setVisitedSteps] = useState(
+    Array(stepsData.length).fill(false),
+  );
 
-
-  const [snack, setSnack] = useState({ open: false, message: '', severity: 'info' });
+  const [snack, setSnack] = useState({
+    open: false,
+    message: "",
+    severity: "info",
+  });
   const navigate = useNavigate();
   const [userID, setUserID] = useState("");
   const [user, setUser] = useState("");
@@ -204,7 +254,6 @@ const MedicalDashboard1 = () => {
     return currentText;
   };
 
-
   const filteredYearLevels = yearLevelOptions.filter((yl) => {
     // If Graduate program → show only Master & Doctor
     if (Number(person.academicProgram) === 1) {
@@ -214,13 +263,6 @@ const MedicalDashboard1 = () => {
     // If College/Bachelor → show only year levels
     return yl.level_type === "year";
   });
-
-
-
-
-
-
-
 
   const handleNavigateStep = (index, to) => {
     setCurrentStep(index);
@@ -236,13 +278,11 @@ const MedicalDashboard1 = () => {
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
 
-
   const pageId = 38;
 
   const [employeeID, setEmployeeID] = useState("");
 
   useEffect(() => {
-
     const storedUser = localStorage.getItem("email");
     const storedRole = localStorage.getItem("role");
     const storedID = localStorage.getItem("person_id");
@@ -266,14 +306,16 @@ const MedicalDashboard1 = () => {
 
   const checkAccess = async (employeeID) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`);
+      const response = await axios.get(
+        `${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`,
+      );
       if (response.data && response.data.page_privilege === 1) {
         setHasAccess(true);
       } else {
         setHasAccess(false);
       }
     } catch (error) {
-      console.error('Error checking access:', error);
+      console.error("Error checking access:", error);
       setHasAccess(false);
       if (error.response && error.response.data.message) {
         console.log(error.response.data.message);
@@ -283,7 +325,6 @@ const MedicalDashboard1 = () => {
       setLoading(false);
     }
   };
-
 
   // do not alter
   const location = useLocation();
@@ -319,7 +360,6 @@ const MedicalDashboard1 = () => {
       return;
     }
 
-
     // ⭐ CASE 3: No URL ID and no last selected → start blank
     setUserID("");
   }, [queryPersonId]);
@@ -328,14 +368,32 @@ const MedicalDashboard1 = () => {
   const [clickedSteps, setClickedSteps] = useState([]);
 
   const steps = [
-    { label: "Personal Information", icon: <PersonIcon />, path: "/medical_dashboard1" },
-    { label: "Family Background", icon: <FamilyRestroomIcon />, path: "/medical_dashboard2" },
-    { label: "Educational Attainment", icon: <SchoolIcon />, path: "/medical_dashboard3" },
-    { label: "Health Medical Records", icon: <HealthAndSafetyIcon />, path: "/medical_dashboard4" },
-    { label: "Other Information", icon: <InfoIcon />, path: "/medical_dashboard5" },
+    {
+      label: "Personal Information",
+      icon: <PersonIcon />,
+      path: "/medical_dashboard1",
+    },
+    {
+      label: "Family Background",
+      icon: <FamilyRestroomIcon />,
+      path: "/medical_dashboard2",
+    },
+    {
+      label: "Educational Attainment",
+      icon: <SchoolIcon />,
+      path: "/medical_dashboard3",
+    },
+    {
+      label: "Health Medical Records",
+      icon: <HealthAndSafetyIcon />,
+      path: "/medical_dashboard4",
+    },
+    {
+      label: "Other Information",
+      icon: <InfoIcon />,
+      path: "/medical_dashboard5",
+    },
   ];
-
-
 
   // ✅ Safe handleUpdate function (no DB errors, correct applicant update)
   const handleUpdate = async (updatedData) => {
@@ -343,7 +401,8 @@ const MedicalDashboard1 = () => {
 
     try {
       // ✅ Get correct applicant ID
-      const targetId = selectedPerson?.person_id || queryPersonId || person.person_id;
+      const targetId =
+        selectedPerson?.person_id || queryPersonId || person.person_id;
       if (!targetId) {
         console.warn("⚠️ No valid applicant ID found — skipping update.");
         return;
@@ -351,58 +410,166 @@ const MedicalDashboard1 = () => {
 
       // ✅ Only include valid columns existing in person_table
       const allowedFields = [
-        "person_id", "profile_img", "campus", "academicProgram", "classifiedAs", "applyingAs",
-        "program", "program2", "program3", "yearLevel",
-        "last_name", "first_name", "middle_name", "extension", "nickname",
-        "height", "weight", "lrnNumber", "nolrnNumber", "gender",
-        "pwdMember", "pwdType", "pwdId",
-        "birthOfDate", "age", "birthPlace", "languageDialectSpoken",
-        "citizenship", "religion", "civilStatus", "tribeEthnicGroup",
-        "cellphoneNumber", "emailAddress",
-        "presentStreet", "presentBarangay", "presentZipCode", "presentRegion",
-        "presentProvince", "presentMunicipality", "presentDswdHouseholdNumber",
+        "person_id",
+        "profile_img",
+        "campus",
+        "academicProgram",
+        "classifiedAs",
+        "applyingAs",
+        "program",
+        "program2",
+        "program3",
+        "yearLevel",
+        "last_name",
+        "first_name",
+        "middle_name",
+        "extension",
+        "nickname",
+        "height",
+        "weight",
+        "lrnNumber",
+        "nolrnNumber",
+        "gender",
+        "pwdMember",
+        "pwdType",
+        "pwdId",
+        "birthOfDate",
+        "age",
+        "birthPlace",
+        "languageDialectSpoken",
+        "citizenship",
+        "religion",
+        "civilStatus",
+        "tribeEthnicGroup",
+        "cellphoneNumber",
+        "emailAddress",
+        "presentStreet",
+        "presentBarangay",
+        "presentZipCode",
+        "presentRegion",
+        "presentProvince",
+        "presentMunicipality",
+        "presentDswdHouseholdNumber",
         "sameAsPresentAddress",
-        "permanentStreet", "permanentBarangay", "permanentZipCode",
-        "permanentRegion", "permanentProvince", "permanentMunicipality",
+        "permanentStreet",
+        "permanentBarangay",
+        "permanentZipCode",
+        "permanentRegion",
+        "permanentProvince",
+        "permanentMunicipality",
         "permanentDswdHouseholdNumber",
         "solo_parent",
-        "father_deceased", "father_family_name", "father_given_name", "father_middle_name",
-        "father_ext", "father_nickname", "father_education", "father_education_level",
-        "father_last_school", "father_course", "father_year_graduated", "father_school_address",
-        "father_contact", "father_occupation", "father_employer", "father_income", "father_email",
-        "mother_deceased", "mother_family_name", "mother_given_name", "mother_middle_name",
-        "mother_ext", "mother_nickname", "mother_education", "mother_education_level",
-        "mother_last_school", "mother_course", "mother_year_graduated", "mother_school_address",
-        "mother_contact", "mother_occupation", "mother_employer", "mother_income", "mother_email",
-        "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name",
-        "guardian_ext", "guardian_nickname", "guardian_address", "guardian_contact", "guardian_email",
+        "father_deceased",
+        "father_family_name",
+        "father_given_name",
+        "father_middle_name",
+        "father_ext",
+        "father_nickname",
+        "father_education",
+        "father_education_level",
+        "father_last_school",
+        "father_course",
+        "father_year_graduated",
+        "father_school_address",
+        "father_contact",
+        "father_occupation",
+        "father_employer",
+        "father_income",
+        "father_email",
+        "mother_deceased",
+        "mother_family_name",
+        "mother_given_name",
+        "mother_middle_name",
+        "mother_ext",
+        "mother_nickname",
+        "mother_education",
+        "mother_education_level",
+        "mother_last_school",
+        "mother_course",
+        "mother_year_graduated",
+        "mother_school_address",
+        "mother_contact",
+        "mother_occupation",
+        "mother_employer",
+        "mother_income",
+        "mother_email",
+        "guardian",
+        "guardian_family_name",
+        "guardian_given_name",
+        "guardian_middle_name",
+        "guardian_ext",
+        "guardian_nickname",
+        "guardian_address",
+        "guardian_contact",
+        "guardian_email",
         "annual_income",
-        "schoolLevel", "schoolLastAttended", "schoolAddress", "courseProgram",
-        "honor", "generalAverage", "yearGraduated",
-        "schoolLevel1", "schoolLastAttended1", "schoolAddress1", "courseProgram1",
-        "honor1", "generalAverage1", "yearGraduated1",
+        "schoolLevel",
+        "schoolLastAttended",
+        "schoolAddress",
+        "courseProgram",
+        "honor",
+        "generalAverage",
+        "yearGraduated",
+        "schoolLevel1",
+        "schoolLastAttended1",
+        "schoolAddress1",
+        "courseProgram1",
+        "honor1",
+        "generalAverage1",
+        "yearGraduated1",
         "strand",
         // 🩺 Health and medical
-        "cough", "colds", "fever", "asthma", "faintingSpells", "heartDisease",
-        "tuberculosis", "frequentHeadaches", "hernia", "chronicCough", "headNeckInjury",
-        "hiv", "highBloodPressure", "diabetesMellitus", "allergies", "cancer",
-        "smokingCigarette", "alcoholDrinking", "hospitalized", "hospitalizationDetails",
+        "cough",
+        "colds",
+        "fever",
+        "asthma",
+        "faintingSpells",
+        "heartDisease",
+        "tuberculosis",
+        "frequentHeadaches",
+        "hernia",
+        "chronicCough",
+        "headNeckInjury",
+        "hiv",
+        "highBloodPressure",
+        "diabetesMellitus",
+        "allergies",
+        "cancer",
+        "smokingCigarette",
+        "alcoholDrinking",
+        "hospitalized",
+        "hospitalizationDetails",
         "medications",
         // 🧬 Covid / Vaccination
-        "hadCovid", "covidDate",
-        "vaccine1Brand", "vaccine1Date", "vaccine2Brand", "vaccine2Date",
-        "booster1Brand", "booster1Date", "booster2Brand", "booster2Date",
+        "hadCovid",
+        "covidDate",
+        "vaccine1Brand",
+        "vaccine1Date",
+        "vaccine2Brand",
+        "vaccine2Date",
+        "booster1Brand",
+        "booster1Date",
+        "booster2Brand",
+        "booster2Date",
         // 🧪 Lab results / medical findings
-        "chestXray", "cbc", "urinalysis", "otherworkups",
+        "chestXray",
+        "cbc",
+        "urinalysis",
+        "otherworkups",
         // 🧍 Additional fields
-        "symptomsToday", "remarks",
+        "symptomsToday",
+        "remarks",
         // ✅ Agreement / Meta
-        "termsOfAgreement", "created_at", "current_step"
+        "termsOfAgreement",
+        "created_at",
+        "current_step",
       ];
 
       // ✅ Clean the payload
       const cleanedData = Object.fromEntries(
-        Object.entries(updatedData).filter(([key]) => allowedFields.includes(key))
+        Object.entries(updatedData).filter(([key]) =>
+          allowedFields.includes(key),
+        ),
       );
 
       if (Object.keys(cleanedData).length === 0) {
@@ -422,8 +589,6 @@ const MedicalDashboard1 = () => {
       });
     }
   };
-
-
 
   // Helper: parse "YYYY-MM-DD" safely (local date in Asia/Manila)
   const parseISODate = (dateString) => {
@@ -468,8 +633,6 @@ const MedicalDashboard1 = () => {
     return age < 0 ? "" : age;
   };
 
-
-
   // 🧩 Real-time handleChange with Manila-based age + filtering reset
   const handleChange = (e) => {
     const target = e && e.target ? e.target : {};
@@ -502,7 +665,6 @@ const MedicalDashboard1 = () => {
       updatedPerson.yearLevel = "First Year";
     }
 
-
     if (name === "campus" || name === "academicProgram") {
       updatedPerson.program = "";
     }
@@ -511,73 +673,176 @@ const MedicalDashboard1 = () => {
     handleUpdate(updatedPerson); // real-time save
   };
 
-
-
-
-
   // ✅ Safe handleBlur for SuperAdmin — updates correct applicant only
   const handleBlur = async () => {
     try {
       // ✅ Determine correct applicant/person_id
-      const targetId = selectedPerson?.person_id || queryPersonId || person.person_id;
+      const targetId =
+        selectedPerson?.person_id || queryPersonId || person.person_id;
       if (!targetId) {
         console.warn("⚠️ No valid applicant ID found — skipping update.");
         return;
       }
 
       const allowedFields = [
-        "person_id", "profile_img", "campus", "academicProgram", "classifiedAs", "applyingAs",
-        "program", "program2", "program3", "yearLevel",
-        "last_name", "first_name", "middle_name", "extension", "nickname",
-        "height", "weight", "lrnNumber", "nolrnNumber", "gender",
-        "pwdMember", "pwdType", "pwdId",
-        "birthOfDate", "age", "birthPlace", "languageDialectSpoken",
-        "citizenship", "religion", "civilStatus", "tribeEthnicGroup",
-        "cellphoneNumber", "emailAddress",
-        "presentStreet", "presentBarangay", "presentZipCode", "presentRegion",
-        "presentProvince", "presentMunicipality", "presentDswdHouseholdNumber",
+        "person_id",
+        "profile_img",
+        "campus",
+        "academicProgram",
+        "classifiedAs",
+        "applyingAs",
+        "program",
+        "program2",
+        "program3",
+        "yearLevel",
+        "last_name",
+        "first_name",
+        "middle_name",
+        "extension",
+        "nickname",
+        "height",
+        "weight",
+        "lrnNumber",
+        "nolrnNumber",
+        "gender",
+        "pwdMember",
+        "pwdType",
+        "pwdId",
+        "birthOfDate",
+        "age",
+        "birthPlace",
+        "languageDialectSpoken",
+        "citizenship",
+        "religion",
+        "civilStatus",
+        "tribeEthnicGroup",
+        "cellphoneNumber",
+        "emailAddress",
+        "presentStreet",
+        "presentBarangay",
+        "presentZipCode",
+        "presentRegion",
+        "presentProvince",
+        "presentMunicipality",
+        "presentDswdHouseholdNumber",
         "sameAsPresentAddress",
-        "permanentStreet", "permanentBarangay", "permanentZipCode",
-        "permanentRegion", "permanentProvince", "permanentMunicipality",
+        "permanentStreet",
+        "permanentBarangay",
+        "permanentZipCode",
+        "permanentRegion",
+        "permanentProvince",
+        "permanentMunicipality",
         "permanentDswdHouseholdNumber",
         "solo_parent",
-        "father_deceased", "father_family_name", "father_given_name", "father_middle_name",
-        "father_ext", "father_nickname", "father_education", "father_education_level",
-        "father_last_school", "father_course", "father_year_graduated", "father_school_address",
-        "father_contact", "father_occupation", "father_employer", "father_income", "father_email",
-        "mother_deceased", "mother_family_name", "mother_given_name", "mother_middle_name",
-        "mother_ext", "mother_nickname", "mother_education", "mother_education_level",
-        "mother_last_school", "mother_course", "mother_year_graduated", "mother_school_address",
-        "mother_contact", "mother_occupation", "mother_employer", "mother_income", "mother_email",
-        "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name",
-        "guardian_ext", "guardian_nickname", "guardian_address", "guardian_contact", "guardian_email",
+        "father_deceased",
+        "father_family_name",
+        "father_given_name",
+        "father_middle_name",
+        "father_ext",
+        "father_nickname",
+        "father_education",
+        "father_education_level",
+        "father_last_school",
+        "father_course",
+        "father_year_graduated",
+        "father_school_address",
+        "father_contact",
+        "father_occupation",
+        "father_employer",
+        "father_income",
+        "father_email",
+        "mother_deceased",
+        "mother_family_name",
+        "mother_given_name",
+        "mother_middle_name",
+        "mother_ext",
+        "mother_nickname",
+        "mother_education",
+        "mother_education_level",
+        "mother_last_school",
+        "mother_course",
+        "mother_year_graduated",
+        "mother_school_address",
+        "mother_contact",
+        "mother_occupation",
+        "mother_employer",
+        "mother_income",
+        "mother_email",
+        "guardian",
+        "guardian_family_name",
+        "guardian_given_name",
+        "guardian_middle_name",
+        "guardian_ext",
+        "guardian_nickname",
+        "guardian_address",
+        "guardian_contact",
+        "guardian_email",
         "annual_income",
-        "schoolLevel", "schoolLastAttended", "schoolAddress", "courseProgram",
-        "honor", "generalAverage", "yearGraduated",
-        "schoolLevel1", "schoolLastAttended1", "schoolAddress1", "courseProgram1",
-        "honor1", "generalAverage1", "yearGraduated1",
+        "schoolLevel",
+        "schoolLastAttended",
+        "schoolAddress",
+        "courseProgram",
+        "honor",
+        "generalAverage",
+        "yearGraduated",
+        "schoolLevel1",
+        "schoolLastAttended1",
+        "schoolAddress1",
+        "courseProgram1",
+        "honor1",
+        "generalAverage1",
+        "yearGraduated1",
         "strand",
         // 🩺 Health and medical
-        "cough", "colds", "fever", "asthma", "faintingSpells", "heartDisease",
-        "tuberculosis", "frequentHeadaches", "hernia", "chronicCough", "headNeckInjury",
-        "hiv", "highBloodPressure", "diabetesMellitus", "allergies", "cancer",
-        "smokingCigarette", "alcoholDrinking", "hospitalized", "hospitalizationDetails",
+        "cough",
+        "colds",
+        "fever",
+        "asthma",
+        "faintingSpells",
+        "heartDisease",
+        "tuberculosis",
+        "frequentHeadaches",
+        "hernia",
+        "chronicCough",
+        "headNeckInjury",
+        "hiv",
+        "highBloodPressure",
+        "diabetesMellitus",
+        "allergies",
+        "cancer",
+        "smokingCigarette",
+        "alcoholDrinking",
+        "hospitalized",
+        "hospitalizationDetails",
         "medications",
         // 🧬 Covid / Vaccination
-        "hadCovid", "covidDate",
-        "vaccine1Brand", "vaccine1Date", "vaccine2Brand", "vaccine2Date",
-        "booster1Brand", "booster1Date", "booster2Brand", "booster2Date",
+        "hadCovid",
+        "covidDate",
+        "vaccine1Brand",
+        "vaccine1Date",
+        "vaccine2Brand",
+        "vaccine2Date",
+        "booster1Brand",
+        "booster1Date",
+        "booster2Brand",
+        "booster2Date",
         // 🧪 Lab results / medical findings
-        "chestXray", "cbc", "urinalysis", "otherworkups",
+        "chestXray",
+        "cbc",
+        "urinalysis",
+        "otherworkups",
         // 🧍 Additional fields
-        "symptomsToday", "remarks",
+        "symptomsToday",
+        "remarks",
         // ✅ Agreement / Meta
-        "termsOfAgreement", "created_at", "current_step"
+        "termsOfAgreement",
+        "created_at",
+        "current_step",
       ];
 
       // ✅ Clean payload before sending
       const cleanedData = Object.fromEntries(
-        Object.entries(person).filter(([key]) => allowedFields.includes(key))
+        Object.entries(person).filter(([key]) => allowedFields.includes(key)),
       );
 
       if (Object.keys(cleanedData).length === 0) {
@@ -600,63 +865,170 @@ const MedicalDashboard1 = () => {
   // ✅ Safe autoSave for SuperAdmin — same logic as handleBlur
   const autoSave = async () => {
     try {
-      const targetId = selectedPerson?.person_id || queryPersonId || person.person_id;
+      const targetId =
+        selectedPerson?.person_id || queryPersonId || person.person_id;
       if (!targetId) {
         console.warn("⚠️ No valid applicant ID found — skipping autoSave.");
         return;
       }
 
       const allowedFields = [
-        "person_id", "profile_img", "campus", "academicProgram", "classifiedAs", "applyingAs",
-        "program", "program2", "program3", "yearLevel",
-        "last_name", "first_name", "middle_name", "extension", "nickname",
-        "height", "weight", "lrnNumber", "nolrnNumber", "gender",
-        "pwdMember", "pwdType", "pwdId",
-        "birthOfDate", "age", "birthPlace", "languageDialectSpoken",
-        "citizenship", "religion", "civilStatus", "tribeEthnicGroup",
-        "cellphoneNumber", "emailAddress",
-        "presentStreet", "presentBarangay", "presentZipCode", "presentRegion",
-        "presentProvince", "presentMunicipality", "presentDswdHouseholdNumber",
+        "person_id",
+        "profile_img",
+        "campus",
+        "academicProgram",
+        "classifiedAs",
+        "applyingAs",
+        "program",
+        "program2",
+        "program3",
+        "yearLevel",
+        "last_name",
+        "first_name",
+        "middle_name",
+        "extension",
+        "nickname",
+        "height",
+        "weight",
+        "lrnNumber",
+        "nolrnNumber",
+        "gender",
+        "pwdMember",
+        "pwdType",
+        "pwdId",
+        "birthOfDate",
+        "age",
+        "birthPlace",
+        "languageDialectSpoken",
+        "citizenship",
+        "religion",
+        "civilStatus",
+        "tribeEthnicGroup",
+        "cellphoneNumber",
+        "emailAddress",
+        "presentStreet",
+        "presentBarangay",
+        "presentZipCode",
+        "presentRegion",
+        "presentProvince",
+        "presentMunicipality",
+        "presentDswdHouseholdNumber",
         "sameAsPresentAddress",
-        "permanentStreet", "permanentBarangay", "permanentZipCode",
-        "permanentRegion", "permanentProvince", "permanentMunicipality",
+        "permanentStreet",
+        "permanentBarangay",
+        "permanentZipCode",
+        "permanentRegion",
+        "permanentProvince",
+        "permanentMunicipality",
         "permanentDswdHouseholdNumber",
         "solo_parent",
-        "father_deceased", "father_family_name", "father_given_name", "father_middle_name",
-        "father_ext", "father_nickname", "father_education", "father_education_level",
-        "father_last_school", "father_course", "father_year_graduated", "father_school_address",
-        "father_contact", "father_occupation", "father_employer", "father_income", "father_email",
-        "mother_deceased", "mother_family_name", "mother_given_name", "mother_middle_name",
-        "mother_ext", "mother_nickname", "mother_education", "mother_education_level",
-        "mother_last_school", "mother_course", "mother_year_graduated", "mother_school_address",
-        "mother_contact", "mother_occupation", "mother_employer", "mother_income", "mother_email",
-        "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name",
-        "guardian_ext", "guardian_nickname", "guardian_address", "guardian_contact", "guardian_email",
+        "father_deceased",
+        "father_family_name",
+        "father_given_name",
+        "father_middle_name",
+        "father_ext",
+        "father_nickname",
+        "father_education",
+        "father_education_level",
+        "father_last_school",
+        "father_course",
+        "father_year_graduated",
+        "father_school_address",
+        "father_contact",
+        "father_occupation",
+        "father_employer",
+        "father_income",
+        "father_email",
+        "mother_deceased",
+        "mother_family_name",
+        "mother_given_name",
+        "mother_middle_name",
+        "mother_ext",
+        "mother_nickname",
+        "mother_education",
+        "mother_education_level",
+        "mother_last_school",
+        "mother_course",
+        "mother_year_graduated",
+        "mother_school_address",
+        "mother_contact",
+        "mother_occupation",
+        "mother_employer",
+        "mother_income",
+        "mother_email",
+        "guardian",
+        "guardian_family_name",
+        "guardian_given_name",
+        "guardian_middle_name",
+        "guardian_ext",
+        "guardian_nickname",
+        "guardian_address",
+        "guardian_contact",
+        "guardian_email",
         "annual_income",
-        "schoolLevel", "schoolLastAttended", "schoolAddress", "courseProgram",
-        "honor", "generalAverage", "yearGraduated",
-        "schoolLevel1", "schoolLastAttended1", "schoolAddress1", "courseProgram1",
-        "honor1", "generalAverage1", "yearGraduated1",
+        "schoolLevel",
+        "schoolLastAttended",
+        "schoolAddress",
+        "courseProgram",
+        "honor",
+        "generalAverage",
+        "yearGraduated",
+        "schoolLevel1",
+        "schoolLastAttended1",
+        "schoolAddress1",
+        "courseProgram1",
+        "honor1",
+        "generalAverage1",
+        "yearGraduated1",
         "strand",
         // 🩺 Health and medical
-        "cough", "colds", "fever", "asthma", "faintingSpells", "heartDisease",
-        "tuberculosis", "frequentHeadaches", "hernia", "chronicCough", "headNeckInjury",
-        "hiv", "highBloodPressure", "diabetesMellitus", "allergies", "cancer",
-        "smokingCigarette", "alcoholDrinking", "hospitalized", "hospitalizationDetails",
+        "cough",
+        "colds",
+        "fever",
+        "asthma",
+        "faintingSpells",
+        "heartDisease",
+        "tuberculosis",
+        "frequentHeadaches",
+        "hernia",
+        "chronicCough",
+        "headNeckInjury",
+        "hiv",
+        "highBloodPressure",
+        "diabetesMellitus",
+        "allergies",
+        "cancer",
+        "smokingCigarette",
+        "alcoholDrinking",
+        "hospitalized",
+        "hospitalizationDetails",
         "medications",
         // 🧬 Covid / Vaccination
-        "hadCovid", "covidDate",
-        "vaccine1Brand", "vaccine1Date", "vaccine2Brand", "vaccine2Date",
-        "booster1Brand", "booster1Date", "booster2Brand", "booster2Date",
+        "hadCovid",
+        "covidDate",
+        "vaccine1Brand",
+        "vaccine1Date",
+        "vaccine2Brand",
+        "vaccine2Date",
+        "booster1Brand",
+        "booster1Date",
+        "booster2Brand",
+        "booster2Date",
         // 🧪 Lab results / medical findings
-        "chestXray", "cbc", "urinalysis", "otherworkups",
+        "chestXray",
+        "cbc",
+        "urinalysis",
+        "otherworkups",
         // 🧍 Additional fields
-        "symptomsToday", "remarks",
+        "symptomsToday",
+        "remarks",
         // ✅ Agreement / Meta
-        "termsOfAgreement", "created_at", "current_step"
+        "termsOfAgreement",
+        "created_at",
+        "current_step",
       ];
       const cleanedData = Object.fromEntries(
-        Object.entries(person).filter(([key]) => allowedFields.includes(key))
+        Object.entries(person).filter(([key]) => allowedFields.includes(key)),
       );
 
       if (Object.keys(cleanedData).length === 0) {
@@ -674,7 +1046,6 @@ const MedicalDashboard1 = () => {
       });
     }
   };
-
 
   const [uploadedImage, setUploadedImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -752,7 +1123,7 @@ const MedicalDashboard1 = () => {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
-        }
+        },
       );
 
       const fileName = response.data.filename || response.data.profile_img;
@@ -784,7 +1155,6 @@ const MedicalDashboard1 = () => {
     }
   };
 
-
   const [isLrnNA, setIsLrnNA] = useState(false);
 
   const handlePwdCheck = (event) => {
@@ -797,8 +1167,6 @@ const MedicalDashboard1 = () => {
       pwdId: checked ? prev.pwdId || "" : "",
     }));
   };
-
-
 
   // ✅ ADDRESS STATE
   const [regionList, setRegionList] = useState([]);
@@ -820,7 +1188,9 @@ const MedicalDashboard1 = () => {
   useEffect(() => {
     const region = regions.find((r) => r.region_name === selectedRegion);
     if (region) {
-      setProvinceList(provinces.filter((p) => p.region_code === region.region_code));
+      setProvinceList(
+        provinces.filter((p) => p.region_code === region.region_code),
+      );
     } else {
       setProvinceList([]);
     }
@@ -828,9 +1198,13 @@ const MedicalDashboard1 = () => {
 
   // ✅ CITIES BASED ON SELECTED PROVINCE
   useEffect(() => {
-    const province = provinces.find((p) => p.province_name === selectedProvince);
+    const province = provinces.find(
+      (p) => p.province_name === selectedProvince,
+    );
     if (province) {
-      setCityList(cities.filter((c) => c.province_code === province.province_code));
+      setCityList(
+        cities.filter((c) => c.province_code === province.province_code),
+      );
     } else {
       setCityList([]);
     }
@@ -850,16 +1224,22 @@ const MedicalDashboard1 = () => {
   useEffect(() => {
     const region = regions.find((r) => r.region_name === person.presentRegion);
     if (region) {
-      setProvinceList(provinces.filter((p) => p.region_code === region.region_code));
+      setProvinceList(
+        provinces.filter((p) => p.region_code === region.region_code),
+      );
     } else {
       setProvinceList([]);
     }
   }, [person.presentRegion]);
 
   useEffect(() => {
-    const province = provinces.find((p) => p.province_name === person.presentProvince);
+    const province = provinces.find(
+      (p) => p.province_name === person.presentProvince,
+    );
     if (province) {
-      setCityList(cities.filter((c) => c.province_code === province.province_code));
+      setCityList(
+        cities.filter((c) => c.province_code === province.province_code),
+      );
     } else {
       setCityList([]);
     }
@@ -892,9 +1272,13 @@ const MedicalDashboard1 = () => {
 
   // Update provinces when permanent region changes
   useEffect(() => {
-    const region = regions.find((r) => r.region_name === person.permanentRegion);
+    const region = regions.find(
+      (r) => r.region_name === person.permanentRegion,
+    );
     if (region) {
-      setPermanentProvinceList(provinces.filter((p) => p.region_code === region.region_code));
+      setPermanentProvinceList(
+        provinces.filter((p) => p.region_code === region.region_code),
+      );
     } else {
       setPermanentProvinceList([]);
     }
@@ -902,9 +1286,13 @@ const MedicalDashboard1 = () => {
 
   // Update cities when permanent province changes
   useEffect(() => {
-    const province = provinces.find((p) => p.province_name === person.permanentProvince);
+    const province = provinces.find(
+      (p) => p.province_name === person.permanentProvince,
+    );
     if (province) {
-      setPermanentCityList(cities.filter((c) => c.province_code === province.province_code));
+      setPermanentCityList(
+        cities.filter((c) => c.province_code === province.province_code),
+      );
     } else {
       setPermanentCityList([]);
     }
@@ -912,14 +1300,17 @@ const MedicalDashboard1 = () => {
 
   // Update barangays when permanent city changes
   useEffect(() => {
-    const city = cities.find((c) => c.city_name === person.permanentMunicipality);
+    const city = cities.find(
+      (c) => c.city_name === person.permanentMunicipality,
+    );
     if (city) {
-      setPermanentBarangayList(barangays.filter((b) => b.city_code === city.city_code));
+      setPermanentBarangayList(
+        barangays.filter((b) => b.city_code === city.city_code),
+      );
     } else {
       setPermanentBarangayList([]);
     }
   }, [person.permanentMunicipality]);
-
 
   const [curriculumOptions, setCurriculumOptions] = useState([]);
 
@@ -936,24 +1327,18 @@ const MedicalDashboard1 = () => {
     fetchCurriculums();
   }, []);
 
-
   const filteredCurriculum = curriculumOptions.filter((item) => {
     // ✅ CAMPUS FILTER
 
-
     // ✅ ACADEMIC PROGRAM FILTER
     if (person.academicProgram !== "" && person.academicProgram !== null) {
-      if (
-        Number(item.academic_program) !==
-        Number(person.academicProgram)
-      ) {
+      if (Number(item.academic_program) !== Number(person.academicProgram)) {
         return false;
       }
     }
 
     return true;
   });
-
 
   const [errors, setErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -963,9 +1348,12 @@ const MedicalDashboard1 = () => {
       if (searchQuery.trim() === "") return;
 
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/search-person-student`, {
-          params: { query: searchQuery }
-        });
+        const res = await axios.get(
+          `${API_BASE_URL}/api/search-person-student`,
+          {
+            params: { query: searchQuery },
+          },
+        );
 
         console.log("Search result data:", res.data);
         setPerson(res.data);
@@ -977,7 +1365,10 @@ const MedicalDashboard1 = () => {
         }
 
         sessionStorage.setItem("admin_edit_person_id", idToStore);
-        sessionStorage.setItem("admin_edit_person_data", JSON.stringify(res.data)); // ✅ added
+        sessionStorage.setItem(
+          "admin_edit_person_data",
+          JSON.stringify(res.data),
+        ); // ✅ added
         setUserID(idToStore);
         setSearchError("");
       } catch (err) {
@@ -988,7 +1379,6 @@ const MedicalDashboard1 = () => {
 
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
-
 
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [persons, setPersons] = useState([]);
@@ -1013,9 +1403,9 @@ const MedicalDashboard1 = () => {
 
     // 🔹 Try to find a matching applicant from the list
     const match = persons.find((p) =>
-      `${p.first_name} ${p.middle_name} ${p.last_name} ${p.emailAddress} ${p.student_number || ''}`
+      `${p.first_name} ${p.middle_name} ${p.last_name} ${p.emailAddress} ${p.student_number || ""}`
         .toLowerCase()
-        .includes(searchQuery.toLowerCase())
+        .includes(searchQuery.toLowerCase()),
     );
 
     if (match) {
@@ -1038,8 +1428,6 @@ const MedicalDashboard1 = () => {
     }
   }, [searchQuery, persons]);
 
-
-
   const [studentData, setStudentData] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -1056,9 +1444,10 @@ const MedicalDashboard1 = () => {
 
     const fetchStudent = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/program_evaluation/${searchQuery}`);
+        const res = await fetch(
+          `${API_BASE_URL}/api/program_evaluation/${searchQuery}`,
+        );
         const data = await res.json();
-
 
         if (data) {
           setSelectedStudent(data);
@@ -1068,7 +1457,9 @@ const MedicalDashboard1 = () => {
             localStorage.setItem("admin_edit_person_id", searchQuery);
           }
 
-          const detailsRes = await fetch(`${API_BASE_URL}/api/program_evaluation/details/${searchQuery}`);
+          const detailsRes = await fetch(
+            `${API_BASE_URL}/api/program_evaluation/details/${searchQuery}`,
+          );
           const detailsData = await detailsRes.json();
           if (Array.isArray(detailsData) && detailsData.length > 0) {
             setStudentDetails(detailsData);
@@ -1106,7 +1497,6 @@ const MedicalDashboard1 = () => {
       .get(`${API_BASE_URL}api/person_with_applicant/${personIdFromUrl}`)
       .then((res) => {
         if (res.data?.student_number) {
-
           // AUTO-INSERT applicant_number into search bar
           setSearchQuery(res.data.student_number);
 
@@ -1154,21 +1544,20 @@ const MedicalDashboard1 = () => {
   }, []);
 
   const [studentNumber, setStudentNumber] = useState(() => {
-    return localStorage.getItem("studentNumberForCOR") || localStorage.getItem("admin_edit_person_id") || "";
+    return (
+      localStorage.getItem("studentNumberForCOR") ||
+      localStorage.getItem("admin_edit_person_id") ||
+      ""
+    );
   });
 
   const [debouncedStudentNumber, setDebouncedStudentNumber] = useState("");
 
-
-
-
   // ✅ For Excel Import
   const [excelFile, setExcelFile] = useState(null);
 
-
-
   const handleSnackClose = (_, reason) => {
-    if (reason === 'clickaway') return;
+    if (reason === "clickaway") return;
     setSnack({ ...snack, open: false });
   };
 
@@ -1213,7 +1602,6 @@ const MedicalDashboard1 = () => {
     }
   };
 
-
   const [examPermitError, setExamPermitError] = useState("");
   const [examPermitModalOpen, setExamPermitModalOpen] = useState(false);
 
@@ -1222,84 +1610,92 @@ const MedicalDashboard1 = () => {
     setExamPermitError("");
   };
 
-
-
   const links = [
     {
-      to: userID ? `/admin_ecat_application_form?person_id=${userID}` : "/admin_ecat_application_form",
+      to: userID
+        ? `/admin_ecat_application_form?person_id=${userID}`
+        : "/admin_ecat_application_form",
       label: "ECAT Application Form",
     },
     {
-      to: userID ? `/admin_admission_form_process?person_id=${userID}` : "/admin_admission_form_process",
+      to: userID
+        ? `/admin_admission_form_process?person_id=${userID}`
+        : "/admin_admission_form_process",
       label: "Admission Form Process",
     },
     {
-      to: userID ? `/admin_personal_data_form?person_id=${userID}` : "/admin_personal_data_form",
+      to: userID
+        ? `/admin_personal_data_form?person_id=${userID}`
+        : "/admin_personal_data_form",
       label: "Personal Data Form",
     },
     {
-      to: userID ? `/admin_office_of_the_registrar?person_id=${userID}` : "/admin_office_of_the_registrar",
+      to: userID
+        ? `/admin_office_of_the_registrar?person_id=${userID}`
+        : "/admin_office_of_the_registrar",
       label: `Application For ${shortTerm ? shortTerm.toUpperCase() : ""} College Admission`,
     },
-    { to: "/admission_services", label: "Application/Student Satisfactory Survey" },
-
+    {
+      to: "/admission_services",
+      label: "Application/Student Satisfactory Survey",
+    },
   ];
-
-
-
 
   const [canPrintPermit, setCanPrintPermit] = useState(false);
 
   useEffect(() => {
     if (!userID) return;
-    axios.get(`${API_BASE_URL}/api/verified-exam-applicants`)
-      .then(res => {
-        const verified = res.data.some(a => a.person_id === parseInt(userID));
-        setCanPrintPermit(verified);
-      });
+    axios.get(`${API_BASE_URL}/api/verified-exam-applicants`).then((res) => {
+      const verified = res.data.some((a) => a.person_id === parseInt(userID));
+      setCanPrintPermit(verified);
+    });
   }, [userID]);
 
-
-
-  // Put this at the very bottom before the return 
+  // Put this at the very bottom before the return
   if (loading || hasAccess === null) {
     return <LoadingOverlay open={loading} message="Loading..." />;
   }
 
   if (!hasAccess) {
-    return (
-      <Unauthorized />
-    );
+    return <Unauthorized />;
   }
 
   // dot not alter
   return (
-    <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+    <Box
+      sx={{
+        height: "calc(100vh - 150px)",
+        overflowY: "auto",
+        paddingRight: 1,
+        backgroundColor: "transparent",
+        mt: 1,
+        padding: 2,
+      }}
+    >
       {showPrintView && (
         <div ref={divToPrintRef} style={{ display: "block" }}>
-          <ExamPermit personId={userID} />   {/* ✅ pass the searched person_id */}
+          <ExamPermit personId={userID} />{" "}
+          {/* ✅ pass the searched person_id */}
         </div>
       )}
-
 
       {/* Top header: DOCUMENTS SUBMITTED + Search */}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
 
           mb: 2,
-
         }}
       >
         <Typography
           variant="h4"
           sx={{
-            fontWeight: 'bold',
+            fontWeight: "bold",
             color: titleColor,
-            fontSize: '36px',
+            fontSize: "36px",
           }}
         >
           PERSONAL INFORMATION
@@ -1322,8 +1718,6 @@ const MedicalDashboard1 = () => {
             startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
           }}
         />
-
-
       </Box>
       {searchError && <Typography color="error">{searchError}</Typography>}
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
@@ -1336,7 +1730,6 @@ const MedicalDashboard1 = () => {
           justifyContent: "space-between",
           alignItems: "center",
           width: "100%",
-
         }}
       >
         {stepsData.map((step, index) => (
@@ -1354,7 +1747,10 @@ const MedicalDashboard1 = () => {
                 cursor: "pointer",
                 borderRadius: 2,
                 border: `1px solid ${borderColor}`,
-                backgroundColor: currentStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                backgroundColor:
+                  currentStep === index
+                    ? settings?.header_color || "#1976d2"
+                    : "#E8C999",
                 color: currentStep === index ? "#fff" : "#000",
                 boxShadow:
                   currentStep === index
@@ -1386,7 +1782,6 @@ const MedicalDashboard1 = () => {
             {index < stepsData.length - 1 && (
               <Box
                 sx={{
-
                   mx: 1, // margin to keep spacing
                 }}
               />
@@ -1397,14 +1792,32 @@ const MedicalDashboard1 = () => {
 
       <br />
       <br />
-      <TableContainer component={Paper} sx={{ width: '100%', mb: 1 }}>
+      <TableContainer component={Paper} sx={{ width: "100%", mb: 1 }}>
         <Table>
-          <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2", border: `1px solid ${borderColor}`, }}>
+          <TableHead
+            sx={{
+              backgroundColor: settings?.header_color || "#1976d2",
+              border: `1px solid ${borderColor}`,
+            }}
+          >
             <TableRow>
               {/* Left cell: Student Number */}
-              <TableCell sx={{ color: 'white', fontSize: '20px', fontFamily: "Poppins, sans-serif", border: 'none' }}>
+              <TableCell
+                sx={{
+                  color: "white",
+                  fontSize: "20px",
+                  fontFamily: "Poppins, sans-serif",
+                  border: "none",
+                }}
+              >
                 Student Number:&nbsp;
-                <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: "normal", textDecoration: "underline" }}>
+                <span
+                  style={{
+                    fontFamily: "Poppins, sans-serif",
+                    fontWeight: "normal",
+                    textDecoration: "underline",
+                  }}
+                >
                   {person?.student_number || "N/A"}
                 </span>
               </TableCell>
@@ -1412,12 +1825,25 @@ const MedicalDashboard1 = () => {
               {/* Right cell: Student Name */}
               <TableCell
                 align="right"
-                sx={{ color: 'white', fontSize: '20px', fontFamily: "Poppins, sans-serif", border: 'none' }}
+                sx={{
+                  color: "white",
+                  fontSize: "20px",
+                  fontFamily: "Poppins, sans-serif",
+                  border: "none",
+                }}
               >
                 Student Name:&nbsp;
-                <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: "normal", textDecoration: "underline" }}>
-                  {person?.last_name?.toUpperCase()}, {person?.first_name?.toUpperCase()}{" "}
-                  {person?.middle_name?.toUpperCase()} {person?.extension?.toUpperCase() || ""}
+                <span
+                  style={{
+                    fontFamily: "Poppins, sans-serif",
+                    fontWeight: "normal",
+                    textDecoration: "underline",
+                  }}
+                >
+                  {person?.last_name?.toUpperCase()},{" "}
+                  {person?.first_name?.toUpperCase()}{" "}
+                  {person?.middle_name?.toUpperCase()}{" "}
+                  {person?.extension?.toUpperCase() || ""}
                 </span>
               </TableCell>
             </TableRow>
@@ -1475,9 +1901,24 @@ const MedicalDashboard1 = () => {
             }}
           >
             <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span> Kindly type 'NA' in boxes where there are no possible answers to the information being requested. &nbsp;  &nbsp; <br />
-            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px', marginLeft: "100px", }}>➔</span> To make use of the letter 'Ñ', please press ALT while typing "165", while for 'ñ', please press ALT while typing "164"
-
+            <strong></strong>
+            <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+            Please indicate “NA” or “N/A” in fields where the requested
+            information is not applicable or no response can be provided.
+            &nbsp;&nbsp;
+            <br />
+            <strong></strong>
+            <span
+              style={{
+                fontSize: "1.2em",
+                margin: "0 15px",
+                marginLeft: "100px",
+              }}
+            >
+              ➔
+            </span>
+            To enter the letter “Ñ”, press and hold the ALT key while typing
+            “165”. For “ñ”, press and hold the ALT key while typing “164”.
           </Typography>
         </Box>
       </Box>
@@ -1494,15 +1935,7 @@ const MedicalDashboard1 = () => {
         LISTS OF ALL PRINTABLE FILES
       </h1>
 
-
-
-
-
-
       <Container>
-
-
-
         {/* Cards Section */}
 
         <Box
@@ -1580,12 +2013,6 @@ const MedicalDashboard1 = () => {
           ))}
         </Box>
 
-
-
-
-
-
-
         <Container>
           <h1
             style={{
@@ -1599,7 +2026,8 @@ const MedicalDashboard1 = () => {
             APPLICANT FORM
           </h1>
           <div style={{ textAlign: "center" }}>
-            Complete the applicant form to secure your place for the upcoming academic year at{" "}
+            Complete the applicant form to secure your place for the upcoming
+            academic year at{" "}
             {shortTerm ? (
               <>
                 <strong>{shortTerm.toUpperCase()}</strong> <br />
@@ -1610,14 +2038,18 @@ const MedicalDashboard1 = () => {
             )}
             .
           </div>
-
-
         </Container>
-
 
         <br />
 
-        <Box sx={{ display: "flex", justifyContent: "center", width: "100%", px: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            width: "100%",
+            px: 4,
+          }}
+        >
           {steps.map((step, index) => (
             <React.Fragment key={index}>
               {/* Wrap the step with Link for routing */}
@@ -1638,7 +2070,10 @@ const MedicalDashboard1 = () => {
                       height: 50,
                       borderRadius: "50%",
                       border: `1px solid ${borderColor}`,
-                      backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                      backgroundColor:
+                        activeStep === index
+                          ? settings?.header_color || "#1976d2"
+                          : "#E8C999",
                       color: activeStep === index ? "#fff" : "#000",
                       display: "flex",
                       alignItems: "center",
@@ -1695,16 +2130,40 @@ const MedicalDashboard1 = () => {
             }}
           >
             <Box sx={{ width: "100%" }}>
-              <Typography style={{ fontSize: "20px", padding: "10px", fontFamily: "Poppins, sans-serif" }}>Step 1: Personal Information</Typography>
+              <Typography
+                style={{
+                  fontSize: "20px",
+                  padding: "10px",
+                  fontFamily: "Poppins, sans-serif",
+                }}
+              >
+                Step 1: Personal Information
+              </Typography>
             </Box>
           </Container>
 
-          <Container maxWidth="100%" sx={{ backgroundColor: "#f1f1f1", border: `1px solid ${borderColor}`, padding: 4, borderRadius: 2, boxShadow: 3 }}>
-            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Personal Information:</Typography>
+          <Container
+            maxWidth="100%"
+            sx={{
+              backgroundColor: "#f1f1f1",
+              border: `1px solid ${borderColor}`,
+              padding: 4,
+              borderRadius: 2,
+              boxShadow: 3,
+            }}
+          >
+            <Typography
+              style={{
+                fontSize: "20px",
+                color: mainButtonColor,
+                fontWeight: "bold",
+              }}
+            >
+              Personal Information:
+            </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
 
             <br />
-
 
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Student Number:</label>
@@ -1725,9 +2184,6 @@ const MedicalDashboard1 = () => {
               />
             </div>
 
-
-
-
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Campus:</label>
 
@@ -1739,8 +2195,6 @@ const MedicalDashboard1 = () => {
                 error={!!errors.campus}
                 className="mb-4"
               >
-
-
                 <Select
                   id="campus-select"
                   name="campus"
@@ -1754,8 +2208,12 @@ const MedicalDashboard1 = () => {
                   renderValue={(selected) => {
                     if (!selected) return <em>Select Campus</em>;
 
-                    const branch = branches.find(b => String(b.id) === String(selected));
-                    return branch ? branch.branch.toUpperCase() : "Select Campus";
+                    const branch = branches.find(
+                      (b) => String(b.id) === String(selected),
+                    );
+                    return branch
+                      ? branch.branch.toUpperCase()
+                      : "Select Campus";
                   }}
                 >
                   <MenuItem value="">
@@ -1774,11 +2232,18 @@ const MedicalDashboard1 = () => {
               </FormControl>
             </div>
 
-
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Academic Program:</label>
-              <FormControl fullWidth size="small" required error={!!errors.academicProgram} className="mb-4">
-                <InputLabel id="academic-program-label">Academic Program</InputLabel>
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.academicProgram}
+                className="mb-4"
+              >
+                <InputLabel id="academic-program-label">
+                  Academic Program
+                </InputLabel>
                 <Select
                   readOnly
                   labelId="academic-program-label"
@@ -1804,7 +2269,13 @@ const MedicalDashboard1 = () => {
 
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Classified As:</label>
-              <FormControl fullWidth size="small" required error={!!errors.classifiedAs} className="mb-4">
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.classifiedAs}
+                className="mb-4"
+              >
                 <InputLabel id="classified-as-label">Classified As</InputLabel>
                 <Select
                   readOnly
@@ -1816,8 +2287,12 @@ const MedicalDashboard1 = () => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                 >
-                  <MenuItem value=""><em>Select Classification</em></MenuItem>
-                  <MenuItem value="Freshman (First Year)">Freshman (First Year)</MenuItem>
+                  <MenuItem value="">
+                    <em>Select Classification</em>
+                  </MenuItem>
+                  <MenuItem value="Freshman (First Year)">
+                    Freshman (First Year)
+                  </MenuItem>
                   <MenuItem value="Transferee">Transferee</MenuItem>
                   <MenuItem value="Returnee">Returnee</MenuItem>
                   <MenuItem value="Shiftee">Shiftee</MenuItem>
@@ -1827,12 +2302,17 @@ const MedicalDashboard1 = () => {
                   <FormHelperText>This field is required.</FormHelperText>
                 )}
               </FormControl>
-
             </div>
 
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Applying As:</label>
-              <FormControl fullWidth size="small" required error={!!errors.applyingAs} className="mb-4">
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.applyingAs}
+                className="mb-4"
+              >
                 <InputLabel id="applying-as-label">Applying As</InputLabel>
                 <Select
                   readOnly
@@ -1847,9 +2327,7 @@ const MedicalDashboard1 = () => {
                   <MenuItem value="">
                     <em>Select Applying</em>
                   </MenuItem>
-                  <MenuItem value="1">
-                    Senior High School Graduate
-                  </MenuItem>
+                  <MenuItem value="1">Senior High School Graduate</MenuItem>
                   <MenuItem value="2">
                     Senior High School Graduating Student
                   </MenuItem>
@@ -1859,18 +2337,10 @@ const MedicalDashboard1 = () => {
                   <MenuItem value="4">
                     Transferee from other University/College
                   </MenuItem>
-                  <MenuItem value="5">
-                    Cross Enrolee Student
-                  </MenuItem>
-                  <MenuItem value="6">
-                    Foreign Applicant/Student
-                  </MenuItem>
-                  <MenuItem value="7">
-                    Baccalaureate Graduate
-                  </MenuItem>
-                  <MenuItem value="8">
-                    Master Degree Graduate
-                  </MenuItem>
+                  <MenuItem value="5">Cross Enrolee Student</MenuItem>
+                  <MenuItem value="6">Foreign Applicant/Student</MenuItem>
+                  <MenuItem value="7">Baccalaureate Graduate</MenuItem>
+                  <MenuItem value="8">Master Degree Graduate</MenuItem>
                 </Select>
                 {errors.applyingAs && (
                   <FormHelperText>This field is required.</FormHelperText>
@@ -1878,49 +2348,62 @@ const MedicalDashboard1 = () => {
               </FormControl>
             </div>
 
-
             <br />
 
-
-            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Course Program:</Typography>
+            <Typography
+              style={{
+                fontSize: "20px",
+                color: mainButtonColor,
+                fontWeight: "bold",
+              }}
+            >
+              Course Program:
+            </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
-
-
 
             <Box display="flex" width="100%" gap={2}>
               {/* Left Side: TextFields with label beside each input */}
               <Box display="flex" flexDirection="column" sx={{ width: "75%" }}>
                 {/* Program Fields */}
-                <Box display="flex" flexDirection="column" sx={{ width: "100%" }}>
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  sx={{ width: "100%" }}
+                >
                   {/* Program 1 */}
                   <Box display="flex" alignItems="center" gap={2} mb={3}>
                     <label className="w-40 font-medium">Course Applied:</label>
-                    <FormControl fullWidth size="small" required error={!!errors.program}>
+                    <FormControl
+                      fullWidth
+                      size="small"
+                      required
+                      error={!!errors.program}
+                    >
                       <InputLabel>Course Applied</InputLabel>
                       <Select
                         name="program"
                         value={person.program || ""}
-                        onBlur={() => handleUpdate(person)} onChange={handleChange}
+                        onBlur={() => handleUpdate(person)}
+                        onChange={handleChange}
                         label="Program"
                       >
-                        <MenuItem value=""><em>Select Program</em></MenuItem>
+                        <MenuItem value="">
+                          <em>Select Program</em>
+                        </MenuItem>
                         {filteredCurriculum.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            {`(${item.program_code}): ${item.program_description}${item.major ? ` (${item.major})` : ""
-                              } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
+                            {`(${item.program_code}): ${item.program_description}${
+                              item.major ? ` (${item.major})` : ""
+                            } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
                           </MenuItem>
                         ))}
-
-
                       </Select>
                       {errors.program && (
                         <FormHelperText>This field is required.</FormHelperText>
                       )}
                     </FormControl>
                   </Box>
-
-
 
                   {/* <Box display="flex" alignItems="center" gap={2} mb={1}>
                            <label className="w-40 font-medium">Course Applied:</label>
@@ -1977,8 +2460,15 @@ const MedicalDashboard1 = () => {
 
                   {/* Year Level */}
                   <div className="flex items-center mb-4 gap-2">
-                    <label className="w-40 mt:[2] font-medium ">Year Level:</label>
-                    <FormControl fullWidth size="small" required error={!!errors.yearLevel}>
+                    <label className="w-40 mt:[2] font-medium ">
+                      Year Level:
+                    </label>
+                    <FormControl
+                      fullWidth
+                      size="small"
+                      required
+                      error={!!errors.yearLevel}
+                    >
                       <InputLabel id="year-level-label">Year Level</InputLabel>
 
                       <Select
@@ -2007,7 +2497,6 @@ const MedicalDashboard1 = () => {
                         <FormHelperText>This field is required.</FormHelperText>
                       )}
                     </FormControl>
-
                   </div>
                 </Box>
               </Box>
@@ -2018,7 +2507,9 @@ const MedicalDashboard1 = () => {
                   marginTop: "10px",
                   marginLeft: "35px",
                   marginBottom: "-10px",
-                  border: errors.profile_img ? "1px solid red" : "1px solid black",
+                  border: errors.profile_img
+                    ? "1px solid red"
+                    : "1px solid black",
                   width: "5.50cm",
                   height: "5.50cm",
                   display: "flex",
@@ -2038,10 +2529,12 @@ const MedicalDashboard1 = () => {
                       objectFit: "cover",
                     }}
                   />
-
                 ) : (
                   <>
-                    <Typography fontSize={12} color={errors.profile_img ? "error" : "textSecondary"}>
+                    <Typography
+                      fontSize={12}
+                      color={errors.profile_img ? "error" : "textSecondary"}
+                    >
                       No Profile Image Uploaded
                     </Typography>
                     {errors.profile_img && (
@@ -2052,21 +2545,28 @@ const MedicalDashboard1 = () => {
                   </>
                 )}
               </Box>
-
             </Box>
 
-
-            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Person Details:</Typography>
+            <Typography
+              style={{
+                fontSize: "20px",
+                color: mainButtonColor,
+                fontWeight: "bold",
+              }}
+            >
+              Person Details:
+            </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
 
             <Box display="flex" gap={2} mb={2}>
               {/* Last Name */}
               <Box flex="1 1 20%">
-                <Typography mb={1} fontWeight="medium">Last Name</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Last Name
+                </Typography>
                 <TextField
                   InputProps={{ readOnly: true }}
-
                   fullWidth
                   size="small"
                   name="last_name"
@@ -2077,16 +2577,16 @@ const MedicalDashboard1 = () => {
                   placeholder="Enter your Last Name"
                   error={errors.last_name}
                   helperText={errors.last_name ? "This field is required." : ""}
-
                 />
               </Box>
 
               {/* First Name */}
               <Box flex="1 1 20%">
-                <Typography mb={1} fontWeight="medium">First Name</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  First Name
+                </Typography>
                 <TextField
                   InputProps={{ readOnly: true }}
-
                   fullWidth
                   size="small"
                   name="first_name"
@@ -2096,16 +2596,19 @@ const MedicalDashboard1 = () => {
                   onBlur={handleBlur}
                   placeholder="Enter your First Name"
                   error={errors.first_name}
-                  helperText={errors.first_name ? "This field is required." : ""}
+                  helperText={
+                    errors.first_name ? "This field is required." : ""
+                  }
                 />
               </Box>
 
               {/* Middle Name */}
               <Box flex="1 1 20%">
-                <Typography mb={1} fontWeight="medium">Middle Name</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Middle Name
+                </Typography>
                 <TextField
                   InputProps={{ readOnly: true }}
-
                   fullWidth
                   size="small"
                   name="middle_name"
@@ -2115,13 +2618,17 @@ const MedicalDashboard1 = () => {
                   onBlur={handleBlur}
                   placeholder="Enter your Middle Name"
                   error={errors.middle_name}
-                  helperText={errors.middle_name ? "This field is required." : ""}
+                  helperText={
+                    errors.middle_name ? "This field is required." : ""
+                  }
                 />
               </Box>
 
               {/* Extension */}
               <Box flex="1 1 20%">
-                <Typography mb={1} fontWeight="medium">Extension</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Extension
+                </Typography>
                 <FormControl fullWidth size="small" error={errors.extension}>
                   <InputLabel id="extension-label">Extension</InputLabel>
                   <Select
@@ -2134,7 +2641,9 @@ const MedicalDashboard1 = () => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                   >
-                    <MenuItem value=""><em>None</em></MenuItem>
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
                     <MenuItem value="Jr.">Jr.</MenuItem>
                     <MenuItem value="Sr.">Sr.</MenuItem>
                     <MenuItem value="I">I</MenuItem>
@@ -2151,10 +2660,11 @@ const MedicalDashboard1 = () => {
 
               {/* Nickname */}
               <Box flex="1 1 20%">
-                <Typography mb={1} fontWeight="medium">Nickname</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Nickname
+                </Typography>
                 <TextField
                   InputProps={{ readOnly: true }}
-
                   fullWidth
                   size="small"
                   name="nickname"
@@ -2168,7 +2678,6 @@ const MedicalDashboard1 = () => {
                 />
               </Box>
             </Box>
-
 
             <Box display="flex" gap={4} mb={2}>
               {/* Height Field */}
@@ -2225,14 +2734,14 @@ const MedicalDashboard1 = () => {
               </Box>
             </Box>
 
-
-
-
-
-
-
-
-            <Box display="flex" alignItems="center" gap={2} flexWrap="nowrap" width="100%" mb={2}>
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={2}
+              flexWrap="nowrap"
+              width="100%"
+              mb={2}
+            >
               {/* LRN Label */}
               <Typography fontWeight="medium" minWidth="180px">
                 Learning Reference Number:
@@ -2247,7 +2756,7 @@ const MedicalDashboard1 = () => {
                 value={
                   person.lrnNumber === "No LRN Number"
                     ? ""
-                    : person.lrnNumber ?? ""
+                    : (person.lrnNumber ?? "")
                 }
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -2264,7 +2773,6 @@ const MedicalDashboard1 = () => {
                 helperText={errors.lrnNumber ? "This field is required." : ""}
               />
 
-
               <FormControlLabel
                 control={
                   <Checkbox
@@ -2279,7 +2787,7 @@ const MedicalDashboard1 = () => {
                       };
 
                       setPerson(updatedPerson);
-                      setIsLrnNA(checked);         // optional: if you're tracking this separately
+                      setIsLrnNA(checked); // optional: if you're tracking this separately
                       setLrnNAFlag(checked ? "1" : "0"); // optional: if you're sending this to backend
                     }}
                     onBlur={handleBlur}
@@ -2289,10 +2797,7 @@ const MedicalDashboard1 = () => {
                 sx={{ mr: 2 }}
               />
 
-
-              <Typography fontWeight="medium">
-                Gender:
-              </Typography>
+              <Typography fontWeight="medium">Gender:</Typography>
               {/* Gender */}
               <TextField
                 select
@@ -2319,20 +2824,18 @@ const MedicalDashboard1 = () => {
                 }}
                 inputProps={{ style: { height: 40 } }}
               >
-                <MenuItem value=""><em>Select Gender</em></MenuItem>
+                <MenuItem value="">
+                  <em>Select Gender</em>
+                </MenuItem>
                 <MenuItem value="0">MALE</MenuItem>
                 <MenuItem value="1">FEMALE</MenuItem>
               </TextField>
-
-
-
 
               {errors.gender && (
                 <Typography color="error" variant="caption" ml={1}>
                   This field is required.
                 </Typography>
               )}
-
 
               {/* PWD Checkbox */}
               <FormControlLabel
@@ -2371,26 +2874,52 @@ const MedicalDashboard1 = () => {
                     InputProps={{ sx: { height: 40 } }}
                     inputProps={{ style: { height: 40 } }}
                   >
-                    <MenuItem value=""><em>None</em></MenuItem>
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
                     <MenuItem value="Blindness">Blindness</MenuItem>
                     <MenuItem value="Low-vision">Low-vision</MenuItem>
-                    <MenuItem value="Leprosy Cured persons">Leprosy Cured persons</MenuItem>
-                    <MenuItem value="Hearing Impairment">Hearing Impairment</MenuItem>
-                    <MenuItem value="Locomotor Disability">Locomotor Disability</MenuItem>
+                    <MenuItem value="Leprosy Cured persons">
+                      Leprosy Cured persons
+                    </MenuItem>
+                    <MenuItem value="Hearing Impairment">
+                      Hearing Impairment
+                    </MenuItem>
+                    <MenuItem value="Locomotor Disability">
+                      Locomotor Disability
+                    </MenuItem>
                     <MenuItem value="Dwarfism">Dwarfism</MenuItem>
-                    <MenuItem value="Intellectual Disability">Intellectual Disability</MenuItem>
+                    <MenuItem value="Intellectual Disability">
+                      Intellectual Disability
+                    </MenuItem>
                     <MenuItem value="Mental Illness">Mental Illness</MenuItem>
-                    <MenuItem value="Autism Spectrum Disorder">Autism Spectrum Disorder</MenuItem>
+                    <MenuItem value="Autism Spectrum Disorder">
+                      Autism Spectrum Disorder
+                    </MenuItem>
                     <MenuItem value="Cerebral Palsy">Cerebral Palsy</MenuItem>
-                    <MenuItem value="Muscular Dystrophy">Muscular Dystrophy</MenuItem>
-                    <MenuItem value="Chronic Neurological conditions">Chronic Neurological conditions</MenuItem>
-                    <MenuItem value="Specific Learning Disabilities">Specific Learning Disabilities</MenuItem>
-                    <MenuItem value="Multiple Sclerosis">Multiple Sclerosis</MenuItem>
-                    <MenuItem value="Speech and Language disability">Speech and Language disability</MenuItem>
+                    <MenuItem value="Muscular Dystrophy">
+                      Muscular Dystrophy
+                    </MenuItem>
+                    <MenuItem value="Chronic Neurological conditions">
+                      Chronic Neurological conditions
+                    </MenuItem>
+                    <MenuItem value="Specific Learning Disabilities">
+                      Specific Learning Disabilities
+                    </MenuItem>
+                    <MenuItem value="Multiple Sclerosis">
+                      Multiple Sclerosis
+                    </MenuItem>
+                    <MenuItem value="Speech and Language disability">
+                      Speech and Language disability
+                    </MenuItem>
                     <MenuItem value="Thalassemia">Thalassemia</MenuItem>
                     <MenuItem value="Hemophilia">Hemophilia</MenuItem>
-                    <MenuItem value="Sickle cell disease">Sickle cell disease</MenuItem>
-                    <MenuItem value="Multiple Disabilities including">Multiple Disabilities including</MenuItem>
+                    <MenuItem value="Sickle cell disease">
+                      Sickle cell disease
+                    </MenuItem>
+                    <MenuItem value="Multiple Disabilities including">
+                      Multiple Disabilities including
+                    </MenuItem>
                   </TextField>
 
                   {/* PWD ID */}
@@ -2415,18 +2944,12 @@ const MedicalDashboard1 = () => {
                   />
                 </>
               )}
-
-
             </Box>
 
             {/* Row 1: Birth Place + Citizenship */}
 
-
             <Box display="flex" gap={2} mb={2}>
               {/* 🎂 Birth Date */}
-
-
-
 
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
@@ -2442,7 +2965,9 @@ const MedicalDashboard1 = () => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   error={!!errors.birthOfDate}
-                  helperText={errors.birthOfDate ? "This field is required." : ""}
+                  helperText={
+                    errors.birthOfDate ? "This field is required." : ""
+                  }
                 />
               </Box>
               {/* 👤 Age (auto-filled, read-only) */}
@@ -2451,7 +2976,6 @@ const MedicalDashboard1 = () => {
                   Age
                 </Typography>
                 <TextField
-
                   fullWidth
                   size="small"
                   name="age"
@@ -2469,30 +2993,57 @@ const MedicalDashboard1 = () => {
                 <Typography mb={1} fontWeight="medium">
                   Birth Place
                 </Typography>
-                <TextField InputProps={{ readOnly: true }}
-                  fullWidth size="small" name="birthPlace" placeholder="Enter your Birth Place" value={person.birthPlace ?? ""} required onBlur={handleBlur} onChange={handleChange} error={!!errors.birthPlace}
-                  helperText={errors.birthPlace ? "This field is required." : ""} />
+                <TextField
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                  size="small"
+                  name="birthPlace"
+                  placeholder="Enter your Birth Place"
+                  value={person.birthPlace ?? ""}
+                  required
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  error={!!errors.birthPlace}
+                  helperText={
+                    errors.birthPlace ? "This field is required." : ""
+                  }
+                />
               </Box>
-              <Box flex={1} >
+              <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
                   Language/Dialect Spoken
                 </Typography>
-                <TextField InputProps={{ readOnly: true }}
-                  fullWidth size="small" name="languageDialectSpoken" placeholder="Enter your Language Spoken" value={person.languageDialectSpoken ?? ""} required onBlur={handleBlur} onChange={handleChange} error={!!errors.languageDialectSpoken}
-                  helperText={errors.languageDialectSpoken ? "This field is required." : ""}
+                <TextField
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                  size="small"
+                  name="languageDialectSpoken"
+                  placeholder="Enter your Language Spoken"
+                  value={person.languageDialectSpoken ?? ""}
+                  required
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  error={!!errors.languageDialectSpoken}
+                  helperText={
+                    errors.languageDialectSpoken
+                      ? "This field is required."
+                      : ""
+                  }
                 />
               </Box>
             </Box>
 
-
             <Box display="flex" gap={2}>
-
-
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
                   Citizenship
                 </Typography>
-                <FormControl fullWidth size="small" required error={!!errors.citizenship}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.citizenship}
+                >
                   <InputLabel id="citizenship-label">Citizenship</InputLabel>
                   <Select
                     readOnly
@@ -2606,7 +3157,9 @@ const MedicalDashboard1 = () => {
                     <MenuItem value="SWISS">SWISS</MenuItem>
                     <MenuItem value="SYRIAN">SYRIAN</MenuItem>
                     <MenuItem value="THAI">THAI</MenuItem>
-                    <MenuItem value="TRINIDAD AND TOBAGO">TRINIDAD AND TOBAGO</MenuItem>
+                    <MenuItem value="TRINIDAD AND TOBAGO">
+                      TRINIDAD AND TOBAGO
+                    </MenuItem>
                     <MenuItem value="TUNISIAN">TUNISIAN</MenuItem>
                     <MenuItem value="TURKISH">TURKISH</MenuItem>
                     <MenuItem value="TAIWANESE">TAIWANESE</MenuItem>
@@ -2627,14 +3180,18 @@ const MedicalDashboard1 = () => {
                     <FormHelperText>This field is required.</FormHelperText>
                   )}
                 </FormControl>
-
               </Box>
 
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
                   Religion
                 </Typography>
-                <FormControl fullWidth size="small" required error={!!errors.religion}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.religion}
+                >
                   <InputLabel id="religion-label">Religion</InputLabel>
                   <Select
                     readOnly
@@ -2649,7 +3206,9 @@ const MedicalDashboard1 = () => {
                     <MenuItem value="">
                       <em>Select Religion</em>
                     </MenuItem>
-                    <MenuItem value="Jehovah's Witness">Jehovah's Witness</MenuItem>
+                    <MenuItem value="Jehovah's Witness">
+                      Jehovah's Witness
+                    </MenuItem>
                     <MenuItem value="Buddist">Buddist</MenuItem>
                     <MenuItem value="Catholic">Catholic</MenuItem>
                     <MenuItem value="Dating Daan">Dating Daan</MenuItem>
@@ -2665,8 +3224,12 @@ const MedicalDashboard1 = () => {
                     <MenuItem value="Aglipay">Aglipay</MenuItem>
                     <MenuItem value="Islam">Islam</MenuItem>
                     <MenuItem value="LDS">LDS</MenuItem>
-                    <MenuItem value="Seventh Day Adventist">Seventh Day Adventist</MenuItem>
-                    <MenuItem value="Iglesia Ni Cristo">Iglesia Ni Cristo</MenuItem>
+                    <MenuItem value="Seventh Day Adventist">
+                      Seventh Day Adventist
+                    </MenuItem>
+                    <MenuItem value="Iglesia Ni Cristo">
+                      Iglesia Ni Cristo
+                    </MenuItem>
                     <MenuItem value="UCCP">UCCP</MenuItem>
                     <MenuItem value="PMCC">PMCC</MenuItem>
                     <MenuItem value="Baha'i Faith">Baha'i Faith</MenuItem>
@@ -2677,13 +3240,17 @@ const MedicalDashboard1 = () => {
                     <FormHelperText>This field is required.</FormHelperText>
                   )}
                 </FormControl>
-
               </Box>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
                   Civil Status
                 </Typography>
-                <FormControl fullWidth size="small" required error={!!errors.civilStatus}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.civilStatus}
+                >
                   <InputLabel id="civil-status-label">Civil Status</InputLabel>
                   <Select
                     readOnly
@@ -2700,7 +3267,9 @@ const MedicalDashboard1 = () => {
                     </MenuItem>
                     <MenuItem value="Single">Single</MenuItem>
                     <MenuItem value="Married">Married</MenuItem>
-                    <MenuItem value="Legally Seperated">Legally Seperated</MenuItem>
+                    <MenuItem value="Legally Seperated">
+                      Legally Seperated
+                    </MenuItem>
                     <MenuItem value="Widowed">Widowed</MenuItem>
                     <MenuItem value="Solo Parent">Solo Parent</MenuItem>
                   </Select>
@@ -2708,13 +3277,17 @@ const MedicalDashboard1 = () => {
                     <FormHelperText>This field is required.</FormHelperText>
                   )}
                 </FormControl>
-
               </Box>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
                   Tribe/Ethnic Group
                 </Typography>
-                <FormControl fullWidth size="small" required error={!!errors.tribeEthnicGroup}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.tribeEthnicGroup}
+                >
                   <InputLabel id="tribe-label">Tribe/Ethnic Group</InputLabel>
                   <Select
                     readOnly
@@ -2780,17 +3353,23 @@ const MedicalDashboard1 = () => {
                     <FormHelperText>This field is required.</FormHelperText>
                   )}
                 </FormControl>
-
               </Box>
             </Box>
 
             <br />
-            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Contact Information:</Typography>
+            <Typography
+              style={{
+                fontSize: "20px",
+                color: mainButtonColor,
+                fontWeight: "bold",
+              }}
+            >
+              Contact Information:
+            </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
 
             <Box display="flex" gap={2} mb={2}>
-
               <Box flex={1} display="flex" alignItems="center" gap={2}>
                 <Typography sx={{ width: 180 }} fontWeight="medium">
                   Contact Number:
@@ -2798,7 +3377,6 @@ const MedicalDashboard1 = () => {
 
                 <TextField
                   fullWidth
-
                   size="small"
                   name="cellphoneNumber"
                   placeholder="9XXXXXXXXX"
@@ -2814,16 +3392,19 @@ const MedicalDashboard1 = () => {
                     });
                   }}
                   error={!!errors.cellphoneNumber}
-                  helperText={errors.cellphoneNumber && "This field is required."}
+                  helperText={
+                    errors.cellphoneNumber && "This field is required."
+                  }
                   InputProps={{
                     readOnly: true,
                     startAdornment: (
-                      <Typography sx={{ mr: 1, fontWeight: "bold" }}>+63</Typography>
+                      <Typography sx={{ mr: 1, fontWeight: "bold" }}>
+                        +63
+                      </Typography>
                     ),
                   }}
                 />
               </Box>
-
 
               <Box flex={1} display="flex" alignItems="center" gap={2}>
                 <Typography sx={{ width: 180 }} fontWeight="medium">
@@ -2839,7 +3420,9 @@ const MedicalDashboard1 = () => {
                   placeholder="Enter your Gmail address"
                   onBlur={() => handleUpdate(person)}
                   error={!!errors.emailAddress}
-                  helperText={errors.emailAddress ? "This field is required." : ""}
+                  helperText={
+                    errors.emailAddress ? "This field is required." : ""
+                  }
                   onChange={(e) => {
                     let value = e.target.value.replace(/\s/g, "");
 
@@ -2850,62 +3433,67 @@ const MedicalDashboard1 = () => {
                     handleChange({
                       target: {
                         name: "emailAddress",
-                        value: finalValue
-                      }
+                        value: finalValue,
+                      },
                     });
                   }}
                 />
-
-
               </Box>
             </Box>
 
-
-            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Present Address:</Typography>
+            <Typography
+              style={{
+                fontSize: "20px",
+                color: mainButtonColor,
+                fontWeight: "bold",
+              }}
+            >
+              Present Address:
+            </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
             <Box
               sx={{
-                display: 'flex',
-                alignItems: 'center', // vertically center
-                justifyContent: 'center', // horizontally center
-                backgroundColor: '#FFF4E5',
-                border: '1px solid #FFA726',
+                display: "flex",
+                alignItems: "center", // vertically center
+                justifyContent: "center", // horizontally center
+                backgroundColor: "#FFF4E5",
+                border: "1px solid #FFA726",
                 borderRadius: 2,
                 p: 2,
                 height: "50px",
                 mb: 2,
-                textAlign: 'center' // ensures multiline text is centered
+                textAlign: "center", // ensures multiline text is centered
               }}
             >
-              <WarningAmberIcon sx={{ color: '#FF9800', mr: 1 }} />
+              <WarningAmberIcon sx={{ color: "#FF9800", mr: 1 }} />
               <Typography fontWeight="medium" color="#BF360C">
                 NOTICE: Fill up first the{" "}
                 <strong>
-                  REGION <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
-                  PERMANENT PROVINCE <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
-                  PERMANENT MUNICIPALITY <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
+                  REGION{" "}
+                  <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+                  PERMANENT PROVINCE{" "}
+                  <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+                  PERMANENT MUNICIPALITY{" "}
+                  <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
                   PERMANENT BARANGAY
                 </strong>
               </Typography>
             </Box>
 
-
-
-
-
-
             <Box display="flex" gap={2} mb={2}>
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Present Street</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Present Street
+                </Typography>
                 <TextField
                   fullWidth
                   InputProps={{ readOnly: true }}
-
                   size="small"
                   name="presentStreet"
                   value={person.presentStreet || ""}
-                  onBlur={() => handleUpdate(person)} placeholder="Enter your Present Street"
+                  onBlur={() => handleUpdate(person)}
+                  placeholder="Enter your Present Street"
                   onChange={handleChange}
                   error={!!errors.presentStreet}
                   helperText={errors.presentStreet && "This field is required."}
@@ -2913,7 +3501,9 @@ const MedicalDashboard1 = () => {
               </Box>
 
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Present Zip Code</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Present Zip Code
+                </Typography>
                 <TextField
                   fullWidth
                   InputProps={{ readOnly: true }}
@@ -2922,20 +3512,27 @@ const MedicalDashboard1 = () => {
                   name="presentZipCode"
                   placeholder="Enter your Zip Code"
                   value={person.presentZipCode || ""}
-                  onBlur={() => handleUpdate(person)} onChange={handleChange}
+                  onBlur={() => handleUpdate(person)}
+                  onChange={handleChange}
                   error={!!errors.presentZipCode}
-                  helperText={errors.presentZipCode && "This field is required."}
+                  helperText={
+                    errors.presentZipCode && "This field is required."
+                  }
                 />
               </Box>
             </Box>
 
-
-
             <Box display="flex" gap={2} mb={2}>
-
               {/* REGION */}
-              <FormControl fullWidth size="small" required error={!!errors.presentRegion}>
-                <Typography mb={1} fontWeight="medium">Present Region</Typography>
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.presentRegion}
+              >
+                <Typography mb={1} fontWeight="medium">
+                  Present Region
+                </Typography>
 
                 <Select
                   name="presentRegion"
@@ -2955,10 +3552,15 @@ const MedicalDashboard1 = () => {
                     autoSave();
                   }}
                 >
-                  <MenuItem value=""><em>Select Region</em></MenuItem>
+                  <MenuItem value="">
+                    <em>Select Region</em>
+                  </MenuItem>
 
-                  {regionList.map(region => (
-                    <MenuItem key={region.region_code} value={region.region_name}>
+                  {regionList.map((region) => (
+                    <MenuItem
+                      key={region.region_code}
+                      value={region.region_name}
+                    >
                       {region.region_name}
                     </MenuItem>
                   ))}
@@ -2970,8 +3572,15 @@ const MedicalDashboard1 = () => {
               </FormControl>
 
               {/* PROVINCE */}
-              <FormControl fullWidth size="small" required error={!!errors.presentProvince}>
-                <Typography mb={1} fontWeight="medium">Present Province</Typography>
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.presentProvince}
+              >
+                <Typography mb={1} fontWeight="medium">
+                  Present Province
+                </Typography>
 
                 <Select
                   readOnly
@@ -2990,10 +3599,15 @@ const MedicalDashboard1 = () => {
                   }}
                   disabled={!person.presentRegion}
                 >
-                  <MenuItem value=""><em>Select Province</em></MenuItem>
+                  <MenuItem value="">
+                    <em>Select Province</em>
+                  </MenuItem>
 
-                  {provinceList.map(province => (
-                    <MenuItem key={province.province_code} value={province.province_name}>
+                  {provinceList.map((province) => (
+                    <MenuItem
+                      key={province.province_code}
+                      value={province.province_name}
+                    >
                       {province.province_name}
                     </MenuItem>
                   ))}
@@ -3003,15 +3617,20 @@ const MedicalDashboard1 = () => {
                   <FormHelperText>This field is required.</FormHelperText>
                 )}
               </FormControl>
-
             </Box>
 
             {/* MUNICIPALITY & BARANGAY */}
             <Box display="flex" gap={2} mb={2}>
-
               {/* MUNICIPALITY */}
-              <FormControl fullWidth size="small" required error={!!errors.presentMunicipality}>
-                <Typography mb={1} fontWeight="medium">Present Municipality</Typography>
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.presentMunicipality}
+              >
+                <Typography mb={1} fontWeight="medium">
+                  Present Municipality
+                </Typography>
 
                 <Select
                   readOnly
@@ -3028,9 +3647,11 @@ const MedicalDashboard1 = () => {
                   }}
                   disabled={!person.presentProvince}
                 >
-                  <MenuItem value=""><em>Select Municipality</em></MenuItem>
+                  <MenuItem value="">
+                    <em>Select Municipality</em>
+                  </MenuItem>
 
-                  {cityList.map(city => (
+                  {cityList.map((city) => (
                     <MenuItem key={city.city_code} value={city.city_name}>
                       {city.city_name}
                     </MenuItem>
@@ -3043,8 +3664,15 @@ const MedicalDashboard1 = () => {
               </FormControl>
 
               {/* BARANGAY */}
-              <FormControl fullWidth size="small" required error={!!errors.presentBarangay}>
-                <Typography mb={1} fontWeight="medium">Present Barangay</Typography>
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.presentBarangay}
+              >
+                <Typography mb={1} fontWeight="medium">
+                  Present Barangay
+                </Typography>
 
                 <Select
                   readOnly
@@ -3059,9 +3687,11 @@ const MedicalDashboard1 = () => {
                   }}
                   disabled={!person.presentMunicipality}
                 >
-                  <MenuItem value=""><em>Select Barangay</em></MenuItem>
+                  <MenuItem value="">
+                    <em>Select Barangay</em>
+                  </MenuItem>
 
-                  {barangayList.map(brgy => (
+                  {barangayList.map((brgy) => (
                     <MenuItem key={brgy.brgy_code} value={brgy.brgy_name}>
                       {brgy.brgy_name}
                     </MenuItem>
@@ -3072,35 +3702,40 @@ const MedicalDashboard1 = () => {
                   <FormHelperText>This field is required.</FormHelperText>
                 )}
               </FormControl>
-
             </Box>
-
-
-
 
             {/* DSWD Household Number */}
             <Box mb={2}>
-              <Typography mb={1} fontWeight="medium">Present DSWD Household Number</Typography>
+              <Typography mb={1} fontWeight="medium">
+                Present DSWD Household Number
+              </Typography>
               <TextField
                 InputProps={{ readOnly: true }}
-
                 fullWidth
                 size="small"
                 name="presentDswdHouseholdNumber"
                 value={person.presentDswdHouseholdNumber || ""}
-                onBlur={() => handleUpdate(person)} onChange={handleChange}
+                onBlur={() => handleUpdate(person)}
+                onChange={handleChange}
                 placeholder="Enter your Present DSWD Household Number"
                 error={!!errors.presentDswdHouseholdNumber}
-                helperText={errors.presentDswdHouseholdNumber && "This field is required."}
+                helperText={
+                  errors.presentDswdHouseholdNumber && "This field is required."
+                }
               />
             </Box>
 
-
-
-            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Permanent Address:</Typography>
+            <Typography
+              style={{
+                fontSize: "20px",
+                color: mainButtonColor,
+                fontWeight: "bold",
+              }}
+            >
+              Permanent Address:
+            </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
-
 
             <FormControlLabel
               control={
@@ -3115,15 +3750,16 @@ const MedicalDashboard1 = () => {
                       sameAsPresentAddress: checked ? 1 : 0,
                     };
 
-
                     if (checked) {
                       updatedPerson.permanentStreet = person.presentStreet;
                       updatedPerson.permanentZipCode = person.presentZipCode;
                       updatedPerson.permanentRegion = person.presentRegion;
                       updatedPerson.permanentProvince = person.presentProvince;
-                      updatedPerson.permanentMunicipality = person.presentMunicipality;
+                      updatedPerson.permanentMunicipality =
+                        person.presentMunicipality;
                       updatedPerson.permanentBarangay = person.presentBarangay;
-                      updatedPerson.permanentDswdHouseholdNumber = person.presentDswdHouseholdNumber;
+                      updatedPerson.permanentDswdHouseholdNumber =
+                        person.presentDswdHouseholdNumber;
 
                       setPermanentRegion(person.presentRegion);
                       setPermanentProvince(person.presentProvince);
@@ -3134,21 +3770,25 @@ const MedicalDashboard1 = () => {
                     setPerson(updatedPerson);
                     handleUpdate(updatedPerson); // optional: real-time save
                   }}
-                  onBlur={() => handleUpdate(person)} />
+                  onBlur={() => handleUpdate(person)}
+                />
               }
               label="Same as Present Address"
             />
 
-
-
-
             {/* Permanent Region & Province */}
             <Box display="flex" gap={2} mb={2}>
-
               {/* Permanent Region */}
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Permanent Region</Typography>
-                <FormControl fullWidth size="small" required error={!!errors.permanentRegion}>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent Region
+                </Typography>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.permanentRegion}
+                >
                   <Select
                     name="permanentRegion"
                     displayEmpty
@@ -3170,23 +3810,35 @@ const MedicalDashboard1 = () => {
                       <em>Select Region</em>
                     </MenuItem>
 
-                    {permanentRegionList.map(region => (
-                      <MenuItem key={region.region_code} value={region.region_name}>
+                    {permanentRegionList.map((region) => (
+                      <MenuItem
+                        key={region.region_code}
+                        value={region.region_name}
+                      >
                         {region.region_name}
                       </MenuItem>
                     ))}
                   </Select>
 
                   {errors.permanentRegion && (
-                    <FormHelperText error>This field is required.</FormHelperText>
+                    <FormHelperText error>
+                      This field is required.
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Box>
 
               {/* Permanent Province */}
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Permanent Province</Typography>
-                <FormControl fullWidth size="small" required error={!!errors.permanentProvince}>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent Province
+                </Typography>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.permanentProvince}
+                >
                   <Select
                     name="permanentProvince"
                     displayEmpty
@@ -3207,28 +3859,38 @@ const MedicalDashboard1 = () => {
                       <em>Select Province</em>
                     </MenuItem>
 
-                    {permanentProvinceList.map(province => (
-                      <MenuItem key={province.province_code} value={province.province_name}>
+                    {permanentProvinceList.map((province) => (
+                      <MenuItem
+                        key={province.province_code}
+                        value={province.province_name}
+                      >
                         {province.province_name}
                       </MenuItem>
                     ))}
                   </Select>
 
                   {errors.permanentProvince && (
-                    <FormHelperText error>This field is required.</FormHelperText>
+                    <FormHelperText error>
+                      This field is required.
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Box>
-
             </Box>
 
             {/* Permanent Municipality & Barangay */}
             <Box display="flex" gap={2} mb={2}>
-
               {/* Permanent Municipality */}
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Permanent Municipality</Typography>
-                <FormControl fullWidth size="small" required error={!!errors.permanentMunicipality}>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent Municipality
+                </Typography>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.permanentMunicipality}
+                >
                   <Select
                     name="permanentMunicipality"
                     displayEmpty
@@ -3247,7 +3909,7 @@ const MedicalDashboard1 = () => {
                       <em>Select Municipality</em>
                     </MenuItem>
 
-                    {permanentCityList.map(city => (
+                    {permanentCityList.map((city) => (
                       <MenuItem key={city.city_code} value={city.city_name}>
                         {city.city_name}
                       </MenuItem>
@@ -3255,15 +3917,24 @@ const MedicalDashboard1 = () => {
                   </Select>
 
                   {errors.permanentMunicipality && (
-                    <FormHelperText error>This field is required.</FormHelperText>
+                    <FormHelperText error>
+                      This field is required.
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Box>
 
               {/* Permanent Barangay */}
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Permanent Barangay</Typography>
-                <FormControl fullWidth size="small" required error={!!errors.permanentBarangay}>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent Barangay
+                </Typography>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  required
+                  error={!!errors.permanentBarangay}
+                >
                   <Select
                     name="permanentBarangay"
                     displayEmpty
@@ -3280,7 +3951,7 @@ const MedicalDashboard1 = () => {
                       <em>Select Barangay</em>
                     </MenuItem>
 
-                    {permanentBarangayList.map(brgy => (
+                    {permanentBarangayList.map((brgy) => (
                       <MenuItem key={brgy.brgy_code} value={brgy.brgy_name}>
                         {brgy.brgy_name}
                       </MenuItem>
@@ -3288,31 +3959,38 @@ const MedicalDashboard1 = () => {
                   </Select>
 
                   {errors.permanentBarangay && (
-                    <FormHelperText error>This field is required.</FormHelperText>
+                    <FormHelperText error>
+                      This field is required.
+                    </FormHelperText>
                   )}
                 </FormControl>
               </Box>
-
             </Box>
-
 
             <Box display="flex" gap={2} mb={2}>
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Permanent Street</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent Street
+                </Typography>
                 <TextField
                   fullWidth
                   size="small"
                   name="permanentStreet"
                   placeholder="Enter your Permanent Street"
                   value={person.permanentStreet || ""}
-                  onBlur={() => handleUpdate(person)} onChange={handleChange}
+                  onBlur={() => handleUpdate(person)}
+                  onChange={handleChange}
                   error={!!errors.permanentStreet}
-                  helperText={errors.permanentStreet && "This field is required."}
+                  helperText={
+                    errors.permanentStreet && "This field is required."
+                  }
                 />
               </Box>
 
               <Box flex={1}>
-                <Typography mb={1} fontWeight="medium">Permanent Zip Code</Typography>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent Zip Code
+                </Typography>
                 <TextField
                   fullWidth
                   size="small"
@@ -3320,18 +3998,21 @@ const MedicalDashboard1 = () => {
                   name="permanentZipCode"
                   placeholder="Enter your Permanent Zip Code"
                   value={person.permanentZipCode || ""}
-                  onBlur={() => handleUpdate(person)} onChange={handleChange}
+                  onBlur={() => handleUpdate(person)}
+                  onChange={handleChange}
                   error={!!errors.permanentZipCode}
-                  helperText={errors.permanentZipCode && "This field is required."}
+                  helperText={
+                    errors.permanentZipCode && "This field is required."
+                  }
                 />
               </Box>
             </Box>
 
-
-
             {/* DSWD Household Number */}
             <Box mb={2}>
-              <Typography mb={1} fontWeight="medium">Permanent DSWD Household Number</Typography>
+              <Typography mb={1} fontWeight="medium">
+                Permanent DSWD Household Number
+              </Typography>
               <TextField
                 fullWidth
                 size="small"
@@ -3339,14 +4020,15 @@ const MedicalDashboard1 = () => {
                 placeholder="Enter your Permanent DSWD Household Number"
                 name="permanentDswdHouseholdNumber"
                 value={person.permanentDswdHouseholdNumber || ""}
-                onBlur={() => handleUpdate(person)} onChange={handleChange}
+                onBlur={() => handleUpdate(person)}
+                onChange={handleChange}
                 error={!!errors.permanentDswdHouseholdNumber}
-                helperText={errors.permanentDswdHouseholdNumber && "This field is required."}
+                helperText={
+                  errors.permanentDswdHouseholdNumber &&
+                  "This field is required."
+                }
               />
             </Box>
-
-
-
 
             <Modal open={open} onClose={handleClose}>
               <Box
@@ -3381,7 +4063,6 @@ const MedicalDashboard1 = () => {
                       color: "#fff",
                       backgroundColor: settings?.header_color || "#1976d2",
 
-
                       border: `1px solid ${borderColor}`,
 
                       "&:hover": {
@@ -3396,7 +4077,6 @@ const MedicalDashboard1 = () => {
                   <Box
                     sx={{
                       backgroundColor: settings?.header_color || "#1976d2",
-
 
                       border: `1px solid ${borderColor}`,
 
@@ -3493,15 +4173,13 @@ const MedicalDashboard1 = () => {
                       <br />
                       - Background: White.
                       <br />
-                      - Head size and position: Look directly into the camera
-                      at a straight angle, face centered.
+                      - Head size and position: Look directly into the camera at
+                      a straight angle, face centered.
                       <br />
                       - File types: JPEG, JPG, PNG
                       <br />
                       - Attire must be formal.
-                      <br />
-                      - Required File Size: 2mb
-
+                      <br />- Required File Size: 2mb
                     </Box>
 
                     <Typography variant="body1" fontWeight="bold" mt={2}>
@@ -3550,7 +4228,6 @@ const MedicalDashboard1 = () => {
                     sx={{
                       backgroundColor: settings?.header_color || "#1976d2",
 
-
                       border: `1px solid ${borderColor}`,
 
                       color: "white",
@@ -3587,8 +4264,15 @@ const MedicalDashboard1 = () => {
                   textAlign: "center",
                 }}
               >
-                <ErrorIcon sx={{ color: mainButtonColor, fontSize: 50, mb: 2 }} />
-                <Typography id="exam-permit-error-title" variant="h6" component="h2" color="maroon">
+                <ErrorIcon
+                  sx={{ color: mainButtonColor, fontSize: 50, mb: 2 }}
+                />
+                <Typography
+                  id="exam-permit-error-title"
+                  variant="h6"
+                  component="h2"
+                  color="maroon"
+                >
                   Exam Permit Notice
                 </Typography>
                 <Typography id="exam-permit-error-description" sx={{ mt: 2 }}>
@@ -3597,16 +4281,16 @@ const MedicalDashboard1 = () => {
                 <Button
                   onClick={handleCloseExamPermitModal}
                   variant="contained"
-                  sx={{ mt: 3, backgroundcolor: mainButtonColor, "&:hover": { backgroundColor: "#8B0000" } }}
+                  sx={{
+                    mt: 3,
+                    backgroundcolor: mainButtonColor,
+                    "&:hover": { backgroundColor: "#8B0000" },
+                  }}
                 >
                   Close
                 </Button>
               </Box>
             </Modal>
-
-
-
-
 
             <Box display="flex" justifyContent="right" mt={4}>
               {/* Previous Page Button */}
@@ -3627,59 +4311,57 @@ const MedicalDashboard1 = () => {
                   alignItems: "center", // Center the content vertically
                 }}
               >
-                <PhotoCameraIcon sx={{ marginRight: "8px" }} /> {/* Photo Icon */}
+                <PhotoCameraIcon sx={{ marginRight: "8px" }} />{" "}
+                {/* Photo Icon */}
                 Upload Photo <br /> Student Picture
               </Button>
               <Button
                 variant="contained"
                 onClick={() => {
-
                   navigate(`/medical_dashboard2?person_id=${userID}`);
                 }}
                 endIcon={
                   <ArrowForwardIcon
                     sx={{
-                      color: '#fff',
-                      transition: 'color 0.3s',
+                      color: "#fff",
+                      transition: "color 0.3s",
                     }}
                   />
                 }
                 sx={{
-
                   backgroundColor: mainButtonColor,
                   border: `1px solid ${borderColor}`,
-                  color: '#fff',
-                  '&:hover': {
+                  color: "#fff",
+                  "&:hover": {
                     backgroundColor: "#000000",
-                    color: '#fff',
-                    '& .MuiSvgIcon-root': {
-                      color: '#fff',
+                    color: "#fff",
+                    "& .MuiSvgIcon-root": {
+                      color: "#fff",
                     },
                   },
                 }}
               >
-
-
                 Next Step
               </Button>
             </Box>
-
           </Container>
         </form>
-      </Container >
+      </Container>
 
       <Snackbar
         open={snack.open}
-
         onClose={handleSnackClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleSnackClose} severity={snack.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleSnackClose}
+          severity={snack.severity}
+          sx={{ width: "100%" }}
+        >
           {snack.message}
         </Alert>
       </Snackbar>
-
-    </Box >
+    </Box>
   );
 };
 

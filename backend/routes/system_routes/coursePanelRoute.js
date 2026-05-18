@@ -300,6 +300,40 @@ is_latin = ?
   }
 });
 
+router.put("/update_course_requirements/:id", CanEdit, async (req, res) => {
+  const { id } = req.params;
+  const { prereq, corequisite } = req.body;
+
+  try {
+    const [currentRows] = await db3.query(
+      "SELECT course_code, course_description FROM course_table WHERE course_id = ? LIMIT 1",
+      [id],
+    );
+
+    if (currentRows.length === 0) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    await db3.query(
+      "UPDATE course_table SET prereq = ?, corequisite = ? WHERE course_id = ?",
+      [prereq || null, corequisite || null, id],
+    );
+
+    const { actorId, actorRole } = getAuditActor(req);
+    const roleLabel = formatAuditActorRole(actorRole);
+    await insertCoursePanelAuditLog({
+      req,
+      action: "COURSE_REQUIREMENTS_UPDATE",
+      message: `${roleLabel} (${actorId}) updated prerequisites/corequisites for ${getCourseLabel(currentRows[0])}.`,
+    });
+
+    res.json({ message: "Course requirements updated successfully" });
+  } catch (error) {
+    console.error("Error updating course requirements:", error);
+    res.status(500).json({ message: "Failed to update course requirements" });
+  }
+});
+
 router.delete("/delete_course/:id", CanDelete, async (req, res) => {
   const { id } = req.params;
 

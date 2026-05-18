@@ -12,6 +12,11 @@ const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
 require("dotenv").config();
 
 const router = express.Router();
+const facultyImageUploadDir = path.join(__dirname, "../../uploads/Faculty1by1");
+
+const ensureFacultyImageUploadDir = async () => {
+  await fs.promises.mkdir(facultyImageUploadDir, { recursive: true });
+};
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -86,13 +91,13 @@ router.post("/update_faculty", upload.single("profile_picture"), async (req, res
     const ext = path.extname(req.file.originalname).toLowerCase();
     const year = new Date().getFullYear();
     const filename = `${employee_id}_1by1_${year}${ext}`;
-    const uploadDir = path.join(__dirname, "../../uploads/Faculty1by1");
-    const finalPath = path.join(uploadDir, filename);
+    await ensureFacultyImageUploadDir();
+    const finalPath = path.join(facultyImageUploadDir, filename);
 
-    const files = await fs.promises.readdir(uploadDir);
+    const files = await fs.promises.readdir(facultyImageUploadDir);
     for (const file of files) {
       if (file.startsWith(`${employee_id}_1by1_`)) {
-        await fs.promises.unlink(path.join(uploadDir, file));
+        await fs.promises.unlink(path.join(facultyImageUploadDir, file));
       }
     }
 
@@ -195,7 +200,8 @@ router.post(
         const year = new Date().getFullYear();
         const ext = path.extname(req.file.originalname).toLowerCase();
         const filename = `${employee_id}_ProfessorProfile_${year}${ext}`;
-        const filePath = path.join(__dirname, "uploads", filename);
+        await ensureFacultyImageUploadDir();
+        const filePath = path.join(facultyImageUploadDir, filename);
         await fs.promises.writeFile(filePath, req.file.buffer);
         profileImage = filename;
       }
@@ -279,7 +285,8 @@ router.put(
         const year = new Date().getFullYear();
         const ext = path.extname(req.file.originalname).toLowerCase();
         const filename = `${employee_id}_ProfessorProfile_${year}${ext}`;
-        const filePath = path.join(__dirname, "uploads", filename);
+        await ensureFacultyImageUploadDir();
+        const filePath = path.join(facultyImageUploadDir, filename);
         await fs.promises.writeFile(filePath, req.file.buffer);
         profileImage = filename;
       }
@@ -459,8 +466,7 @@ router.delete("/delete_prof/:id", CanDelete, async (req, res) => {
     const profileImage = profRows[0].profile_image;
     if (profileImage) {
       const uploadDirs = [
-        path.join(__dirname, "uploads"),
-        path.join(__dirname, "../../uploads/Faculty1by1"),
+        facultyImageUploadDir,
       ];
 
       for (const uploadDir of uploadDirs) {

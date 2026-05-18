@@ -324,6 +324,15 @@ router.put("/api/misc_fee", async (req, res) => {
       });
     }
 
+    if (result.affectedRows > 0) {
+      const { actorId, roleLabel } = getActorLabel(req);
+      await insertFeeRuleAuditLog({
+        req,
+        action: "MISC_FEE_UPDATE",
+        message: `${roleLabel} (${actorId}) updated miscellaneous fee for year level ${year_level_id}, semester ${semester_id}.`,
+      });
+    }
+
     res.json({ success: true, affectedRows: result.affectedRows });
   } catch (err) {
     console.error("MISC UPDATE ERROR:", err);
