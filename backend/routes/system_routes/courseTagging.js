@@ -293,9 +293,9 @@ router.post("/add-all-to-enrolled-courses", async (req, res) => {
     console.log("Curriculum found:", curriculum_id);
 
     if (
-      year_level_id !== year_level ||
-      semester_id !== activeSemesterId ||
-      curriculum_id !== curriculumID
+      Number(year_level_id) !== Number(year_level) ||
+      Number(semester_id) !== Number(activeSemesterId) ||
+      Number(curriculum_id) !== Number(curriculumID)
     ) {
       console.log(
         `Skipping subject ${subject_id} (not Year 1, not active semester ${activeSemesterId}, or wrong curriculum)`
@@ -303,6 +303,8 @@ router.post("/add-all-to-enrolled-courses", async (req, res) => {
       return res.status(200).json({
         message:
           "Skipped - Not Year 1 / Not Active Semester / Wrong Curriculum",
+        enrolled: false,
+        skipped: true,
       });
     }
 
@@ -321,7 +323,11 @@ router.post("/add-all-to-enrolled-courses", async (req, res) => {
       console.log(
         `Skipping subject ${subject_id}, already enrolled for student ${user_id}`
       );
-      return res.status(200).json({ message: "Skipped - Already Enrolled" });
+      return res.status(200).json({
+        message: "Skipped - Already Enrolled",
+        enrolled: false,
+        skipped: true,
+      });
     }
 
     const insertSql = `
@@ -419,7 +425,11 @@ router.post("/add-all-to-enrolled-courses", async (req, res) => {
       message: `${roleLabel} (${actorId}) enrolled ${courseLabel} to Student (${user_id}) via bulk course tagging.`,
     });
 
-    res.status(200).json({ message: "Course enrolled successfully" });
+    res.status(200).json({
+      message: "Course enrolled successfully",
+      enrolled: true,
+      skipped: false,
+    });
   } catch (err) {
     console.error("Error:", err);
     return res.status(500).json({ error: err.message });
@@ -1838,12 +1848,17 @@ router.post("/add-all-to-enrolled-courses-summer", async (req, res) => {
 
     const { year_level_id, semester_id, curriculum_id } = checkResult[0];
 
-    if (year_level_id !== year_level || curriculum_id !== curriculumID) {
+    if (
+      Number(year_level_id) !== Number(year_level) ||
+      Number(curriculum_id) !== Number(curriculumID)
+    ) {
       console.log(
         `Skipping subject ${subject_id} (wrong year level or curriculum)`,
       );
       return res.status(200).json({
         message: "Skipped - Wrong Year Level / Wrong Curriculum",
+        enrolled: false,
+        skipped: true,
       });
     }
 
@@ -1862,7 +1877,11 @@ router.post("/add-all-to-enrolled-courses-summer", async (req, res) => {
       console.log(
         `Skipping subject ${subject_id}, already enrolled for student ${user_id}`,
       );
-      return res.status(200).json({ message: "Skipped - Already Enrolled" });
+      return res.status(200).json({
+        message: "Skipped - Already Enrolled",
+        enrolled: false,
+        skipped: true,
+      });
     }
 
     const insertSql = `
@@ -1960,7 +1979,11 @@ router.post("/add-all-to-enrolled-courses-summer", async (req, res) => {
       message: `${roleLabel} (${actorId}) enrolled ${courseLabel} to Student (${user_id}) via summer bulk course tagging.`,
     });
 
-    res.status(200).json({ message: "Course enrolled successfully" });
+    res.status(200).json({
+      message: "Course enrolled successfully",
+      enrolled: true,
+      skipped: false,
+    });
   } catch (err) {
     console.error("Error:", err);
     return res.status(500).json({ error: err.message });

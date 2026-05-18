@@ -586,7 +586,7 @@ const CourseTaggingForSummer = () => {
   const addAllToCart = async (yearLevelId) => {
     if (!canCreate) { setSnack({ open: true, message: "You do not have permission to bulk enroll subjects.", severity: "error" }); return; }
     const newCourses = courses.filter(
-      (c) => !isEnrolledCourse(c.course_id) && c.year_level_id === yearLevelId && (activeSemesterId ? c.semester_id === activeSemesterId : true)
+      (c) => !isEnrolledCourse(c.course_id) && Number(c.year_level_id) === Number(yearLevelId) && (activeSemesterId ? Number(c.semester_id) === Number(activeSemesterId) : true)
     );
     if (!selectedSection) { setSnack({ open: true, message: "Please select a department section before adding all the courses.", severity: "warning" }); return; }
     if (!activeSchoolYearId || !activeSemesterId) { setSnack({ open: true, message: "Summer school year is not ready yet.", severity: "warning" }); return; }
@@ -597,12 +597,12 @@ const CourseTaggingForSummer = () => {
       await Promise.all(
         newCourses.map(async (course) => {
           try {
-            await axios.post(`${API_BASE_URL}/add-all-to-enrolled-courses-summer`, {
+            const res = await axios.post(`${API_BASE_URL}/add-all-to-enrolled-courses-summer`, {
               subject_id: course.course_id, user_id: userId, curriculumID: currId,
               departmentSectionID: selectedSection, year_level: yearLevelId,
               active_school_year_id: activeSchoolYearId, active_semester_id: activeSemesterId,
             }, auditConfig);
-            enrolledCount++;
+            if (res.data?.enrolled) enrolledCount++;
             setDisableYearButtons(true);
           } catch (err) { console.error("Error enrolling course in bulk:", err); }
         })
@@ -715,7 +715,7 @@ const CourseTaggingForSummer = () => {
     if (!selectedSection) { setSnack({ open: true, message: "Please select a department section before adding all the courses.", severity: "warning" }); return; }
     if (!userId) { setSnack({ open: true, message: "Please search and select a student first.", severity: "warning" }); return; }
     const newCourses = courses.filter(
-      (c) => !isEnrolledCourse(c.course_id) && c.year_level_id === yearLevelId && (activeSemesterId ? c.semester_id === activeSemesterId : true)
+      (c) => !isEnrolledCourse(c.course_id) && Number(c.year_level_id) === Number(yearLevelId) && (activeSemesterId ? Number(c.semester_id) === Number(activeSemesterId) : true)
     );
     if (newCourses.length === 0) return;
     const coursesWithPrereq = newCourses.filter((c) => hasCoursePrereq(c));

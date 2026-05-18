@@ -343,6 +343,7 @@ const RequirementsForm = () => {
       setIsOptional(false);
       setIsEditing(false);
       setEditId(null);
+      setOpenDialog(false);
 
 
       fetchRequirements();
