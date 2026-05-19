@@ -22,6 +22,7 @@ import {
   Divider,
   CircularProgress,
   Tooltip,
+  Checkbox,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -100,10 +101,12 @@ const DepartmentSectionTagging = () => {
   const [departmentSections, setDepartmentSections] = useState([]);
   const [schoolYears, setSchoolYears] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [yearLevels, setYearLevels] = useState([]);
 
   // ── FILTER SELECTIONS (for search) ───────────────────────────────────────
   const [filterDepartment, setFilterDepartment] = useState("");
   const [filterCurriculum, setFilterCurriculum] = useState("");
+  const [filterYearLevel, setFilterYearLevel] = useState("");
   const [filterYear, setFilterYear] = useState("");
   const [filterSemester, setFilterSemester] = useState("");
 
@@ -114,12 +117,13 @@ const DepartmentSectionTagging = () => {
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
-        const [deptRes, currRes, secRes, yrRes, semRes, activeRes] = await Promise.all([
+        const [deptRes, currRes, secRes, yrRes, semRes, yearLevelRes, activeRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/get_department`),
           axios.get(`${API_BASE_URL}/api/applied_program`).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/department_section`),
           axios.get(`${API_BASE_URL}/get_school_year`),
           axios.get(`${API_BASE_URL}/get_school_semester`),
+          axios.get(`${API_BASE_URL}/get_year_level`).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/active_school_year`),
         ]);
 
@@ -128,12 +132,14 @@ const DepartmentSectionTagging = () => {
         const secs = secRes.data || [];
         const yrs = yrRes.data || [];
         const sems = semRes.data || [];
+        const yearLevelList = Array.isArray(yearLevelRes.data) ? yearLevelRes.data : [];
 
         setDepartments(depts);
         setAllCurriculums(currs);
         setDepartmentSections(secs);
         setSchoolYears(yrs);
         setSemesters(sems);
+        setYearLevels(yearLevelList);
 
         // Pre-select active school year/semester
         if (activeRes.data?.length > 0) {
@@ -206,23 +212,63 @@ const DepartmentSectionTagging = () => {
   const [allCurriculumStudents, setAllCurriculumStudents] = useState([]);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
   const [enrolledNumbers, setEnrolledNumbers] = useState(new Set());
+  const [selectedStudentNumbers, setSelectedStudentNumbers] = useState(new Set());
   const latestCurriculumRequestRef = useRef(0);
   const latestEnrolledRequestRef = useRef(0);
 
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
 
+  const selectableStudents = allCurriculumStudents.filter(
+    (student) => !enrolledNumbers.has(String(student.student_number))
+  );
+  const selectableStudentNumbers = selectableStudents.map((student) =>
+    String(student.student_number)
+  );
+  const selectedStudentCount = selectedStudentNumbers.size;
+  const selectedStudentNumberList = Array.from(selectedStudentNumbers);
+  const allSelectableStudentsSelected =
+    selectableStudentNumbers.length > 0 &&
+    selectableStudentNumbers.every((studentNumber) =>
+      selectedStudentNumbers.has(studentNumber)
+    );
+  const someSelectableStudentsSelected =
+    selectedStudentCount > 0 && !allSelectableStudentsSelected;
+
+  useEffect(() => {
+    setSelectedStudentNumbers((prev) => {
+      const validStudentNumbers = new Set(selectableStudentNumbers);
+      const next = new Set(
+        Array.from(prev).filter((studentNumber) =>
+          validStudentNumbers.has(studentNumber)
+        )
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [allCurriculumStudents, enrolledNumbers]);
+
   // ── Fetch all students under the curriculum ───────────────────────────────
   const fetchCurriculumStudents = async () => {
     const requestId = ++latestCurriculumRequestRef.current;
-    const res = await axios.get(`${API_BASE_URL}/get_student_per_curriculum`, {
-      params: {
-        curriculum_id: filterCurriculum,
-        active_school_year_id: activeSYID,
-      },
-    });
-    if (requestId === latestCurriculumRequestRef.current) {
-      setAllCurriculumStudents(Array.isArray(res.data) ? res.data : []);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/get_student_per_curriculum`, {
+        params: {
+          curriculum_id: filterCurriculum,
+          active_school_year_id: activeSYID,
+          year_level_id: filterYearLevel || undefined,
+        },
+      });
+      if (requestId === latestCurriculumRequestRef.current) {
+        setAllCurriculumStudents(Array.isArray(res.data) ? res.data : []);
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        if (requestId === latestCurriculumRequestRef.current) {
+          setAllCurriculumStudents([]);
+        }
+      } else {
+        throw err;
+      }
     }
   };
 
@@ -234,6 +280,7 @@ const DepartmentSectionTagging = () => {
         params: {
           curriculum_id: filterCurriculum,
           active_school_year_id: activeSYID,
+          year_level_id: filterYearLevel || undefined,
         },
       });
       const enrolled = Array.isArray(res.data) ? res.data : [];
@@ -264,6 +311,27 @@ const DepartmentSectionTagging = () => {
   const syncEnrolledState = (students) => {
     setEnrolledStudents(students);
     setEnrolledNumbers(new Set(students.map((s) => String(s.student_number))));
+  };
+
+  const toggleStudentSelection = (studentNumber) => {
+    const safeStudentNumber = String(studentNumber);
+    setSelectedStudentNumbers((prev) => {
+      const next = new Set(prev);
+      if (next.has(safeStudentNumber)) {
+        next.delete(safeStudentNumber);
+      } else {
+        next.add(safeStudentNumber);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllStudentSelection = () => {
+    setSelectedStudentNumbers((prev) => {
+      if (selectableStudentNumbers.length === 0) return prev;
+      if (allSelectableStudentsSelected) return new Set();
+      return new Set(selectableStudentNumbers);
+    });
   };
 
   const refreshEnrolledStudentsInBackground = () => {
@@ -308,6 +376,7 @@ const DepartmentSectionTagging = () => {
     curriculum_id: filterCurriculum,
     active_school_year_id: activeSYID,
     department_section_id: insertSection,
+    year_level_id: filterYearLevel || undefined,
   });
 
   const buildOptimisticSectionStudent = (studentNumber) => {
@@ -362,24 +431,43 @@ const DepartmentSectionTagging = () => {
     }
     setActionLoading(true);
     try {
+      const enrollingSelectedStudents = selectedStudentCount > 0;
+      const payload = {
+        ...getEnrollMeta(),
+        ...(enrollingSelectedStudents
+          ? { student_numbers: selectedStudentNumberList }
+          : {}),
+      };
       const res = await axios.put(
         `${API_BASE_URL}/enrolled_student_in_section`,
-        getEnrollMeta(),
+        payload,
         getAuditHeaders()
       );
+      const optimisticStudentNumbers = enrollingSelectedStudents
+        ? new Set(selectedStudentNumberList)
+        : null;
       syncEnrolledState([
         ...enrolledStudents,
         ...allCurriculumStudents
-          .filter((student) => !enrolledNumbers.has(String(student.student_number)))
+          .filter((student) => {
+            const studentNumber = String(student.student_number);
+            return (
+              !enrolledNumbers.has(studentNumber) &&
+              (!optimisticStudentNumbers || optimisticStudentNumbers.has(studentNumber))
+            );
+          })
           .map((student) => ({
             ...student,
             section_description: insertSectionLabel,
             section: insertSectionLabel,
           })),
       ]);
+      setSelectedStudentNumbers(new Set());
       setSnackbar({
         open: true,
-        message: res.data?.message || "Students enrolled successfully.",
+        message: res.data?.message || (enrollingSelectedStudents
+          ? "Selected students enrolled successfully."
+          : "Students enrolled successfully."),
         severity: "success",
       });
       fetchBothPanels().catch((err) => {
@@ -635,6 +723,23 @@ const DepartmentSectionTagging = () => {
             </Select>
           </FormControl>
 
+          {/* Year Level */}
+          <FormControl size="small" sx={{ minWidth: 170 }}>
+            <InputLabel>Year Level</InputLabel>
+            <Select
+              value={String(filterYearLevel || "")}
+              label="Year Level"
+              onChange={(e) => setFilterYearLevel(e.target.value)}
+            >
+              <MenuItem value="">All Year Levels</MenuItem>
+              {yearLevels.map((yl) => (
+                <MenuItem key={yl.year_level_id} value={String(yl.year_level_id)}>
+                  {yl.year_level_description}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           {/* School Year */}
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>School Year</InputLabel>
@@ -748,7 +853,9 @@ const DepartmentSectionTagging = () => {
         <Tooltip
           title={
             canManageStudents
-              ? `Enroll all students into ${insertSectionLabel}`
+              ? selectedStudentCount > 0
+                ? `Enroll ${selectedStudentCount} selected student(s) into ${insertSectionLabel}`
+                : `Enroll all students into ${insertSectionLabel}`
               : "Please complete filter and select a section first"
           }
         >
@@ -774,7 +881,9 @@ const DepartmentSectionTagging = () => {
                 "&:hover": { backgroundColor: mainButtonColor, opacity: 0.85 },
               }}
             >
-              Enroll All
+              {selectedStudentCount > 0
+                ? `Enroll Selected (${selectedStudentCount})`
+                : "Enroll All"}
             </Button>
           </span>
         </Tooltip>
@@ -831,6 +940,20 @@ const DepartmentSectionTagging = () => {
                 height: "20px",
               }}
             />
+            {selectedStudentCount > 0 && (
+              <Chip
+                label={`${selectedStudentCount} selected`}
+                size="small"
+                onDelete={() => setSelectedStudentNumbers(new Set())}
+                sx={{
+                  backgroundColor: "#fff3e0",
+                  color: "#ef6c00",
+                  fontWeight: 700,
+                  fontSize: "11px",
+                  height: "20px",
+                }}
+              />
+            )}
           </Box>
 
           <Paper
@@ -841,7 +964,22 @@ const DepartmentSectionTagging = () => {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    {["#", "Student No.", "Student Name", "Program", "Year Level", "Action"].map((h) => (
+                    <TableCell sx={{ ...thStyle, width: "48px" }}>
+                      <Checkbox
+                        size="small"
+                        checked={allSelectableStudentsSelected}
+                        indeterminate={someSelectableStudentsSelected}
+                        disabled={selectableStudentNumbers.length === 0}
+                        onChange={toggleAllStudentSelection}
+                        sx={{
+                          color: "#fff",
+                          p: 0,
+                          "&.Mui-checked": { color: "#fff" },
+                          "&.MuiCheckbox-indeterminate": { color: "#fff" },
+                        }}
+                      />
+                    </TableCell>
+                    {["Student No.", "Student Name", "Program", "Year Level", "Action"].map((h) => (
                       <TableCell key={h} sx={thStyle}>{h}</TableCell>
                     ))}
                   </TableRow>
@@ -861,16 +999,61 @@ const DepartmentSectionTagging = () => {
                   ) : (
                     allCurriculumStudents.map((s, idx) => {
                       const isEnrolled = enrolledNumbers.has(String(s.student_number));
+                      const studentNumber = String(s.student_number);
+                      const isSelected = selectedStudentNumbers.has(studentNumber);
                       return (
                         <TableRow
                           key={s.student_number}
+                          onClick={() => {
+                            if (!isEnrolled && !actionLoading) {
+                              toggleStudentSelection(s.student_number);
+                            }
+                          }}
                           sx={{
-                            backgroundColor: isEnrolled ? "#f1f8f1" : "inherit",
-                            "&:hover": { backgroundColor: isEnrolled ? "#e8f5e9" : "#f9fbe7" },
+                            backgroundColor: isEnrolled
+                              ? "#f1f8f1"
+                              : isSelected
+                                ? "#fff8e1"
+                                : "inherit",
+                            cursor: isEnrolled || actionLoading ? "default" : "pointer",
+                            transition: "background-color 0.15s ease",
+                            "&:hover": {
+                              backgroundColor: isEnrolled
+                                ? "#e8f5e9"
+                                : isSelected
+                                  ? "#ffecb3"
+                                  : "#fffde7",
+                            },
                           }}
                         >
-                          <TableCell sx={{ ...tdStyle, color: "#888", width: "36px" }}>
-                            {idx + 1}
+                          <TableCell
+                            sx={{
+                              ...tdStyle,
+                              color: "#888",
+                              width: "48px",
+                            }}
+                          >
+                            <Box
+                              component="span"
+                              className="row-index"
+                              sx={{
+                                display: isSelected ? "none" : "inline",
+                              }}
+                            >
+                              {idx + 1}
+                            </Box>
+                            <Checkbox
+                              className="row-checkbox"
+                              size="small"
+                              checked={isSelected}
+                              disabled={isEnrolled || actionLoading}
+                              onChange={() => toggleStudentSelection(s.student_number)}
+                              onClick={(event) => event.stopPropagation()}
+                              sx={{
+                                display: isSelected ? "inline-flex" : "none",
+                                p: 0,
+                              }}
+                            />
                           </TableCell>
                           <TableCell sx={tdStyle}>{s.student_number}</TableCell>
                           <TableCell sx={tdStyle}>
@@ -907,7 +1090,10 @@ const DepartmentSectionTagging = () => {
                                 size="small"
                                 variant="contained"
                                 startIcon={<EnrollIcon sx={{ fontSize: "14px !important" }} />}
-                                onClick={() => handleEnrollSingle(s.student_number)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleEnrollSingle(s.student_number);
+                                }}
                                 disabled={!insertSection}
                                 sx={{
                                   backgroundColor: mainButtonColor,

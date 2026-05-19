@@ -358,25 +358,49 @@ const ApplicantProfile = () => {
 
       // 🧠 Snackbar logic
       if (!entrance_exam_status) {
-        showSnackbar("📝 Proceed to Entrance Exam.", "info");
-      } else if (entrance_exam_status && !isDoneStatus(qualifying_status)) {
-        showSnackbar("✅ Proceed to Qualifying.", "success");
-      } else if (qualifying_result && !isDoneStatus(interview_status)) {
-        showSnackbar("✅ Proceed to Interview.", "success");
-      } else if (interview_result || isDoneStatus(interview_status)) {
-        showSnackbar("🏁 All exams completed.", "success");
+        showSnackbar(
+          "📝 This applicant is qualified and may now proceed to the Entrance Examination phase. Please complete the examination process to continue with the admission evaluation.",
+          "info"
+        );
+
+      } else if (entrance_exam_status && !qualifying_status) {
+        showSnackbar(
+          "✅ Congratulations! The applicant has successfully passed the Entrance Examination and is now eligible to proceed to the Qualifying Examination stage.",
+          "success"
+        );
+
+      } else if (qualifying_result && !interview_result) {
+        showSnackbar(
+          "🎤 The applicant has successfully completed the Qualifying Examination and is now endorsed for the Interview process. Please wait for the interview schedule and further instructions.",
+          "success"
+        );
+
+      } else if (interview_result) {
+        showSnackbar(
+          "🏁 All admission requirements, examinations, and interview procedures have been successfully completed by the applicant.",
+          "success"
+        );
       }
 
       if (isAccepted) {
-        showSnackbar("🎉 Applicant ACCEPTED!", "success");
+        showSnackbar(
+          "🎉 Congratulations! This applicant has been officially ACCEPTED for admission. The applicant may now proceed with enrollment and the succeeding registration requirements.",
+          "success"
+        );
       }
 
       if (isRegistrarApproved) {
-        showSnackbar("📄 Registrar Approved.", "success");
+        showSnackbar(
+          "📄 The applicant’s admission records and submitted requirements have been successfully reviewed and approved by the Registrar’s Office.",
+          "success"
+        );
       }
 
       if (hasStudentNumberLocal) {
-        showSnackbar("🎓 Student number generated!", "success");
+        showSnackbar(
+          "🎓 A student number has been successfully generated for the applicant. The applicant is now officially registered in the student records system.",
+          "success"
+        );
       }
 
       setPersonId(pid);

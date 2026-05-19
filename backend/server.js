@@ -2009,6 +2009,19 @@ app.get("/api/person_with_applicant/:id", async (req, res) => {
       SELECT
         pt.*,
         ant.applicant_number,
+        CASE
+          WHEN ia.status = 1 OR ia.status = 'Accepted' THEN 'Accepted'
+          WHEN ia.status = 2 OR ia.status = 'Rejected' THEN 'Rejected'
+          ELSE 'Waiting List'
+        END AS college_approval_status,
+        ia.action,
+        ia.email_sent,
+        ia.qualifying_status,
+        ia.interview_status AS interview_status_result,
+        COALESCE(ps.interview_status, 0) AS applicant_interview_status,
+        COALESCE(ps.exam_result, 0) AS total_ave,
+        COALESCE(ps.qualifying_result, 0) AS qualifying_exam_score,
+        COALESCE(ps.interview_result, 0) AS qualifying_interview_score,
         ea.schedule_id AS exam_schedule_id,
         ees.day_description AS exam_day,
         ees.building_description AS exam_building,
@@ -2018,6 +2031,8 @@ app.get("/api/person_with_applicant/:id", async (req, res) => {
         ees.proctor AS exam_proctor
       FROM person_table pt
       JOIN applicant_numbering_table ant ON pt.person_id = ant.person_id
+      LEFT JOIN interview_applicants ia ON ia.applicant_id = ant.applicant_number
+      LEFT JOIN person_status_table ps ON ps.person_id = pt.person_id
       LEFT JOIN exam_applicants ea ON ant.applicant_number = ea.applicant_id
       LEFT JOIN entrance_exam_schedule ees ON ea.schedule_id = ees.schedule_id
       WHERE pt.person_id = ? OR ant.applicant_number = ?
