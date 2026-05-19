@@ -232,16 +232,24 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
         const fetchScores = async () => {
             try {
 
+                const applicantNumberRes = await axios.get(
+                    `${API_BASE_URL}/api/applicant_number/${personId}`
+                );
+                const applicantNumber = applicantNumberRes.data?.applicant_number;
+
                 // 2️⃣ Entrance exam scores (already working)
                 const res = await axios.get(`${API_BASE_URL}/api/applicants-with-number`);
-                const applicant = res.data.find(a => a.applicant_number === applicantNumber);
+                const applicants = Array.isArray(res.data) ? res.data : res.data?.data || [];
+                const applicant = applicants.find(a => a.applicant_number === applicantNumber);
 
                 if (applicant) {
-                    const english = Number(applicant.english) || 0;
-                    const science = Number(applicant.science) || 0;
-                    const filipino = Number(applicant.filipino) || 0;
-                    const math = Number(applicant.math) || 0;
-                    const abstract = Number(applicant.abstract) || 0;
+                    const scores = applicant.scores || {};
+                    const scoreValues = Object.values(scores).map(Number);
+                    const english = Number(applicant.english ?? scoreValues[0]) || 0;
+                    const science = Number(applicant.science ?? scoreValues[1]) || 0;
+                    const filipino = Number(applicant.filipino ?? scoreValues[2]) || 0;
+                    const math = Number(applicant.math ?? scoreValues[3]) || 0;
+                    const abstract = Number(applicant.abstract ?? scoreValues[4]) || 0;
                     const finalRating = applicant.final_rating
                         ? Number(applicant.final_rating)
                         : (english + science + filipino + math + abstract) / 5;
@@ -253,7 +261,7 @@ const ApplicantExamPermit = ({ personId, steps, printRef }) => {
                         math,
                         abstract,
                         final: finalRating.toFixed(2),
-                        status: applicant.status || "N/A",  // ✅ fix here
+                        status: applicant.exam_status ?? applicant.status ?? "N/A",
                     });
 
 

@@ -145,6 +145,23 @@ const ApplicantDashboard = (props) => {
     useState(null);
   const [examScore, setExamScore] = useState(null);
 
+  const normalizeSchedule = (schedule) => {
+    if (!schedule) return null;
+
+    return {
+      ...schedule,
+      schedule_id: schedule.schedule_id ?? schedule.exam_schedule_id ?? null,
+      day_description:
+        schedule.day_description ?? schedule.exam_day ?? schedule.date_of_exam ?? null,
+      building_description:
+        schedule.building_description ?? schedule.exam_building ?? null,
+      room_description:
+        schedule.room_description ?? schedule.exam_room ?? null,
+      start_time: schedule.start_time ?? schedule.exam_start_time ?? null,
+      end_time: schedule.end_time ?? schedule.exam_end_time ?? null,
+    };
+  };
+
   const fetchProctorSchedule = async (applicantNumber) => {
     if (!applicantNumber) return;
     console.log("fetchProctorSchedule called with:", applicantNumber); // 👈
@@ -153,10 +170,18 @@ const ApplicantDashboard = (props) => {
         `${API_BASE_URL}/api/applicant-schedule/${applicantNumber}`,
       );
       console.log("proctor data:", data);
-      setProctor(data);
+      setProctor(normalizeSchedule(data));
     } catch (err) {
       console.error("Error fetching schedule:", err);
-      setProctor(null);
+      try {
+        const { data } = await axios.get(
+          `${API_BASE_URL}/api/exam-schedule/${applicantNumber}`,
+        );
+        setProctor(normalizeSchedule(data));
+      } catch (fallbackErr) {
+        console.error("Fallback schedule fetch failed:", fallbackErr);
+        setProctor((previousSchedule) => previousSchedule);
+      }
     }
   };
   const [requirementsCompleted, setRequirementsCompleted] = useState(
@@ -192,6 +217,11 @@ const ApplicantDashboard = (props) => {
         `${API_BASE_URL}/api/person_with_applicant/${id}`,
       );
       setPerson(res.data || {});
+
+      const profileSchedule = normalizeSchedule(res.data);
+      if (profileSchedule?.schedule_id || profileSchedule?.day_description) {
+        setProctor(profileSchedule);
+      }
 
       // map many possible field names
       let qExam =
@@ -284,6 +314,16 @@ const ApplicantDashboard = (props) => {
     status: null,
   });
 
+  const normalizeExamStatus = (status) => {
+    if (status === 0 || String(status).trim() === "0") return "PASSED";
+    if (status === 1 || String(status).trim() === "1") return "FAILED";
+
+    const normalized = String(status ?? "").trim().toUpperCase();
+    if (["PASSED", "PASS"].includes(normalized)) return "PASSED";
+    if (["FAILED", "FAIL"].includes(normalized)) return "FAILED";
+    return "PENDING";
+  };
+
   const fetchEntranceExamScores = async (applicantNumber) => {
     if (!applicantNumber) return;
 
@@ -305,7 +345,7 @@ const ApplicantDashboard = (props) => {
             : "0.00",
           total: applicant.total || 0,
           percentage: applicant.percentage || 0,
-          status: applicant.exam_status || "Pending",
+          status: normalizeExamStatus(applicant.exam_status),
         });
       } else {
         setExamScores({
@@ -326,7 +366,14 @@ const ApplicantDashboard = (props) => {
     Object.keys(examScores.subjects).length > 0;
 
   // AFTER — shows whenever schedule data exists
-  const hasSchedule = !!(proctor?.day_description && proctor?.start_time);
+  const hasSchedule = !!(
+    proctor?.schedule_id ||
+    proctor?.day_description ||
+    proctor?.building_description ||
+    proctor?.room_description ||
+    proctor?.start_time ||
+    proctor?.end_time
+  );
 
   const [interviewSchedule, setInterviewSchedule] = useState(null);
   const [hasInterviewScores, setHasInterviewScores] = useState(false);
@@ -525,12 +572,7 @@ const ApplicantDashboard = (props) => {
     }
 
     // STEP 2 — Exam
-    if (
-      proctor &&
-      proctor.day_description &&
-      proctor.start_time &&
-      proctor.end_time
-    ) {
+    if (hasSchedule) {
       return 1;
     }
 
@@ -572,22 +614,7 @@ const ApplicantDashboard = (props) => {
   }, [year]);
 
   const [announcements, setAnnouncements] = useState([]);
-
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
-  const fetchAnnouncements = async () => {
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/announcements/applicant`,
-      );
-      setAnnouncements(res.data); // 👈 no .data.data
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
@@ -1584,6 +1611,10 @@ const ApplicantDashboard = (props) => {
                           <span>⏳ Status: Pending</span>
                         )}
 
+                        {!hasSchedule && hasScores && (
+                          <span>Schedule: Not assigned</span>
+                        )}
+
                         {/* Scheduled Exam Info */}
                         {hasSchedule && (
                           <>
@@ -1613,9 +1644,9 @@ const ApplicantDashboard = (props) => {
                             🎯{" "}
                             <b>
                               Entrance Examination Status:
-                              {examScores.status === "PASSED" ? (
+                              {normalizeExamStatus(examScores.status) === "PASSED" ? (
                                 <span style={{ color: "green" }}> PASSED </span>
-                              ) : examScores.status === "FAILED" ? (
+                              ) : normalizeExamStatus(examScores.status) === "FAILED" ? (
                                 <span style={{ color: "red" }}> FAILED </span>
                               ) : (
                                 <span> Pending </span>

@@ -328,7 +328,10 @@ router.get("/api/applicants-with-number", async (req, res) => {
           subjects.length > 0
             ? computedTotal / subjects.length
             : 0,
-        exam_status: row.exam_status || "Pending",
+        exam_status:
+          row.exam_status !== null && row.exam_status !== undefined
+            ? row.exam_status
+            : "Pending",
       };
     });
 

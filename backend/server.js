@@ -59,11 +59,9 @@ const applicantDocsDir = path.join(
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://192.168.0.180:5173",
-  "http://192.168.0.180:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.0.180:5173",
+  "http://192.168.50.55:5173",
   "http://192.168.1.9:5173",
 ];
 
@@ -2012,9 +2010,18 @@ app.get("/api/person_with_applicant/:id", async (req, res) => {
       `
       SELECT
         pt.*,
-        ant.applicant_number
+        ant.applicant_number,
+        ea.schedule_id AS exam_schedule_id,
+        ees.day_description AS exam_day,
+        ees.building_description AS exam_building,
+        ees.room_description AS exam_room,
+        ees.start_time AS exam_start_time,
+        ees.end_time AS exam_end_time,
+        ees.proctor AS exam_proctor
       FROM person_table pt
       JOIN applicant_numbering_table ant ON pt.person_id = ant.person_id
+      LEFT JOIN exam_applicants ea ON ant.applicant_number = ea.applicant_id
+      LEFT JOIN entrance_exam_schedule ees ON ea.schedule_id = ees.schedule_id
       WHERE pt.person_id = ? OR ant.applicant_number = ?
       LIMIT 1
     `,

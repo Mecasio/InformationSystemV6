@@ -214,6 +214,28 @@ const ApplicantProfile = () => {
   const [hasStudentNumber, setHasStudentNumber] = useState(false);
   const [studentNumber, setStudentNumber] = useState(null);
 
+  const normalizeExamStatus = (status) => {
+    if (status === 0 || String(status).trim() === "0") return "PASSED";
+    if (status === 1 || String(status).trim() === "1") return "FAILED";
+
+    const normalized = String(status ?? "").trim().toUpperCase();
+    if (["PASSED", "PASS"].includes(normalized)) return "PASSED";
+    if (["FAILED", "FAIL"].includes(normalized)) return "FAILED";
+    return "";
+  };
+
+  const isDoneStatus = (value) =>
+    value === true ||
+    value === 1 ||
+    String(value ?? "").trim() === "1" ||
+    String(value ?? "").trim().toUpperCase() === "DONE" ||
+    String(value ?? "").trim().toUpperCase() === "PASSED";
+
+  const isAcceptedStatus = (value) =>
+    value === 1 ||
+    String(value ?? "").trim() === "1" ||
+    String(value ?? "").trim().toUpperCase() === "ACCEPTED";
+
   const fetchApplicantData = async (query) => {
     if (!query) return;
 
@@ -256,12 +278,12 @@ const ApplicantProfile = () => {
           `${API_BASE_URL}/api/applicant-scores/${query}`
         );
 
-        entrance_exam_status = scoreRes.data?.entrance_exam_status;
+        entrance_exam_status = normalizeExamStatus(scoreRes.data?.entrance_exam_status);
         qualifying_result = scoreRes.data?.qualifying_result;
         interview_result = scoreRes.data?.interview_result;
 
-        qualifying_status = Number(scoreRes.data?.qualifying_status || 0);
-        interview_status = Number(scoreRes.data?.interview_status || 0);
+        qualifying_status = scoreRes.data?.qualifying_status;
+        interview_status = scoreRes.data?.interview_status;
       } catch (err) {
         console.error("Score API failed:", err);
       }
@@ -275,7 +297,7 @@ const ApplicantProfile = () => {
         );
 
         isAccepted =
-          statusRes.data?.found && statusRes.data.status === "Accepted";
+          statusRes.data?.found && isAcceptedStatus(statusRes.data.status);
       } catch (err) {
         console.error("Status API failed:", err);
       }
@@ -316,8 +338,8 @@ const ApplicantProfile = () => {
           entrance_exam_status === "FAILED",
 
         // separate step 2 states
-        qualifyingDone: qualifying_status === 1,
-        interviewDone: interview_status === 1,
+        qualifyingDone: isDoneStatus(qualifying_status),
+        interviewDone: isDoneStatus(interview_status),
 
         step3: isAccepted,
         step4: isRegistrarApproved,
@@ -337,11 +359,11 @@ const ApplicantProfile = () => {
       // 🧠 Snackbar logic
       if (!entrance_exam_status) {
         showSnackbar("📝 Proceed to Entrance Exam.", "info");
-      } else if (entrance_exam_status && !qualifying_status) {
+      } else if (entrance_exam_status && !isDoneStatus(qualifying_status)) {
         showSnackbar("✅ Proceed to Qualifying.", "success");
-      } else if (qualifying_result && !interview_result) {
+      } else if (qualifying_result && !isDoneStatus(interview_status)) {
         showSnackbar("✅ Proceed to Interview.", "success");
-      } else if (interview_result) {
+      } else if (interview_result || isDoneStatus(interview_status)) {
         showSnackbar("🏁 All exams completed.", "success");
       }
 
