@@ -55,7 +55,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import DateField from "../components/DateField";
-
+import { Snackbar, Alert } from "@mui/material";
 const StudentDashboard1 = () => {
   const settings = useContext(SettingsContext);
 
@@ -184,6 +184,25 @@ const StudentDashboard1 = () => {
     permanentMunicipality: "",
     permanentDswdHouseholdNumber: "",
   });
+
+  // Add this state at the top if not already:
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "warning",
+  });
+
+  // Snackbar close handler
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  // Example: replace previous calls with this:
+  const showSnackbar = (message) => {
+    setSnackbar({ open: true, message, severity: "warning" });
+  };
+
 
   const [yearLevelOptions, setYearLevelOptions] = useState([]);
 
@@ -611,8 +630,7 @@ const StudentDashboard1 = () => {
     setPreview(null);
   };
 
-  const handleFileChange = (e) => {
-    if (isReadOnly) return;
+   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -621,7 +639,11 @@ const StudentDashboard1 = () => {
 
     // Check file type
     if (!validTypes.includes(file.type)) {
-      alert("Invalid file type. Please select a JPEG or PNG file.");
+      setSnackbar({
+        open: true,
+        message: "Invalid file type. Please select a JPEG or PNG file.",
+        severity: "error",
+      });
       setSelectedFile(null);
       setPreview(null);
       return;
@@ -629,7 +651,11 @@ const StudentDashboard1 = () => {
 
     // Check file size
     if (file.size > maxSizeInBytes) {
-      alert("File is too large. Maximum allowed size is 2MB.");
+      setSnackbar({
+        open: true,
+        message: "File is too large. Maximum allowed size is 2MB.",
+        severity: "error",
+      });
       setSelectedFile(null);
       setPreview(null);
       return;
@@ -642,10 +668,23 @@ const StudentDashboard1 = () => {
     reader.readAsDataURL(file);
   };
 
+  const MAX_SIZE = 2 * 1024 * 1024;
+
   const handleUpload = async () => {
-    if (isReadOnly) return;
     if (!selectedFile) {
-      alert("Please select a file first.");
+      setSnackbar({
+        open: true,
+        message: "Please select a file first.",
+        severity: "warning",
+      });
+      return;
+    }
+    if (selectedFile.size > MAX_SIZE) {
+      setSnackbar({
+        open: true,
+        message: "File must be 2MB or less.",
+        severity: "error",
+      });
       return;
     }
 
@@ -674,11 +713,24 @@ const StudentDashboard1 = () => {
       await handleUpdate(updatedPerson); // ✅ this pushes the profile_img change into DB
 
       setUploadedImage(`${API_BASE_URL}/uploads/${fileName}`);
-      alert("Upload successful!");
+      setSnackbar({
+        open: true,
+        message: "Upload successful!",
+        severity: "success",
+      });
       handleClose();
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Upload failed.");
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Upload failed.";
+
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
     }
   };
 
@@ -1013,6 +1065,8 @@ const StudentDashboard1 = () => {
         padding: 2,
       }}
     >
+      {/* ✅ Hidden render of ExamPermit for printing */}
+
       <Box
         sx={{
           display: "flex",
@@ -1035,9 +1089,8 @@ const StudentDashboard1 = () => {
         </Typography>
       </Box>
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
-      <br />
-      <br />
 
+      <br />
       <Box
         sx={{
           display: "flex",
@@ -1088,22 +1141,22 @@ const StudentDashboard1 = () => {
             }}
           >
             <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-            <strong></strong>{" "}
-            <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>{" "}
-            Kindly type 'NA' in boxes where there are no possible answers to the
-            information being requested. &nbsp; &nbsp; <br />
-            <strong></strong>{" "}
+            <strong></strong>
+            <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
+            Please indicate “NA” or “N/A” in fields where the requested information is not applicable or no response can be provided.
+            &nbsp;&nbsp;<br />
+
+            <strong></strong>
             <span
               style={{
-                fontSize: "1.2em",
-                margin: "0 15px",
-                marginLeft: "100px",
+                fontSize: '1.2em',
+                margin: '0 15px',
+                marginLeft: '100px',
               }}
             >
               ➔
-            </span>{" "}
-            To make use of the letter 'Ñ', please press ALT while typing "165",
-            while for 'ñ', please press ALT while typing "164"
+            </span>
+            To enter the letter “Ñ”, press and hold the ALT key while typing “165”. For “ñ”, press and hold the ALT key while typing “164”.
           </Typography>
         </Box>
       </Box>
@@ -1121,7 +1174,6 @@ const StudentDashboard1 = () => {
       </h1>
 
       {/* Cards Section */}
-
       <Box
         sx={{
           display: "flex",
@@ -1197,6 +1249,7 @@ const StudentDashboard1 = () => {
         ))}
       </Box>
 
+      {/* Applicant Form Section */}
       <Container>
         <Container>
           <h1
@@ -1227,6 +1280,7 @@ const StudentDashboard1 = () => {
 
         <br />
 
+        {/* Steps */}
         <Box
           sx={{
             display: "flex",
@@ -1237,52 +1291,45 @@ const StudentDashboard1 = () => {
         >
           {steps.map((step, index) => (
             <React.Fragment key={index}>
-              {/* Wrap the step with Link for routing */}
-              <Link to={step.path} style={{ textDecoration: "none" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  cursor: "pointer",
+                }}
+                onClick={() => handleStepClick(index)}
+              >
                 <Box
                   sx={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: "50%",
+                    border: `1px solid ${borderColor}`,
+                    backgroundColor:
+                      activeStep === index
+                        ? settings?.header_color || "#1976d2"
+                        : "#E8C999",
+                    color: activeStep === index ? "#fff" : "#000",
                     display: "flex",
-                    flexDirection: "column",
                     alignItems: "center",
-                    cursor: "pointer",
+                    justifyContent: "center",
                   }}
-                  onClick={() => handleStepClick(index)}
                 >
-                  {/* Step Icon */}
-                  <Box
-                    sx={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: "50%",
-                      border: `1px solid ${borderColor}`,
-                      backgroundColor:
-                        activeStep === index
-                          ? settings?.header_color || "#1976d2"
-                          : "#E8C999",
-                      color: activeStep === index ? "#fff" : "#000",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-
-                  {/* Step Label */}
-                  <Typography
-                    sx={{
-                      mt: 1,
-                      color: activeStep === index ? "#6D2323" : "#000",
-                      fontWeight: activeStep === index ? "bold" : "normal",
-                      fontSize: 14,
-                    }}
-                  >
-                    {step.label}
-                  </Typography>
+                  {step.icon}
                 </Box>
-              </Link>
+                <Typography
+                  sx={{
+                    mt: 1,
+                    color: activeStep === index ? "#6D2323" : "#000",
+                    fontWeight: activeStep === index ? "bold" : "normal",
+                    fontSize: 14,
+                  }}
+                >
+                  {step.label}
+                </Typography>
+              </Box>
 
-              {/* Connector Line */}
               {index < steps.length - 1 && (
                 <Box
                   sx={{
@@ -1334,23 +1381,17 @@ const StudentDashboard1 = () => {
               padding: 4,
               borderRadius: 2,
               boxShadow: 3,
-              ...readOnlySx,
             }}
           >
             <Typography
-              style={{
-                fontSize: "20px",
-                color: mainButtonColor,
-                fontWeight: "bold",
-              }}
+              style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}
             >
               Personal Information:
             </Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
-
             <div className="flex items-center mb-4 gap-4">
-              <label className="w-40 font-medium">Campus:</label>
+              <label className="w-40 font-medium">Campus:<span style={{ color: "red" }}> *</span></label>
 
               <FormControl
                 fullWidth
@@ -1396,7 +1437,7 @@ const StudentDashboard1 = () => {
             </div>
 
             <div className="flex items-center mb-4 gap-4">
-              <label className="w-40 font-medium">Academic Program:</label>
+              <label className="w-40 font-medium">Academic Program:<span style={{ color: "red" }}> *</span></label>
               <FormControl
                 fullWidth
                 size="small"
@@ -1433,7 +1474,7 @@ const StudentDashboard1 = () => {
             </div>
 
             <div className="flex items-center mb-4 gap-4">
-              <label className="w-40 font-medium">Classified As:</label>
+              <label className="w-40 font-medium">Classified As:<span style={{ color: "red" }}> *</span></label>
               <FormControl
                 fullWidth
                 size="small"
@@ -1469,7 +1510,7 @@ const StudentDashboard1 = () => {
             </div>
 
             <div className="flex items-center mb-4 gap-4">
-              <label className="w-40 font-medium">Applying As:</label>
+              <label className="w-40 font-medium">Applying As:<span style={{ color: "red" }}> *</span></label>
               <FormControl
                 fullWidth
                 size="small"
@@ -1525,11 +1566,7 @@ const StudentDashboard1 = () => {
             <br />
 
             <Typography
-              style={{
-                fontSize: "20px",
-                color: mainButtonColor,
-                fontWeight: "bold",
-              }}
+              style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}
             >
               Course Program:
             </Typography>
@@ -1551,6 +1588,7 @@ const StudentDashboard1 = () => {
                     <FormControl fullWidth size="small" required error={!!errors.program}>
                       <InputLabel>Course Applied</InputLabel>
                       <Select
+                      readOnly
                         name="program"
                         value={person.program || ""}
                         onBlur={() => handleUpdate(person)} onChange={handleChange}
@@ -1572,7 +1610,7 @@ const StudentDashboard1 = () => {
                     </FormControl>
                   </Box>
 
-               {/* <Box display="flex" alignItems="center" gap={2} mb={1}>
+                  {/* <Box display="flex" alignItems="center" gap={2} mb={1}>
                            <label className="w-40 font-medium">Course Applied:</label>
                             <FormControl fullWidth size="small" required error={!!errors.program2}>
                                                                       <InputLabel>Course Applied</InputLabel>
@@ -1689,7 +1727,7 @@ const StudentDashboard1 = () => {
               >
                 {person.profile_img && person.profile_img !== "" ? (
                   <img
-                    src={`${API_BASE_URL}/uploads/Applicant1by1/${person.profile_img}?t=${Date.now()}`}
+                    src={`${API_BASE_URL}/uploads/Student1by1/${person.profile_img}?t=${Date.now()}`}
                     alt="Profile"
                     style={{
                       width: "100%",
@@ -1720,6 +1758,7 @@ const StudentDashboard1 = () => {
                 fontSize: "20px",
                 color: mainButtonColor,
                 fontWeight: "bold",
+                mt: "-50px",
               }}
             >
               Person Details:
@@ -1731,17 +1770,28 @@ const StudentDashboard1 = () => {
               {/* Last Name */}
               <Box flex="1 1 20%">
                 <Typography mb={1} fontWeight="medium">
-                  Last Name
+                  Last Name<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
+                  InputProps={{
+                    readOnly: true,
+                    sx: { textTransform: "uppercase" } // must be inside InputProps
+                  }}
                   fullWidth
                   size="small"
                   name="last_name"
-                  required
-                  InputProps={{ readOnly: true }}
-                  value={person.last_name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
+                  require
+                  value={(person.last_name || "").toUpperCase()}
+                  onChange={(e) =>
+                    handleChange({
+                      ...e,
+                      target: {
+                        ...e.target,
+                        value: e.target.value.toUpperCase()
+                      }
+                    })
+                  }
+                  onBlur={() => handleUpdate(person)}
                   placeholder="Enter your Last Name"
                   error={errors.last_name}
                   helperText={errors.last_name ? "This field is required." : ""}
@@ -1751,17 +1801,28 @@ const StudentDashboard1 = () => {
               {/* First Name */}
               <Box flex="1 1 20%">
                 <Typography mb={1} fontWeight="medium">
-                  First Name
+                  First Name<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
+                  InputProps={{
+                    readOnly: true,
+                    sx: { textTransform: "uppercase" } // must be inside InputProps
+                  }}
                   size="small"
                   name="first_name"
                   required
-                  InputProps={{ readOnly: true }}
-                  value={person.first_name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
+                  value={(person.first_name || "").toUpperCase()}
+                  onChange={(e) =>
+                    handleChange({
+                      ...e,
+                      target: {
+                        ...e.target,
+                        value: e.target.value.toUpperCase()
+                      }
+                    })
+                  }
+                  onBlur={() => handleUpdate(person)}
                   placeholder="Enter your First Name"
                   error={errors.first_name}
                   helperText={
@@ -1777,18 +1838,25 @@ const StudentDashboard1 = () => {
                 </Typography>
                 <TextField
                   fullWidth
+                  InputProps={{
+                    readOnly: true,
+                    sx: { textTransform: "uppercase" } // must be inside InputProps
+                  }}
                   size="small"
                   name="middle_name"
                   required
-                  InputProps={{ readOnly: true }}
-                  value={person.middle_name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Enter your Middle Name"
-                  error={errors.middle_name}
-                  helperText={
-                    errors.middle_name ? "This field is required." : ""
+                  value={(person.middle_name || "").toUpperCase()}
+                  onChange={(e) =>
+                    handleChange({
+                      ...e,
+                      target: {
+                        ...e.target,
+                        value: e.target.value.toUpperCase()
+                      }
+                    })
                   }
+                  onBlur={() => handleUpdate(person)}
+                  placeholder="Enter your Middle Name"
                 />
               </Box>
 
@@ -1802,12 +1870,11 @@ const StudentDashboard1 = () => {
                   <Select
                     labelId="extension-label"
                     id="extension-select"
-                    readOnly
                     name="extension"
                     value={person.extension || ""}
                     label="Extension"
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                   >
                     <MenuItem value="">
                       <em>None</em>
@@ -1820,9 +1887,6 @@ const StudentDashboard1 = () => {
                     <MenuItem value="IV">IV</MenuItem>
                     <MenuItem value="V">V</MenuItem>
                   </Select>
-                  {errors.extension && (
-                    <FormHelperText>This field is required.</FormHelperText>
-                  )}
                 </FormControl>
               </Box>
 
@@ -1835,23 +1899,20 @@ const StudentDashboard1 = () => {
                   fullWidth
                   size="small"
                   name="nickname"
-                  InputProps={{ readOnly: true }}
-                  value={person.nickname}
+                  required
+                  value={person.nickname || ""}
                   onChange={handleChange}
-                  onBlur={handleBlur}
+                  onBlur={() => handleUpdate(person)}
                   placeholder="Enter your Nickname"
-                  error={errors.nickname}
-                  helperText={errors.nickname ? "This field is required." : ""}
                 />
               </Box>
             </Box>
-
             <Box display="flex" gap={4} mb={2}>
               {/* Height Field */}
               <Box display="flex" flexDirection="column" flex="0 0 26%">
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Typography fontWeight="medium" minWidth="60px">
-                    Height:
+                  <Typography fontWeight="medium" minWidth="70px">
+                    Height:<span style={{ color: "red" }}> *</span>
                   </Typography>
                   <TextField
                     size="small"
@@ -1876,8 +1937,8 @@ const StudentDashboard1 = () => {
               {/* Weight Field */}
               <Box display="flex" flexDirection="column" flex="0 0 26%">
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Typography fontWeight="medium" minWidth="60px">
-                    Weight:
+                  <Typography fontWeight="medium" minWidth="85px">
+                    Weight:<span style={{ color: "red" }}> *</span>
                   </Typography>
                   <TextField
                     size="small"
@@ -1911,7 +1972,7 @@ const StudentDashboard1 = () => {
             >
               {/* LRN Label */}
               <Typography fontWeight="medium" minWidth="180px">
-                Learning Reference Number:
+                Learning Reference Number:<span style={{ color: "red" }}> *</span>
               </Typography>
 
               {/* LRN Input */}
@@ -1926,12 +1987,11 @@ const StudentDashboard1 = () => {
                     : person.lrnNumber || ""
                 }
                 onChange={handleChange}
-                readOnly
-                onBlur={handleBlur}
+                onBlur={() => handleUpdate(person)}
                 disabled={person.lrnNumber === "No LRN Number"}
                 size="small"
                 sx={{ width: 220 }}
-                InputProps={{ sx: { height: 40, readOnly: true } }}
+                InputProps={{ sx: { height: 40 } }}
                 inputProps={{ style: { height: 40, padding: "10.5px 14px" } }}
                 error={errors.lrnNumber}
                 helperText={errors.lrnNumber ? "This field is required." : ""}
@@ -1940,7 +2000,6 @@ const StudentDashboard1 = () => {
               <FormControlLabel
                 control={
                   <Checkbox
-                    disabled
                     name="lrn_na"
                     checked={person.lrnNumber === "No LRN Number"}
                     onChange={(e) => {
@@ -1954,21 +2013,22 @@ const StudentDashboard1 = () => {
                       setIsLrnNA(checked); // optional: if you're tracking this separately
                       setLrnNAFlag(checked ? "1" : "0"); // optional: if you're sending this to backend
                     }}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                   />
                 }
                 label="N/A"
                 sx={{ mr: 2 }}
               />
 
-              <Typography fontWeight="medium">Gender:</Typography>
+              <Typography fontWeight="medium">
+                Gender:<span style={{ color: "red" }}> *</span>
+              </Typography>
               {/* Gender */}
               <TextField
                 select
                 size="small"
-                label="Gender"
+                label="SEX"
                 name="gender"
-                readOnly
                 required
                 value={person.gender == null ? "" : String(person.gender)}
                 onChange={(e) => {
@@ -1980,7 +2040,7 @@ const StudentDashboard1 = () => {
                     },
                   });
                 }}
-                onBlur={handleBlur}
+                onBlur={() => handleUpdate(person)}
                 error={Boolean(errors.gender)}
                 sx={{ width: 150 }}
                 InputProps={{ sx: { height: 40 } }}
@@ -2019,11 +2079,10 @@ const StudentDashboard1 = () => {
                     select
                     size="small"
                     label="PWD Type"
-                    readOnly
                     name="pwdType"
                     value={person.pwdType || ""}
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                     required={person.pwdMember === 1}
                     error={person.pwdMember === 1 && !!errors.pwdType}
                     helperText={
@@ -2090,7 +2149,7 @@ const StudentDashboard1 = () => {
                     name="pwdId"
                     value={person.pwdId || ""}
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                     required={person.pwdMember === 1}
                     error={person.pwdMember === 1 && !!errors.pwdId}
                     helperText={
@@ -2106,21 +2165,23 @@ const StudentDashboard1 = () => {
               )}
             </Box>
 
+            {/* Row 1: Birth Place + Citizenship */}
             <Box display="flex" gap={2} mb={2}>
               {/* 🎂 Birth Date */}
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Birth of Date
+                  Birth of Date<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <DateField
-                  disabled
                   fullWidth
+                  InputProps={{ readOnly: true }}
+
                   size="small"
                   name="birthOfDate"
                   required
                   value={person.birthOfDate || ""}
                   onChange={handleChange}
-                  onBlur={handleBlur}
+                  onBlur={() => handleUpdate(person)}
                   error={!!errors.birthOfDate}
                   helperText={
                     errors.birthOfDate ? "This field is required." : ""
@@ -2131,17 +2192,16 @@ const StudentDashboard1 = () => {
               {/* 👤 Age (auto-filled, read-only) */}
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Age
+                  Age<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
-                  readOnly
                   fullWidth
                   size="small"
                   name="age"
                   value={person.age || ""}
                   placeholder="Enter your Age"
                   required
-                  onBlur={handleBlur}
+                  onBlur={() => handleUpdate(person)}
                   onChange={handleChange}
                   error={!!errors.age}
                   helperText={errors.age ? "This field is required." : ""}
@@ -2150,15 +2210,14 @@ const StudentDashboard1 = () => {
               </Box>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Birth Place
+                  Birth Place<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
                   size="small"
                   name="birthPlace"
-                  InputProps={{ readOnly: true }}
                   placeholder="Enter your Birth Place"
-                  value={person.birthPlace}
+                  value={person.birthPlace || ""}
                   required
                   onBlur={handleBlur}
                   onChange={handleChange}
@@ -2170,7 +2229,7 @@ const StudentDashboard1 = () => {
               </Box>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Language/Dialect Spoken
+                  Language/Dialect Spoken<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
@@ -2194,7 +2253,7 @@ const StudentDashboard1 = () => {
             <Box display="flex" gap={2}>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Citizenship
+                  Citizenship<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -2207,10 +2266,9 @@ const StudentDashboard1 = () => {
                     labelId="citizenship-label"
                     id="citizenship"
                     name="citizenship"
-                    readOnly
                     value={person.citizenship || ""}
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                     label="Citizenship" // Required for floating label
                   >
                     <MenuItem value="">
@@ -2342,7 +2400,7 @@ const StudentDashboard1 = () => {
 
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Religion
+                  Religion<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -2357,7 +2415,7 @@ const StudentDashboard1 = () => {
                     name="religion"
                     value={person.religion || ""}
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                     label="Religion" // Enables floating label
                   >
                     <MenuItem value="">
@@ -2400,7 +2458,7 @@ const StudentDashboard1 = () => {
               </Box>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Civil Status
+                  Civil Status<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -2412,11 +2470,10 @@ const StudentDashboard1 = () => {
                   <Select
                     labelId="civil-status-label"
                     id="civilStatus"
-                    readOnly
                     name="civilStatus"
                     value={person.civilStatus || ""}
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                     label="Civil Status"
                   >
                     <MenuItem value="">
@@ -2437,7 +2494,7 @@ const StudentDashboard1 = () => {
               </Box>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Tribe/Ethnic Group
+                  Tribe/Ethnic Group<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -2452,7 +2509,7 @@ const StudentDashboard1 = () => {
                     name="tribeEthnicGroup"
                     value={person.tribeEthnicGroup || ""}
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={() => handleUpdate(person)}
                     label="Tribe/Ethnic Group"
                   >
                     <MenuItem value="">
@@ -2514,11 +2571,7 @@ const StudentDashboard1 = () => {
 
             <br />
             <Typography
-              style={{
-                fontSize: "20px",
-                color: mainButtonColor,
-                fontWeight: "bold",
-              }}
+              style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}
             >
               Contact Information:
             </Typography>
@@ -2528,7 +2581,7 @@ const StudentDashboard1 = () => {
             <Box display="flex" gap={2} mb={2}>
               <Box flex={1} display="flex" alignItems="center" gap={2}>
                 <Typography sx={{ width: 180 }} fontWeight="medium">
-                  Contact Number:
+                  Contact Number:<span style={{ color: "red" }}> *</span>
                 </Typography>
 
                 <TextField
@@ -2552,7 +2605,6 @@ const StudentDashboard1 = () => {
                     errors.cellphoneNumber && "This field is required."
                   }
                   InputProps={{
-                    readOnly: true,
                     startAdornment: (
                       <Typography sx={{ mr: 1, fontWeight: "bold" }}>
                         +63
@@ -2564,7 +2616,7 @@ const StudentDashboard1 = () => {
 
               <Box flex={1} display="flex" alignItems="center" gap={2}>
                 <Typography sx={{ width: 180 }} fontWeight="medium">
-                  Email Address:
+                  Email Address:<span style={{ color: "red" }}> *</span>
                 </Typography>
 
                 <TextField
@@ -2573,38 +2625,60 @@ const StudentDashboard1 = () => {
                   name="emailAddress"
                   required
                   value={person.emailAddress || ""}
-                  placeholder="Enter your Gmail address"
-                  onBlur={() => handleUpdate(person)}
-                  error={!!errors.emailAddress}
-                  helperText={
-                    errors.emailAddress ? "This field is required." : ""
-                  }
-                  onChange={(e) => {
-                    let value = e.target.value.replace(/\s/g, "");
-
-                    value = value.replace(/@.*/, "");
-
-                    const finalValue = value === "" ? "" : value + "@gmail.com";
-
-                    handleChange({
-                      target: {
-                        name: "emailAddress",
-                        value: finalValue,
-                      },
-                    });
+                  placeholder="Your registered email"
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  sx={{
+                    backgroundColor: "#f0f0f0",
                   }}
                 />
               </Box>
             </Box>
 
+            <Typography
+              style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}
+            >
+              Present Address:
+            </Typography>
+            <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+            <br />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center", // vertically center
+                justifyContent: "center", // horizontally center
+                backgroundColor: "#FFF4E5",
+                border: "1px solid #FFA726",
+                borderRadius: 2,
+                p: 2,
+                height: "50px",
+                mb: 2,
+                textAlign: "center", // ensures multiline text is centered
+              }}
+            >
+              <WarningAmberIcon sx={{ color: "#FF9800", mr: 1 }} />
+              <Typography fontWeight="medium" color="#BF360C">
+                NOTICE: Fill up first the{" "}
+                <strong>
+                  REGION{" "}
+                  <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+                  PERMANENT PROVINCE{" "}
+                  <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+                  PERMANENT MUNICIPALITY{" "}
+                  <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>
+                  PERMANENT BARANGAY
+                </strong>
+              </Typography>
+            </Box>
+
             <Box display="flex" gap={2} mb={2}>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Present Street
+                  Present Street<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
-                  InputProps={{ readOnly: true }}
                   size="small"
                   name="presentStreet"
                   value={person.presentStreet || ""}
@@ -2618,22 +2692,19 @@ const StudentDashboard1 = () => {
 
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Present Zip Code
+                  Zip Code<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
-                  InputProps={{ readOnly: true }}
-                  type="number"
                   size="small"
                   name="presentZipCode"
                   placeholder="Enter your Zip Code"
+                  type="number"
                   value={person.presentZipCode || ""}
                   onBlur={() => handleUpdate(person)}
                   onChange={handleChange}
                   error={!!errors.presentZipCode}
-                  helperText={
-                    errors.presentZipCode && "This field is required."
-                  }
+                  helperText={errors.presentZipCode && "This field is required."}
                 />
               </Box>
             </Box>
@@ -2647,13 +2718,12 @@ const StudentDashboard1 = () => {
                 error={!!errors.presentRegion}
               >
                 <Typography mb={1} fontWeight="medium">
-                  Present Region
+                  Region<span style={{ color: "red" }}> *</span>
                 </Typography>
 
                 <Select
                   name="presentRegion"
                   displayEmpty
-                  readOnly
                   value={person.presentRegion || ""}
                   onBlur={() => handleUpdate(person)}
                   onChange={(e) => {
@@ -2695,11 +2765,10 @@ const StudentDashboard1 = () => {
                 error={!!errors.presentProvince}
               >
                 <Typography mb={1} fontWeight="medium">
-                  Present Province
+                  Province<span style={{ color: "red" }}> *</span>
                 </Typography>
 
                 <Select
-                  readOnly
                   name="presentProvince"
                   displayEmpty
                   value={person.presentProvince || ""}
@@ -2745,11 +2814,10 @@ const StudentDashboard1 = () => {
                 error={!!errors.presentMunicipality}
               >
                 <Typography mb={1} fontWeight="medium">
-                  Present Municipality
+                  Municipality<span style={{ color: "red" }}> *</span>
                 </Typography>
 
                 <Select
-                  readOnly
                   name="presentMunicipality"
                   displayEmpty
                   value={person.presentMunicipality || ""}
@@ -2787,11 +2855,10 @@ const StudentDashboard1 = () => {
                 error={!!errors.presentBarangay}
               >
                 <Typography mb={1} fontWeight="medium">
-                  Present Barangay
+                  Barangay<span style={{ color: "red" }}> *</span>
                 </Typography>
 
                 <Select
-                  readOnly
                   name="presentBarangay"
                   displayEmpty
                   value={person.presentBarangay || ""}
@@ -2822,31 +2889,41 @@ const StudentDashboard1 = () => {
 
             {/* DSWD Household Number */}
             <Box mb={2}>
-              <Typography mb={1} fontWeight="medium">
-                Present DSWD Household Number
-              </Typography>
-              <TextField
-                InputProps={{ readOnly: true }}
-                fullWidth
-                size="small"
-                name="presentDswdHouseholdNumber"
-                value={person.presentDswdHouseholdNumber || ""}
-                onBlur={() => handleUpdate(person)}
-                onChange={handleChange}
-                placeholder="Enter your Present DSWD Household Number"
-                error={!!errors.presentDswdHouseholdNumber}
-                helperText={
-                  errors.presentDswdHouseholdNumber && "This field is required."
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="presentDswdChecked"
+                    checked={person.presentDswdChecked === 1}
+                    onChange={handleChange}
+                  />
                 }
+                label="I have a Present DSWD Household Number"
               />
             </Box>
 
+            {person.presentDswdChecked === 1 && (
+              <Box mb={2}>
+                <Typography mb={1} fontWeight="medium">
+                  Present DSWD Household Number <span style={{ color: "red" }}>*</span>
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  name="presentDswdHouseholdNumber"
+                  value={person.presentDswdHouseholdNumber || ""}
+                  onBlur={() => handleUpdate(person)}
+                  onChange={handleChange}
+                  placeholder="Enter your Present DSWD Household Number"
+                  error={!!errors.presentDswdHouseholdNumber}
+                  helperText={
+                    errors.presentDswdHouseholdNumber && "This field is required."
+                  }
+                />
+              </Box>
+            )}
+
             <Typography
-              style={{
-                fontSize: "20px",
-                color: mainButtonColor,
-                fontWeight: "bold",
-              }}
+              style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}
             >
               Permanent Address:
             </Typography>
@@ -2894,7 +2971,7 @@ const StudentDashboard1 = () => {
             <Box display="flex" gap={2} mb={2}>
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Permanent Street
+                  Permanent Street<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
@@ -2913,13 +2990,13 @@ const StudentDashboard1 = () => {
 
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Permanent Zip Code
+                  Zip Code<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <TextField
                   fullWidth
                   size="small"
-                  type="number"
                   name="permanentZipCode"
+                  type="number"
                   placeholder="Enter your Permanent Zip Code"
                   value={person.permanentZipCode || ""}
                   onBlur={() => handleUpdate(person)}
@@ -2937,7 +3014,7 @@ const StudentDashboard1 = () => {
               {/* Permanent Region */}
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Permanent Region
+                  Permanent Region<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -2987,7 +3064,7 @@ const StudentDashboard1 = () => {
               {/* Permanent Province */}
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Permanent Province
+                  Permanent Province<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -3039,7 +3116,7 @@ const StudentDashboard1 = () => {
               {/* Permanent Municipality */}
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Permanent Municipality
+                  Permanent Municipality<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -3083,7 +3160,7 @@ const StudentDashboard1 = () => {
               {/* Permanent Barangay */}
               <Box flex={1}>
                 <Typography mb={1} fontWeight="medium">
-                  Permanent Barangay
+                  Permanent Barangay<span style={{ color: "red" }}> *</span>
                 </Typography>
                 <FormControl
                   fullWidth
@@ -3123,29 +3200,40 @@ const StudentDashboard1 = () => {
               </Box>
             </Box>
 
-
-
             {/* DSWD Household Number */}
             <Box mb={2}>
-              <Typography mb={1} fontWeight="medium">
-                Permanent DSWD Household Number
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                variant="outlined"
-                placeholder="Enter your Permanent DSWD Household Number"
-                name="permanentDswdHouseholdNumber"
-                value={person.permanentDswdHouseholdNumber || ""}
-                onBlur={() => handleUpdate(person)}
-                onChange={handleChange}
-                error={!!errors.permanentDswdHouseholdNumber}
-                helperText={
-                  errors.permanentDswdHouseholdNumber &&
-                  "This field is required."
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="permanentDswdChecked"
+                    checked={person.permanentDswdChecked === 1}
+                    onChange={handleChange}
+                  />
                 }
+                label="I have a Permanent DSWD Household Number"
               />
             </Box>
+
+            {person.permanentDswdChecked === 1 && (
+              <Box mb={2}>
+                <Typography mb={1} fontWeight="medium">
+                  Permanent DSWD Household Number <span style={{ color: "red" }}>*</span>
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  name="permanentDswdHouseholdNumber"
+                  value={person.permanentDswdHouseholdNumber || ""}
+                  onBlur={() => handleUpdate(person)}
+                  onChange={handleChange}
+                  placeholder="Enter your Permanent DSWD Household Number"
+                  error={!!errors.permanentDswdHouseholdNumber}
+                  helperText={
+                    errors.permanentDswdHouseholdNumber && "This field is required."
+                  }
+                />
+              </Box>
+            )}
 
             <Modal open={open} onClose={handleClose}>
               <Box
@@ -3225,7 +3313,7 @@ const StudentDashboard1 = () => {
                         src={
                           preview
                             ? preview
-                            : `${API_BASE_URL}/uploads/Student1by1/${person.profile_img}`
+                            : `${API_BASE_URL}/uploads/Applicant1by1/${person.profile_img}`
                         }
                         alt="Preview"
                         sx={{
@@ -3369,6 +3457,8 @@ const StudentDashboard1 = () => {
               </Box>
             </Modal>
 
+
+
             <Box display="flex" justifyContent="right" mt={4}>
               {/* Previous Page Button */}
               <Button
@@ -3393,7 +3483,7 @@ const StudentDashboard1 = () => {
               <Button
                 variant="contained"
                 onClick={(e) => {
-                  handleUpdate();
+                  handleUpdate(person);
 
                   if (isFormValid()) {
                     navigate(`/dashboard/${keys.step2}`);
@@ -3427,6 +3517,21 @@ const StudentDashboard1 = () => {
                 Next Step
               </Button>
             </Box>
+
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={3000} // 3 seconds
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
           </Container>
         </form>
       </Container>

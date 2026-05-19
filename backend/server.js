@@ -61,7 +61,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.50.55:5173",
+  "http://192.168.50.62:5173",
   "http://192.168.1.9:5173",
 ];
 
@@ -3111,43 +3111,54 @@ app.post(
   async (req, res) => {
     const { person_id } = req.body;
     if (!person_id || !req.file) {
-      return res.status(400).send("Missing person_id or file.");
+      return res.status(400).json({ message: "Missing person_id or file." });
     }
 
     try {
-      //  Get applicant_number from person_id
-      const [rows] = await db.query(
-        "SELECT applicant_number FROM applicant_numbering_table WHERE person_id = ?",
-        [person_id],
+      // ✅ Get student_number from DB3
+      const [rows] = await db3.query(
+        "SELECT student_number FROM student_numbering_table WHERE person_id = ?",
+        [person_id]
       );
+
       if (!rows.length) {
         return res.status(404).json({
-          message: "Applicant number not found for person_id " + person_id,
+          message: "Student number not found for person_id " + person_id,
         });
       }
 
-      const applicant_number = rows[0].applicant_number;
+      const student_number = rows[0].student_number;
 
       const ext = path.extname(req.file.originalname).toLowerCase();
       const year = new Date().getFullYear();
-      const filename = `${applicant_number}_1by1_${year}${ext}`; //  Use applicant number here
-      const finalPath = path.join(__dirname, "uploads", filename);
+      const filename = `${student_number}_1by1_${year}${ext}`;
 
-      //  Save file
+      const uploadDir = path.join(__dirname, "uploads/Student1by1");
+      const finalPath = path.join(uploadDir, filename);
+
+      // ✅ Delete old file if exists
+      const files = await fs.promises.readdir(uploadDir);
+      for (const file of files) {
+        if (file.startsWith(`${student_number}_1by1_`)) {
+          await fs.promises.unlink(path.join(uploadDir, file));
+        }
+      }
+
+      // ✅ Save new file
       await fs.promises.writeFile(finalPath, req.file.buffer);
 
-      //  Save to DB (still use person_id here)
+      // ✅ Update DB3
       await db3.query(
         "UPDATE person_table SET profile_img = ? WHERE person_id = ?",
-        [filename, person_id],
+        [filename, person_id]
       );
 
       res.status(200).json({ message: "Uploaded successfully", filename });
     } catch (err) {
       console.error("Upload error:", err);
-      res.status(500).send("Failed to upload image.");
+      res.status(500).json({ message: "Failed to upload image.", error: err.message });
     }
-  },
+  }
 );
 
 //  2. Get person details by person_id
