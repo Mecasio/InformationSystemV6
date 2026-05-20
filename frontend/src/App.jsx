@@ -38,7 +38,7 @@ import GradeConversionAdmin from "./system_management/GradeConversionAdmin";
 import HonorsReport from "./system_management/HonorsReport";
 export const SettingsContext = createContext(null);
 
-const ApplicationSuperAdmin = lazy(  () => import("./account_management/ApplicationProcessSuperAdmin"));
+const ApplicationSuperAdmin = lazy(() => import("./account_management/ApplicationProcessSuperAdmin"));
 const Archived = lazy(() => import("./account_management/ArchivedModule"));
 const MigrationDataPanel = lazy(
   () => import("./account_management/MigrationDataPanel"),
@@ -83,7 +83,7 @@ const ApplicantRequirementsUploader = lazy(
 );
 const StudentRequirementsUploader = lazy(
   () => import("./account_management/StudentRequirementsUploader"),
-);  
+);
 const SuperAdminStudentDashboard1 = lazy(
   () => import("./account_management/SuperAdminStudentDashboard1"),
 );
@@ -221,6 +221,7 @@ const DepartmentRegistration = lazy(
 const DepartmentRoom = lazy(() => import("./department_management/DprtmntRoom"));
 const SectionSlotMonitoring = lazy(() => import("./department_management/SlotMonitoring"));
 const ApplicantList = lazy(() => import("./enrollment_management/ApplicantList"));
+const EntranceExaminationScore = lazy(() => import("./enrollment_management/EntranceExaminationScore"));
 const AssignQualifyingInterviewExam = lazy(
   () => import("./enrollment_management/AssignQualifyingInterviewExam"),
 );
@@ -663,54 +664,54 @@ function App() {
                 <div className="flex-1 flex flex-col">
                   {/* Navbar */}
                   {!isCorExportRenderRoute && (
-                  <AppBar
-                    position="fixed"
-                    sx={{
-                      zIndex: (theme) => theme.zIndex.drawer + 1,
-                      bgcolor: settings?.header_color || "#1976d2",
-                    }}
-                  >
-                    <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <AppBar
+                      position="fixed"
+                      sx={{
+                        zIndex: (theme) => theme.zIndex.drawer + 1,
+                        bgcolor: settings?.header_color || "#1976d2",
+                      }}
+                    >
+                      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
 
-                      {/* LEFT SIDE (logo + title) */}
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        {settings?.logo_url && (
-                          <img
-                            src={`${API_BASE_URL}${settings.logo_url}?t=${Date.now()}`}
-                            alt="Logo"
-                            style={{
-                              height: "55px",
-                              width: "55px",
-                              borderRadius: "50%",
-                              objectFit: "cover",
-                              marginRight: "12px",
-                              cursor: "pointer",
-                              border: "2px solid white",
-                            }}
-                            onClick={() => window.location.reload()}
-                          />
-                        )}
+                        {/* LEFT SIDE (logo + title) */}
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          {settings?.logo_url && (
+                            <img
+                              src={`${API_BASE_URL}${settings.logo_url}?t=${Date.now()}`}
+                              alt="Logo"
+                              style={{
+                                height: "55px",
+                                width: "55px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                marginRight: "12px",
+                                cursor: "pointer",
+                                border: "2px solid white",
+                              }}
+                              onClick={() => window.location.reload()}
+                            />
+                          )}
 
-                        <Typography variant="h5" sx={{ fontWeight: "bold" }}>
-                          <span style={{ fontFamily: "Poppins, sans-serif", fontSize: "28px" }}>
-                            {settings?.short_term || "SCHOOL NAME"} -
-                          </span>{" "}
-                          <span style={{ fontFamily: "Poppins, sans-serif", fontSize: "24px" }}>
-                            {settings?.company_name || "SCHOOL NAME"}
-                          </span>
-                        </Typography>
-                      </Box>
-
-                      {/* RIGHT SIDE (TIME + DATE) */}
-                      <Box sx={{ textAlign: "right" }}>
-
-                        <Box sx={{ fontSize: "14px" }}>
-                          <Clock />
+                          <Typography variant="h5" sx={{ fontWeight: "bold" }}>
+                            <span style={{ fontFamily: "Poppins, sans-serif", fontSize: "28px" }}>
+                              {settings?.short_term || "SCHOOL NAME"} -
+                            </span>{" "}
+                            <span style={{ fontFamily: "Poppins, sans-serif", fontSize: "24px" }}>
+                              {settings?.company_name || "SCHOOL NAME"}
+                            </span>
+                          </Typography>
                         </Box>
-                      </Box>
 
-                    </Toolbar>
-                  </AppBar>
+                        {/* RIGHT SIDE (TIME + DATE) */}
+                        <Box sx={{ textAlign: "right" }}>
+
+                          <Box sx={{ fontSize: "14px" }}>
+                            <Clock />
+                          </Box>
+                        </Box>
+
+                      </Toolbar>
+                    </AppBar>
                   )}
 
                   {/* ✅ Main content area */}
@@ -1413,7 +1414,7 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-                     <Route
+                      <Route
                         path="/student_account_balance/info"
                         element={
                           <ProtectedRoute allowedRoles={"student"}>
@@ -1445,6 +1446,14 @@ function App() {
                         element={
                           <ProtectedRoute>
                             <ApplicantList />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/entrance_examination_score"
+                        element={
+                          <ProtectedRoute>
+                            <EntranceExaminationScore />
                           </ProtectedRoute>
                         }
                       />
@@ -1504,7 +1513,7 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-                        <Route
+                      <Route
                         path="/honors_report"
                         element={
                           <ProtectedRoute>
@@ -1851,7 +1860,7 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-                       <Route
+                      <Route
                         path="/applicant_requirements_uploader"
                         element={
                           <ProtectedRoute>

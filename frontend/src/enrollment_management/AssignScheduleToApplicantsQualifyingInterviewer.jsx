@@ -234,36 +234,41 @@ const AssignScheduleToApplicantsInterviewer = () => {
   }, [user, adminData.dprtmnt_id]);
 
   const tabs = [
-    {
-      label: "Applicant List",
-      to: "/applicant_list",
-      icon: <SchoolIcon fontSize="large" />,
-    },
-    {
-      label: "Applicant Profile",
-      to: "/registrar_dashboard1",
-      icon: <PersonIcon fontSize="large" />,
-    },
-    {
-      label: "Student Requirements",
-      to: "/registrar_requirements",
-      icon: <AssignmentIcon fontSize="large" />,
-    },
-    {
-      label: "Qualifying / Interview Schedule Management",
-      to: "/assign_schedule_applicants_qualifying_interview",
-      icon: <ScheduleIcon fontSize="large" />
-    },
-    {
-      label: "Qualifying / Interview Exam Score",
-      to: "/qualifying_interview_exam_scores",
-      icon: <ScoreIcon fontSize="large" />,
-    },
-    {
-      label: "Student Numbering",
-      to: "/student_numbering_per_college",
-      icon: <DashboardIcon fontSize="large" />,
-    },
+  {
+       label: "Applicant List",
+       to: "/applicant_list",
+       icon: <SchoolIcon fontSize="large" />,
+     },
+     {
+       label: "Applicant Form",
+       to: "/registrar_dashboard1",
+       icon: <PersonIcon fontSize="large" />,
+     },
+     {
+       label: "Student Requirements",
+       to: "/registrar_requirements",
+       icon: <AssignmentIcon fontSize="large" />,
+     },
+       {
+       label: "Entrance Examination Score",
+       to: "/entrance_examination_score",
+       icon: <ScoreIcon fontSize="large" />,
+     },
+     {
+       label: "Qualifying / Interview Schedule Management",
+       to: "/assign_schedule_applicants_qualifying_interview",
+       icon: <ScheduleIcon fontSize="large" />,
+     },
+     {
+       label: "Qualifying / Interview Exam Score",
+       to: "/qualifying_interview_exam_scores",
+       icon: <ScoreIcon fontSize="large" />,
+     },
+     {
+       label: "Student Numbering",
+       to: "/student_numbering_per_college",
+       icon: <DashboardIcon fontSize="large" />,
+     },
   ];
 
   const handleStepClick = (index, to) => {
@@ -273,7 +278,7 @@ const AssignScheduleToApplicantsInterviewer = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(3);
+  const [activeStep, setActiveStep] = useState(4);
   const [clickedSteps, setClickedSteps] = useState(
     Array(tabs.length).fill(false),
   );

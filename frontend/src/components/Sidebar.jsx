@@ -561,6 +561,7 @@ const SideBar = ({
       { title: "Applicant List", link: "/applicant_list", icon: ListAlt, page_id: 6 },
       { title: "Applicant Profile", link: "/registrar_dashboard1", icon: AccountCircle, page_id: 43 },
       { title: "Applicant Online Requirements", link: "/registrar_requirements", icon: FolderCopy, page_id: 49 },
+      { title: "Entrance Examination Score", link: "/entrance_examination_score", icon: Assessment, page_id: 151 },
       { title: "Qualifying Schedule Mgmt", link: "/assign_schedule_applicants_qualifying_interview", icon: EditCalendar, page_id: 12 },
       { title: "Qualifying / Interview Scores", link: "/qualifying_interview_exam_scores", icon: Assessment, page_id: 37 },
       { title: "Student Numbering", link: "/student_numbering_per_college", icon: FormatListNumbered, page_id: 60 },
@@ -756,7 +757,7 @@ const SideBar = ({
         },
 
       ],
-    },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+    },
     {
       key: "sectionManagement",
       label: "Section Management",

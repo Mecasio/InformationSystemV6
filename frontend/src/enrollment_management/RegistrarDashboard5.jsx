@@ -72,13 +72,13 @@ const RegistrarDashboard5 = () => {
 
 
     const stepsData = [
-       {
+      {
            label: "Applicant List",
            to: "/applicant_list",
            icon: <SchoolIcon fontSize="large" />,
          },
          {
-           label: "Applicant Profile",
+           label: "Applicant Form",
            to: "/registrar_dashboard1",
            icon: <PersonIcon fontSize="large" />,
          },
@@ -87,10 +87,15 @@ const RegistrarDashboard5 = () => {
            to: "/registrar_requirements",
            icon: <AssignmentIcon fontSize="large" />,
          },
+           {
+           label: "Entrance Examination Score",
+           to: "/entrance_examination_score",
+           icon: <ScoreIcon fontSize="large" />,
+         },
          {
            label: "Qualifying / Interview Schedule Management",
            to: "/assign_schedule_applicants_qualifying_interview",
-           icon: <ScheduleIcon fontSize="large" />
+           icon: <ScheduleIcon fontSize="large" />,
          },
          {
            label: "Qualifying / Interview Exam Score",
@@ -102,7 +107,6 @@ const RegistrarDashboard5 = () => {
            to: "/student_numbering_per_college",
            icon: <DashboardIcon fontSize="large" />,
          },
-
     ];
 
     const [currentStep, setCurrentStep] = useState(1);
