@@ -346,11 +346,11 @@ const RegisterRegistrar = () => {
             if (form.status) fd.set("status", Number(form.status));
             if (form.access_level) fd.set("access_level", Number(form.access_level));
 
-            // Send the selected curriculum id, or omit it when no program is selected.
+            // Send an empty curriculum_id when no curriculum is selected so the backend clears the restriction.
             if (form.curriculum_id && form.curriculum_id !== "") {
                 fd.set("curriculum_id", Number(form.curriculum_id));
             } else {
-                fd.delete("curriculum_id");
+                fd.set("curriculum_id", "");
             }
             // Debug
             for (let pair of fd.entries()) console.log(pair[0], pair[1]);
@@ -365,6 +365,26 @@ const RegisterRegistrar = () => {
                 });
 
                 // ✅ SUCCESS SNACKBAR
+                const editedEmployeeId = form.employee_id || editData.employee_id || "";
+                const editedEmail = form.email || editData.email || "";
+                const isEditingCurrentUser =
+                    String(editedEmployeeId) === String(localStorage.getItem("employee_id") || "") ||
+                    String(editedEmail).toLowerCase() === String(localStorage.getItem("email") || "").toLowerCase();
+
+                if (isEditingCurrentUser) {
+                    const nextCurriculumId = form.curriculum_id ? String(form.curriculum_id) : "";
+                    localStorage.setItem("employee_id", String(editedEmployeeId));
+                    localStorage.setItem("email", String(editedEmail));
+                    localStorage.setItem("curriculum_id", nextCurriculumId);
+                    localStorage.setItem("registrar_curriculum_id", nextCurriculumId);
+                    window.dispatchEvent(
+                        new CustomEvent("registrar-curriculum-updated", {
+                            detail: { curriculum_id: nextCurriculumId },
+                        })
+                    );
+                    window.dispatchEvent(new Event("registrarAccountUpdated"));
+                }
+
                 setSnackbarMessage("Registrar updated successfully.");
                 setSnackbarSeverity("success");
 
@@ -1231,7 +1251,7 @@ const RegisterRegistrar = () => {
                                 onChange={(e) => setForm({ ...form, curriculum_id: e.target.value })}
                                 disabled={!form.dprtmnt_id}  // disabled until department is chosen
                             >
-                                <MenuItem value="">Select Curriculum</MenuItem>
+                                <MenuItem value="">All Curriculums</MenuItem>
                                 {[...new Map(
                                     programs
                                         .filter((p) => String(p.dprtmnt_id) === String(form.dprtmnt_id))

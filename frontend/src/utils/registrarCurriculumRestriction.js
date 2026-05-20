@@ -1,3 +1,34 @@
+import axios from "axios";
+import API_BASE_URL from "../apiConfig";
+
+export const setRegistrarCurriculumId = (value) => {
+  if (typeof window === "undefined") return "";
+
+  const curriculumId = value === null || value === undefined ? "" : String(value);
+  localStorage.setItem("curriculum_id", curriculumId);
+  localStorage.setItem("registrar_curriculum_id", curriculumId);
+  return curriculumId;
+};
+
+export const refreshRegistrarCurriculumId = async (employeeId) => {
+  if (typeof window === "undefined") return "";
+  if (localStorage.getItem("role") !== "registrar") return "";
+
+  const currentEmployeeId = employeeId || localStorage.getItem("employee_id");
+  if (!currentEmployeeId) return "";
+
+  const response = await axios.get(`${API_BASE_URL}/api/employee/${currentEmployeeId}`);
+  const curriculumId = setRegistrarCurriculumId(response.data?.curriculum_id || "");
+
+  window.dispatchEvent(
+    new CustomEvent("registrar-curriculum-updated", {
+      detail: { curriculum_id: curriculumId },
+    })
+  );
+
+  return curriculumId;
+};
+
 export const getRegistrarCurriculumId = () => {
   if (typeof window === "undefined") return "";
 

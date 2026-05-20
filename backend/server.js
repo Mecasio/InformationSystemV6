@@ -61,7 +61,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.50.62:5173",
+  "http://192.168.0.180:5173",
   "http://192.168.1.9:5173",
 ];
 
@@ -394,6 +394,18 @@ app.get("/api/employee/:employee_id", async (req, res) => {
   try {
     const { employee_id } = req.params;
 
+    const [[userAccount]] = await db3.query(
+      `SELECT employee_id, dprtmnt_id, program_id AS curriculum_id
+       FROM user_accounts
+       WHERE employee_id = ?
+       LIMIT 1`,
+      [employee_id],
+    );
+
+    if (!userAccount) {
+      return res.status(404).json({ success: false, message: "Employee not found" });
+    }
+
     // get all page_ids assigned to this employee
     const [rows] = await db3.query(
       "SELECT page_id FROM page_access WHERE user_id = ?",
@@ -405,6 +417,9 @@ app.get("/api/employee/:employee_id", async (req, res) => {
     res.json({
       success: true,
       accessList,
+      employee_id: userAccount.employee_id,
+      dprtmnt_id: userAccount.dprtmnt_id,
+      curriculum_id: userAccount.curriculum_id,
     });
   } catch (err) {
     console.error("Error fetching employee access:", err);
@@ -634,6 +649,76 @@ const formatInterviewApplicantStatus = (value) => {
   return String(value ?? "NONE");
 };
 
+app.get("/api/interview_applicants/:applicant_id", async (req, res) => {
+  const { applicant_id } = req.params;
+
+  try {
+    const [[row]] = await db.query(
+      `SELECT
+         ia.applicant_id,
+         ia.status,
+         ia.action,
+         ia.email_sent,
+         COALESCE(ps.interview_status, 0) AS applicant_interview_status
+       FROM interview_applicants ia
+       LEFT JOIN applicant_numbering_table ant ON ant.applicant_number = ia.applicant_id
+       LEFT JOIN person_status_table ps ON ps.person_id = ant.person_id
+       WHERE ia.applicant_id = ?
+       LIMIT 1`,
+      [applicant_id],
+    );
+
+    if (!row) {
+      return res.status(404).json({ message: "Applicant not found" });
+    }
+
+    res.json({
+      ...row,
+      status: formatInterviewApplicantStatus(row.status),
+      locked:
+        Number(row.email_sent) === 1 ||
+        Number(row.applicant_interview_status) === 1,
+    });
+  } catch (err) {
+    console.error("Error fetching applicant interview status:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.put("/api/interview_applicants/:applicant_id/action", async (req, res) => {
+  const { applicant_id } = req.params;
+
+  try {
+    const [[applicant]] = await db.query(
+      `SELECT person_id FROM applicant_numbering_table WHERE applicant_number = ? LIMIT 1`,
+      [applicant_id],
+    );
+
+    if (!applicant) {
+      return res.status(404).json({ message: "Applicant not found" });
+    }
+
+    await db.query(
+      `UPDATE interview_applicants
+       SET action = 1, email_sent = 1
+       WHERE applicant_id = ?`,
+      [applicant_id],
+    );
+
+    await db.query(
+      `INSERT INTO person_status_table (person_id, applicant_id, interview_status)
+       VALUES (?, ?, 1)
+       ON DUPLICATE KEY UPDATE interview_status = 1`,
+      [applicant.person_id, applicant_id],
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error marking interview applicant email sent:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
   const { applicant_id } = req.params;
   const { status } = req.body;
@@ -644,6 +729,9 @@ app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
       `
       SELECT
         ia.status,
+        ia.action,
+        ia.email_sent,
+        COALESCE(ps.interview_status, 0) AS applicant_interview_status,
         ant.applicant_number,
         pt.first_name,
         pt.middle_name,
@@ -652,6 +740,7 @@ app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
       FROM interview_applicants ia
       LEFT JOIN applicant_numbering_table ant ON ant.applicant_number = ia.applicant_id
       LEFT JOIN person_table pt ON pt.person_id = ant.person_id
+      LEFT JOIN person_status_table ps ON ps.person_id = ant.person_id
       WHERE ia.applicant_id = ?
       LIMIT 1
       `,
@@ -660,6 +749,15 @@ app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
 
     if (!applicantBefore) {
       return res.status(404).json({ message: "Applicant not found" });
+    }
+
+    if (
+      Number(applicantBefore.email_sent) === 1 ||
+      Number(applicantBefore.applicant_interview_status) === 1
+    ) {
+      return res.status(409).json({
+        message: "Status can no longer be changed after email has been sent.",
+      });
     }
 
     const [result] = await db.query(

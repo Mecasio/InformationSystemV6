@@ -503,9 +503,17 @@ router.post(
 
       // ✅ Fetch old status + qualifying_status + interview_status together
       const [oldStatusRows] = await db.query(
-        `SELECT status, qualifying_status, interview_status AS interview_status_result
-         FROM interview_applicants
-         WHERE applicant_id = ?
+        `SELECT
+           ia.status,
+           ia.action,
+           ia.email_sent,
+           ia.qualifying_status,
+           ia.interview_status AS interview_status_result,
+           COALESCE(ps.interview_status, 0) AS applicant_interview_status
+         FROM interview_applicants ia
+         LEFT JOIN applicant_numbering_table ant ON ant.applicant_number = ia.applicant_id
+         LEFT JOIN person_status_table ps ON ps.person_id = ant.person_id
+         WHERE ia.applicant_id = ?
          LIMIT 1`,
         [applicant_number]
       );
@@ -535,6 +543,20 @@ router.post(
       const newStatus = hasStatusPayload
         ? normalizeCollegeApprovalStatus(status)
         : oldStatus;
+
+      const statusIsLocked =
+        Number(oldStatusRows[0]?.email_sent) === 1 ||
+        Number(oldStatusRows[0]?.applicant_interview_status) === 1;
+
+      if (
+        hasStatusPayload &&
+        statusIsLocked &&
+        isDifferent(normalizeCollegeApprovalStatus(oldStatus), newStatus)
+      ) {
+        return res.status(409).json({
+          error: "Status can no longer be changed after email has been sent.",
+        });
+      }
 
       // ✅ Normalize pass/fail: keep null if not provided, else 0 or 1
       const newQualifyingStatus =

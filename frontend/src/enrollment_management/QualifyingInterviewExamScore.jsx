@@ -229,6 +229,10 @@ const QualifyingExamScore = () => {
     return "Waiting List";
   };
 
+  const isCollegeStatusLocked = (person) =>
+    Number(person?.applicant_interview_status) === 1 ||
+    Number(person?.email_sent) === 1;
+
   const buildPayload = (person, overrides = {}, options = {}) => {
     const edits = { ...(editScores[person.person_id] || {}), ...overrides };
     const selectedStatus = normalizeCollegeApprovalStatusLabel(
@@ -497,6 +501,9 @@ const QualifyingExamScore = () => {
       const withAssignedFlag = data.map((p) => ({
         ...p,
         assigned: false,
+        college_approval_status: normalizeCollegeApprovalStatusLabel(
+          p.college_approval_status
+        ),
         qualifying_exam_score: Number(p.qualifying_exam_score) || 0,
         qualifying_interview_score: Number(p.qualifying_interview_score) || 0,
         qualifying_status: p.qualifying_status ?? null,           // ✅ NEW
@@ -907,6 +914,15 @@ const QualifyingExamScore = () => {
     const nextStatus = normalizeCollegeApprovalStatusLabel(newStatus);
     try {
       const targetPerson = persons.find((p) => p.applicant_number === applicantId);
+
+      if (isCollegeStatusLocked(targetPerson)) {
+        setSnack({
+          open: true,
+          message: "Status can no longer be changed after email has been sent.",
+          severity: "warning",
+        });
+        return;
+      }
 
       if (targetPerson?.person_id) {
         setEditScores((prev) => ({
@@ -2145,7 +2161,7 @@ Thank you, best regards
     setPersons((prev) =>
       prev.map((p) =>
         successfulApplicantNumbers.has(p.applicant_number)
-          ? { ...p, applicant_interview_status: 1 }
+          ? { ...p, applicant_interview_status: 1, email_sent: 1, action: 1 }
           : p,
       ),
     );
@@ -2232,7 +2248,7 @@ Thank you, best regards
     setPersons((prev) =>
       prev.map((p) =>
         successfulApplicantNumbers.has(p.applicant_number)
-          ? { ...p, applicant_interview_status: 1 }
+          ? { ...p, applicant_interview_status: 1, email_sent: 1, action: 1 }
           : p,
       ),
     );
@@ -3514,6 +3530,7 @@ Thank you, best regards
                 const applicantId = person.applicant_number;
                 const isAssigned = !!person.schedule_id; // ✅ check if already assigned
                 const currentCollegeApprovalStatus = getCurrentCollegeApprovalStatus(person);
+                const statusLocked = isCollegeStatusLocked(person);
 
 
                 const totalScore = subjectScores.reduce(
@@ -3742,6 +3759,7 @@ Thank you, best regards
                               e.target.value,
                             )
                           }
+                          disabled={statusLocked}
                           displayEmpty
                         >
                           <MenuItem value="Accepted">Accepted</MenuItem>

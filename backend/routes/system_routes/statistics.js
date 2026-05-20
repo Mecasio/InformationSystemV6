@@ -573,24 +573,20 @@ router.get("/api/course_count/:id", async (req, res) => {
       `
       SELECT
         COUNT(es.course_id) AS initial_course,
+        SUM(CASE WHEN es.en_remarks = 1 AND (sy.astatus <> 1 OR es.fe_status = 1) THEN 1 ELSE 0 END) AS passed_course,
+        SUM(CASE WHEN es.en_remarks = 2 AND (sy.astatus <> 1 OR es.fe_status = 1) THEN 1 ELSE 0 END) AS failed_course,
+        SUM(CASE WHEN es.en_remarks = 3 AND (sy.astatus <> 1 OR es.fe_status = 1) THEN 1 ELSE 0 END) AS inc_course,
+        SUM(CASE WHEN es.en_remarks = 4 AND (sy.astatus <> 1 OR es.fe_status = 1) THEN 1 ELSE 0 END) AS dropped_course,
         CASE
-          WHEN SUM(CASE WHEN es.fe_status = 1 THEN 1 ELSE 0 END) = COUNT(es.course_id)
-          THEN SUM(CASE WHEN es.en_remarks = 1 THEN 1 ELSE 0 END)
+          WHEN SUM(CASE WHEN sy.astatus = 1 THEN 1 ELSE 0 END) > 0
+            AND SUM(CASE WHEN sy.astatus = 1 AND es.fe_status = 1 THEN 1 ELSE 0 END) = SUM(CASE WHEN sy.astatus = 1 THEN 1 ELSE 0 END)
+          THEN 1
           ELSE 0
-        END AS passed_course,
-        CASE
-          WHEN SUM(CASE WHEN es.fe_status = 1 THEN 1 ELSE 0 END) = COUNT(es.course_id)
-          THEN SUM(CASE WHEN es.en_remarks = 2 THEN 1 ELSE 0 END)
-          ELSE 0
-        END AS failed_course,
-        CASE
-          WHEN SUM(CASE WHEN es.fe_status = 1 THEN 1 ELSE 0 END) = COUNT(es.course_id)
-          THEN SUM(CASE WHEN es.en_remarks = 3 THEN 1 ELSE 0 END)
-          ELSE 0
-        END AS inc_course
+        END AS current_courses_evaluated
       FROM enrolled_subject AS es
       JOIN student_numbering_table AS snt ON es.student_number = snt.student_number
       JOIN person_table AS pt ON snt.person_id = pt.person_id
+      JOIN active_school_year_table AS sy ON es.active_school_year_id = sy.id
       WHERE pt.person_id = ?
     `,
       [id],

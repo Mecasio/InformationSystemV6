@@ -29,6 +29,7 @@ import Clock from "./components/Clock";
 import ProtectedRoute, { isTokenValid } from "./components/ProtectedRoute";
 
 import API_BASE_URL from "./apiConfig";
+import { refreshRegistrarCurriculumId } from "./utils/registrarCurriculumRestriction";
 
 import StudentAccounts from "./account_management/StudentAccounts";
 import ApplicationProcessAdmin from "./admission/ApplicationProcessAdmin";
@@ -586,6 +587,28 @@ function App() {
   }, []);
 
 
+
+  // Keep registrar curriculum restriction synced with user_accounts.program_id.
+  useEffect(() => {
+    if (!isAuthenticated || localStorage.getItem("role") !== "registrar") {
+      return undefined;
+    }
+
+    const refreshCurrentRegistrarCurriculum = () => {
+      refreshRegistrarCurriculumId().catch((err) => {
+        console.error("Error refreshing registrar curriculum:", err);
+      });
+    };
+
+    refreshCurrentRegistrarCurriculum();
+    window.addEventListener("focus", refreshCurrentRegistrarCurriculum);
+    window.addEventListener("registrarAccountUpdated", refreshCurrentRegistrarCurriculum);
+
+    return () => {
+      window.removeEventListener("focus", refreshCurrentRegistrarCurriculum);
+      window.removeEventListener("registrarAccountUpdated", refreshCurrentRegistrarCurriculum);
+    };
+  }, [isAuthenticated]);
 
   // ✅ Listen for custom 'settingsUpdated' event
   useEffect(() => {

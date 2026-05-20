@@ -111,15 +111,64 @@ router.put("/access/:access_id", async (req, res) => {
       .json({ error: "access_description and access_page are required" });
   }
 
+  let conn;
+  let committed = false;
+
   try {
-    const [result] = await db3.query(
+    conn = await db3.getConnection();
+    await conn.beginTransaction();
+
+    const [result] = await conn.query(
       "UPDATE access_table SET access_description = ?, access_page = ? WHERE access_id = ?",
       [access_description, JSON.stringify(access_page), access_id]
     );
 
     if (result.affectedRows === 0) {
+      await conn.rollback();
       return res.status(404).json({ error: "Access level not found" });
     }
+
+    const [assignedUsers] = await conn.query(
+      "SELECT employee_id FROM user_accounts WHERE access_level = ?",
+      [access_id]
+    );
+
+    const employeeIds = assignedUsers
+      .map((user) => user.employee_id)
+      .filter(Boolean);
+
+    if (employeeIds.length > 0) {
+      await conn.query("DELETE FROM page_access WHERE user_id IN (?)", [
+        employeeIds,
+      ]);
+
+      const pagePermissions = access_page.filter(
+        (permission) => Number(permission.page_privilege ?? permission.access ?? 1) === 1
+      );
+
+      if (pagePermissions.length > 0) {
+        const values = employeeIds.flatMap((employeeId) =>
+          pagePermissions.map((permission) => [
+            Number(permission.page_privilege ?? 1),
+            Number(permission.page_id),
+            employeeId,
+            permission.can_create ? 1 : 0,
+            permission.can_edit ? 1 : 0,
+            permission.can_delete ? 1 : 0,
+          ])
+        );
+
+        await conn.query(
+          `INSERT INTO page_access
+           (page_privilege, page_id, user_id, can_create, can_edit, can_delete)
+           VALUES ?`,
+          [values]
+        );
+      }
+    }
+
+    await conn.commit();
+    committed = true;
 
     const { actorId, actorRole } = getAuditActor(req);
     const roleLabel = formatAuditActorRole(actorRole);
@@ -131,8 +180,11 @@ router.put("/access/:access_id", async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    if (conn && !committed) await conn.rollback();
     console.error(err);
     res.status(500).json({ error: "Failed to update access level" });
+  } finally {
+    if (conn) conn.release();
   }
 });
 

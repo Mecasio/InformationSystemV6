@@ -868,15 +868,24 @@ router.get("/api/student/:id", async (req, res) => {
         pt.middle_name,
         snt.student_number,
         sst.year_level_id,
+        ylt.year_level_description,
         es.curriculum_id,
+        pgt.program_description,
+        pgt.program_code,
         sy.semester_id
       FROM student_numbering_table AS snt
       INNER JOIN person_table AS pt ON snt.person_id = pt.person_id
       INNER JOIN user_accounts AS ua ON pt.person_id = ua.person_id
       INNER JOIN enrolled_subject AS es ON snt.student_number = es.student_number
+      LEFT JOIN curriculum_table AS ct ON es.curriculum_id = ct.curriculum_id
+      LEFT JOIN program_table AS pgt ON ct.program_id = pgt.program_id
       INNER JOIN student_status_table AS sst ON snt.student_number = sst.student_number
+        AND sst.active_school_year_id = es.active_school_year_id
+      LEFT JOIN year_level_table AS ylt ON ylt.year_level_id = sst.year_level_id
       INNER JOIN active_school_year_table AS sy ON es.active_school_year_id = sy.id
       WHERE pt.person_id = ?
+      ORDER BY sy.astatus DESC, sy.year_id DESC, sy.semester_id DESC, sst.year_level_id DESC
+      LIMIT 1
     `,
       [id],
     );
