@@ -27,6 +27,7 @@ import {
   Alert,
   DialogActions,
   Switch,
+  IconButton,
 } from "@mui/material";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
@@ -34,6 +35,10 @@ import API_BASE_URL from "../apiConfig";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
+import CloseIcon from "@mui/icons-material/Close";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
+import LockIcon from "@mui/icons-material/Lock";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const UserPageAccess = () => {
   const settings = useContext(SettingsContext);
@@ -1484,237 +1489,151 @@ const UserPageAccess = () => {
         </Table>
       </TableContainer>
 
+      {/* ==================== DIALOG 1: EDIT USER ACCESS ==================== */}
       <Dialog
         open={openModal}
         onClose={() => setOpenModal(false)}
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>
-          Editing Access For: {selectedUser?.employee_id} |{" "}
-          {`${selectedUser?.last_name}, ${selectedUser?.first_name} ${selectedUser?.middle_name || "."}`}
+        <DialogTitle
+          sx={{
+            bgcolor: settings?.header_color || "#1976d2",
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            🔐 Editing Access For: {selectedUser?.employee_id} |{" "}
+            {`${selectedUser?.last_name}, ${selectedUser?.first_name} ${selectedUser?.middle_name || "."}`}
+          </Box>
+          <IconButton
+            onClick={() => setOpenModal(false)}
+            sx={{
+              color: "white",
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              padding: 0,
+              "&:hover": {
+                backgroundColor: "rgba(255,255,255,0.2)",
+                border: "2px solid white",
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
 
         <DialogContent dividers sx={{ maxHeight: "70vh" }}>
-          <Box display="flex" gap={2} mb={2}>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={grantAllAccess}
-            >
-              Grant All Access
-            </Button>
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} mb={2}>
 
-            <Button
-              variant="contained"
-              color="warning"
-              onClick={revokeAllAccess}
-            >
-              Remove All Access
-            </Button>
+            {/* Left: Grant All / Remove All */}
+            <Box display="flex" gap={1.5}>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<LockOpenIcon />}
+                onClick={grantAllAccess}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Grant All Access
+              </Button>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<LockIcon />}
+                onClick={revokeAllAccess}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Remove All Access
+              </Button>
+            </Box>
+
+            {/* Right: Per-permission bulk buttons */}
+            <Box display="flex" gap={1} flexWrap="wrap" justifyContent="flex-end">
+              {Object.entries(permissionLabels).map(([permissionKey, label]) => (
+                <React.Fragment key={permissionKey}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="success"
+                    onClick={() => handleUserBulkPermission(permissionKey, true)}
+                    sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+                  >
+                    Grant All {label}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="error"
+                    onClick={() => handleUserBulkPermission(permissionKey, false)}
+                    sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+                  >
+                    Close All {label}
+                  </Button>
+                </React.Fragment>
+              ))}
+            </Box>
           </Box>
 
-          <Box display="flex" gap={1.5} mb={2} flexWrap="wrap">
-            {Object.entries(permissionLabels).map(([permissionKey, label]) => (
-              <React.Fragment key={permissionKey}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  color="success"
-                  onClick={() => handleUserBulkPermission(permissionKey, true)}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Grant All {label}
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  color="warning"
-                  onClick={() => handleUserBulkPermission(permissionKey, false)}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Close All {label}
-                </Button>
-              </React.Fragment>
-            ))}
-          </Box>
           <Paper sx={{ border: `1px solid ${borderColor}` }}>
             <TableContainer>
               <Table>
-                <TableHead
-                  sx={{ backgroundColor: settings?.header_color || "#1976d2" }}
-                >
+                <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2" }}>
                   <TableRow>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                    >
-                      #
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                    >
-                      Page Description
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                    >
-                      Page Group
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                      align="center"
-                    >
-                      Access
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                      align="center"
-                    >
-                      CREATE
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                      align="center"
-                    >
-                      EDIT
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                      align="center"
-                    >
-                      DELETE
-                    </TableCell>
+                    {["#", "Page Description", "Page Group", "Access", "CREATE", "EDIT", "DELETE"].map((header) => (
+                      <TableCell
+                        key={header}
+                        sx={{
+                          color: "white",
+                          textAlign: "center",
+                          fontWeight: "bold",
+                          border: `1px solid ${borderColor}`,
+                        }}
+                      >
+                        {header}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
-
                 <TableBody>
                   {pages.map((p, i) => (
-                    <TableRow key={p.id}>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        {i + 1}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        {p.page_description}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        {p.page_group}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                        align="center"
-                      >
+                    <TableRow
+                      key={p.id}
+                      sx={{ "&:hover": { backgroundColor: "#f5f5f5" }, transition: "background-color 0.2s" }}
+                    >
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{i + 1}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{p.page_description}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{p.page_group}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.access || false}
-                          onChange={() =>
-                            handleToggleChange(
-                              p.id,
-                              pageAccess[p.id]?.access || false,
-                            )
-                          }
+                          onChange={() => handleToggleChange(p.id, pageAccess[p.id]?.access || false)}
                         />
                       </TableCell>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                        align="center"
-                      >
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.can_create || false}
-                          onChange={() =>
-                            handlePermissionToggle(p.id, "can_create")
-                          }
+                          onChange={() => handlePermissionToggle(p.id, "can_create")}
                           disabled={!pageAccess[p.id]?.access}
                         />
                       </TableCell>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                        align="center"
-                      >
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.can_edit || false}
-                          onChange={() =>
-                            handlePermissionToggle(p.id, "can_edit")
-                          }
+                          onChange={() => handlePermissionToggle(p.id, "can_edit")}
                           disabled={!pageAccess[p.id]?.access}
                         />
                       </TableCell>
-                      <TableCell
-                        sx={{
-                          color: "black",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                        align="center"
-                      >
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.can_delete || false}
-                          onChange={() =>
-                            handlePermissionToggle(p.id, "can_delete")
-                          }
+                          onChange={() => handlePermissionToggle(p.id, "can_delete")}
                           disabled={!pageAccess[p.id]?.access}
                         />
                       </TableCell>
@@ -1726,27 +1645,58 @@ const UserPageAccess = () => {
           </Paper>
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             color="error"
             variant="outlined"
+          
             onClick={() => setOpenModal(false)}
+     
           >
             Cancel
           </Button>
         </DialogActions>
       </Dialog>
 
+
+      {/* ==================== DIALOG 2: CREATE NEW ACCESS ==================== */}
       <Dialog
         open={openCreateModal}
-        onClose={() => {
-          setOpenCreateModal(false);
-          setCreateAccessSearch("");
-        }}
+        onClose={() => { setOpenCreateModal(false); setCreateAccessSearch(""); }}
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>Create New Access</DialogTitle>
+        <DialogTitle
+          sx={{
+            bgcolor: settings?.header_color || "#1976d2",
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            ➕ Create New Access
+          </Box>
+          <IconButton
+            onClick={() => { setOpenCreateModal(false); setCreateAccessSearch(""); }}
+            sx={{
+              color: "white",
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              padding: 0,
+              "&:hover": {
+                backgroundColor: "rgba(255,255,255,0.2)",
+                border: "2px solid white",
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
 
         <DialogContent dividers>
           <Box display="flex" gap={2} mb={2}>
@@ -1755,15 +1705,11 @@ const UserPageAccess = () => {
               fullWidth
               value={accessDescription}
               onChange={(e) => setAccessDescription(e.target.value)}
-              sx={{ mb: 3 }}
             />
             <Button
               variant="contained"
-              sx={{
-                px: 4,
-                fontWeight: 600,
-                textTransform: "none",
-              }}
+              startIcon={<CheckCircleIcon />}
+              sx={{ px: 3, fontWeight: 600, textTransform: "none", borderRadius: 2, whiteSpace: "nowrap" }}
               onClick={handleCreateAssignAll}
             >
               Assign All
@@ -1777,12 +1723,10 @@ const UserPageAccess = () => {
             value={createAccessSearch}
             onChange={(e) => setCreateAccessSearch(e.target.value)}
             sx={{ mb: 2 }}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
-            }}
+            InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} /> }}
           />
 
-          <Box display="flex" gap={1.5} mb={2} flexWrap="wrap">
+          <Box display="flex" justifyContent="flex-end" gap={1} mb={2} flexWrap="wrap">
             {Object.entries(permissionLabels).map(([permissionKey, label]) => (
               <React.Fragment key={permissionKey}>
                 <Button
@@ -1790,16 +1734,16 @@ const UserPageAccess = () => {
                   size="small"
                   color="success"
                   onClick={() => handleCreateBulkPermission(permissionKey, true)}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
+                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
                 >
                   Grant All {label}
                 </Button>
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   size="small"
-                  color="warning"
+                  color="error"
                   onClick={() => handleCreateBulkPermission(permissionKey, false)}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
+                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
                 >
                   Close All {label}
                 </Button>
@@ -1810,112 +1754,48 @@ const UserPageAccess = () => {
           <Paper sx={{ border: `1px solid ${borderColor}` }}>
             <TableContainer>
               <Table>
-                <TableHead
-                  sx={{ backgroundColor: settings?.header_color || "#1976d2" }}
-                >
+                <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2" }}>
                   <TableRow>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      #
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Page Description
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Page Group
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Access
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      CREATE
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      EDIT
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      DELETE
-                    </TableCell>
+                    {["#", "Page Description", "Page Group", "Access", "CREATE", "EDIT", "DELETE"].map((header) => (
+                      <TableCell
+                        key={header}
+                        sx={{ color: "white", textAlign: "center", fontWeight: "bold", border: `1px solid ${borderColor}` }}
+                      >
+                        {header}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
-
                 <TableBody>
                   {filteredCreatePages.map((p, i) => (
-                    <TableRow key={p.id}>
-                      <TableCell align="center">{i + 1}</TableCell>
-                      <TableCell align="center">{p.page_description}</TableCell>
-                      <TableCell align="center">{p.page_group}</TableCell>
-                      <TableCell align="center">
-                        <Switch
-                          checked={createPageAccess[p.id]?.access || false}
-                          onChange={() => handleCreateToggle(p.id)}
-                        />
+                    <TableRow
+                      key={p.id}
+                      sx={{ "&:hover": { backgroundColor: "#f5f5f5" }, transition: "background-color 0.2s" }}
+                    >
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{i + 1}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{p.page_description}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{p.page_group}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
+                        <Switch checked={createPageAccess[p.id]?.access || false} onChange={() => handleCreateToggle(p.id)} />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={createPageAccess[p.id]?.can_create || false}
-                          onChange={() =>
-                            handleCreatePermissionToggle(p.id, "can_create")
-                          }
+                          onChange={() => handleCreatePermissionToggle(p.id, "can_create")}
                           disabled={!createPageAccess[p.id]?.access}
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={createPageAccess[p.id]?.can_edit || false}
-                          onChange={() =>
-                            handleCreatePermissionToggle(p.id, "can_edit")
-                          }
+                          onChange={() => handleCreatePermissionToggle(p.id, "can_edit")}
                           disabled={!createPageAccess[p.id]?.access}
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={createPageAccess[p.id]?.can_delete || false}
-                          onChange={() =>
-                            handleCreatePermissionToggle(p.id, "can_delete")
-                          }
+                          onChange={() => handleCreatePermissionToggle(p.id, "can_delete")}
                           disabled={!createPageAccess[p.id]?.access}
                         />
                       </TableCell>
@@ -1923,9 +1803,7 @@ const UserPageAccess = () => {
                   ))}
                   {filteredCreatePages.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={7}>
-                        No pages found.
-                      </TableCell>
+                      <TableCell align="center" colSpan={7}>No pages found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -1934,48 +1812,70 @@ const UserPageAccess = () => {
           </Paper>
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             color="error"
             variant="outlined"
-            onClick={() => {
-              setOpenCreateModal(false);
-              setCreateAccessSearch("");
-            }}
+  
+            onClick={() => { setOpenCreateModal(false); setCreateAccessSearch(""); }}
+      
           >
             Cancel
           </Button>
-
           <Button
             variant="contained"
-            sx={{
-              px: 4,
-              fontWeight: 600,
-              textTransform: "none",
-            }}
+            startIcon={<SaveIcon />}
             onClick={saveAccess}
+            sx={{ px: 4, fontWeight: 600, textTransform: "none", borderRadius: 2 }}
           >
-            <SaveIcon fontSize="small" /> Save
+            Save
           </Button>
         </DialogActions>
       </Dialog>
 
+
+      {/* ==================== DIALOG 3: EDIT ACCESS LEVEL ==================== */}
       <Dialog
         open={openEditAccessModal}
-        onClose={() => {
-          setOpenEditAccessModal(false);
-          setEditAccessSearch("");
-        }}
+        onClose={() => { setOpenEditAccessModal(false); setEditAccessSearch(""); }}
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>Edit Access Level</DialogTitle>
+        <DialogTitle
+          sx={{
+            bgcolor: settings?.header_color || "#1976d2",
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            ✏️ Edit Access Level
+          </Box>
+          <IconButton
+            onClick={() => { setOpenEditAccessModal(false); setEditAccessSearch(""); }}
+            sx={{
+              color: "white",
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              padding: 0,
+              "&:hover": {
+                backgroundColor: "rgba(255,255,255,0.2)",
+                border: "2px solid white",
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
 
         <DialogContent dividers>
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="edit-access-level-select-label">
-              Access Level
-            </InputLabel>
+            <InputLabel id="edit-access-level-select-label">Access Level</InputLabel>
             <Select
               labelId="edit-access-level-select-label"
               value={editAccessId}
@@ -1996,7 +1896,7 @@ const UserPageAccess = () => {
             fullWidth
             value={editAccessDescription}
             onChange={(e) => setEditAccessDescription(e.target.value)}
-            sx={{ mb: 3 }}
+            sx={{ mb: 2 }}
             disabled={!editAccessId}
           />
 
@@ -2008,167 +1908,112 @@ const UserPageAccess = () => {
             onChange={(e) => setEditAccessSearch(e.target.value)}
             disabled={!editAccessId}
             sx={{ mb: 2 }}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
-            }}
+            InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} /> }}
           />
 
-          <Box display="flex" gap={2} mb={2}>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleEditSelectAll}
-              disabled={!editAccessId}
-            >
-              Select All
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              onClick={handleEditClearAll}
-              disabled={!editAccessId}
-            >
-              Clear All
-            </Button>
-          </Box>
+          <Box display="flex" justifyContent="space-between" alignItems="center" gap={2} mb={2}>
+            {/* Left: Select All / Clear All */}
+            <Box display="flex" gap={1.5}>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<LockOpenIcon />}
+                onClick={handleEditSelectAll}
+                disabled={!editAccessId}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<LockIcon />}
+                onClick={handleEditClearAll}
+                disabled={!editAccessId}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Clear All
+              </Button>
+            </Box>
 
-          <Box display="flex" gap={1.5} mb={2} flexWrap="wrap">
-            {Object.entries(permissionLabels).map(([permissionKey, label]) => (
-              <React.Fragment key={permissionKey}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  color="success"
-                  onClick={() => handleEditBulkPermission(permissionKey, true)}
-                  disabled={!editAccessId}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Grant All {label}
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  color="warning"
-                  onClick={() => handleEditBulkPermission(permissionKey, false)}
-                  disabled={!editAccessId}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Close All {label}
-                </Button>
-              </React.Fragment>
-            ))}
+            {/* Right: Per-permission bulk buttons */}
+            <Box display="flex" gap={1} flexWrap="wrap" justifyContent="flex-end">
+              {Object.entries(permissionLabels).map(([permissionKey, label]) => (
+                <React.Fragment key={permissionKey}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="success"
+                    onClick={() => handleEditBulkPermission(permissionKey, true)}
+                    disabled={!editAccessId}
+                    sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+                  >
+                    Grant All {label}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="error"
+                    onClick={() => handleEditBulkPermission(permissionKey, false)}
+                    disabled={!editAccessId}
+                    sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+                  >
+                    Close All {label}
+                  </Button>
+                </React.Fragment>
+              ))}
+            </Box>
           </Box>
 
           <Paper sx={{ border: `1px solid ${borderColor}` }}>
             <TableContainer>
               <Table>
-                <TableHead
-                  sx={{ backgroundColor: settings?.header_color || "#1976d2" }}
-                >
+                <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2" }}>
                   <TableRow>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      #
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Page Description
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Page Group
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Access
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      CREATE
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      EDIT
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        color: "white",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      DELETE
-                    </TableCell>
+                    {["#", "Page Description", "Page Group", "Access", "CREATE", "EDIT", "DELETE"].map((header) => (
+                      <TableCell
+                        key={header}
+                        sx={{ color: "white", textAlign: "center", fontWeight: "bold", border: `1px solid ${borderColor}` }}
+                      >
+                        {header}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
-
                 <TableBody>
                   {filteredEditPages.map((p, i) => (
-                    <TableRow key={p.id}>
-                      <TableCell align="center">{i + 1}</TableCell>
-                      <TableCell align="center">{p.page_description}</TableCell>
-                      <TableCell align="center">{p.page_group}</TableCell>
-                      <TableCell align="center">
+                    <TableRow
+                      key={p.id}
+                      sx={{ "&:hover": { backgroundColor: "#f5f5f5" }, transition: "background-color 0.2s" }}
+                    >
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{i + 1}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{p.page_description}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>{p.page_group}</TableCell>
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={editPageAccess[p.id]?.access || false}
                           onChange={() => handleEditToggle(p.id)}
                           disabled={!editAccessId}
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={editPageAccess[p.id]?.can_create || false}
-                          onChange={() =>
-                            handleEditPermissionToggle(p.id, "can_create")
-                          }
+                          onChange={() => handleEditPermissionToggle(p.id, "can_create")}
                           disabled={!editAccessId || !editPageAccess[p.id]?.access}
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={editPageAccess[p.id]?.can_edit || false}
-                          onChange={() =>
-                            handleEditPermissionToggle(p.id, "can_edit")
-                          }
+                          onChange={() => handleEditPermissionToggle(p.id, "can_edit")}
                           disabled={!editAccessId || !editPageAccess[p.id]?.access}
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={editPageAccess[p.id]?.can_delete || false}
-                          onChange={() =>
-                            handleEditPermissionToggle(p.id, "can_delete")
-                          }
+                          onChange={() => handleEditPermissionToggle(p.id, "can_delete")}
                           disabled={!editAccessId || !editPageAccess[p.id]?.access}
                         />
                       </TableCell>
@@ -2176,9 +2021,7 @@ const UserPageAccess = () => {
                   ))}
                   {filteredEditPages.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={7}>
-                        No pages found.
-                      </TableCell>
+                      <TableCell align="center" colSpan={7}>No pages found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -2187,28 +2030,23 @@ const UserPageAccess = () => {
           </Paper>
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             color="error"
             variant="outlined"
-            onClick={() => {
-              setOpenEditAccessModal(false);
-              setEditAccessSearch("");
-            }}
+          
+            onClick={() => { setOpenEditAccessModal(false); setEditAccessSearch(""); }}
+         
           >
             Cancel
           </Button>
-
           <Button
             variant="contained"
-            sx={{
-              px: 4,
-              fontWeight: 600,
-              textTransform: "none",
-            }}
+            startIcon={<SaveIcon />}
             onClick={saveEditedAccess}
+            sx={{ px: 4, fontWeight: 600, textTransform: "none", borderRadius: 2 }}
           >
-            <SaveIcon fontSize="small" /> Save
+            Save
           </Button>
         </DialogActions>
       </Dialog>

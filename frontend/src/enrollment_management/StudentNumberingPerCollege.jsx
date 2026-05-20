@@ -157,19 +157,26 @@ const StudentNumbering = () => {
         navigate(to); // this will actually change the page
     };
 
-    const [authOpen, setAuthOpen] = useState(true);   // open when page loads
+
+    const [authOpen, setAuthOpen] = useState(true);
     const [authPassword, setAuthPassword] = useState("");
     const [authError, setAuthError] = useState("");
     const [authPassed, setAuthPassed] = useState(false);
     const [showAuthPassword, setShowAuthPassword] = useState(false);
 
+    // 🔒 NEW: Lockout states
+    const [isLocked, setIsLocked] = useState(false);
+    const [lockTimer, setLockTimer] = useState(0);
+    const lockIntervalRef = useRef(null);
+
     const handleAuthSubmit = async () => {
+        if (isLocked) return;
         if (!authPassword) {
             setAuthError("Password is required.");
             return;
         }
         try {
-            const personId = localStorage.getItem("person_id"); // from main login
+            const personId = localStorage.getItem("person_id");
             const res = await axios.post(`${API_BASE_URL}/api/verify-password`, {
                 person_id: personId,
                 password: authPassword,
@@ -178,13 +185,85 @@ const StudentNumbering = () => {
             if (res.data.success) {
                 setAuthPassed(true);
                 setAuthOpen(false);
-            } else {
-                setAuthError("❌ Invalid password.");
+                setIsLocked(false);
+                setLockTimer(0);
+                if (lockIntervalRef.current) clearInterval(lockIntervalRef.current);
             }
         } catch (err) {
-            setAuthError("Invalid Password please try Again");
+            const data = err.response?.data;
+
+            if (data?.locked) {
+                // 🔒 Backend says locked — start countdown from remainingSeconds
+                setIsLocked(true);
+                setLockTimer(data.remainingSeconds);
+                setAuthError(data.message);
+                setAuthPassword("");
+
+                if (lockIntervalRef.current) clearInterval(lockIntervalRef.current);
+
+                lockIntervalRef.current = setInterval(() => {
+                    setLockTimer((prev) => {
+                        if (prev <= 1) {
+                            clearInterval(lockIntervalRef.current);
+                            setIsLocked(false);
+                            setAuthError("");
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+            } else {
+                // ❌ Wrong password but not locked yet
+                setAuthPassword("");
+                setAuthError(
+                    data?.attemptsLeft !== undefined
+                        ? `❌ Invalid password. ${data.attemptsLeft} attempt(s) remaining.`
+                        : data?.message || "❌ Invalid password."
+                );
+            }
         }
     };
+
+
+
+    // Cleanup interval on unmount
+    useEffect(() => {
+        return () => {
+            if (lockIntervalRef.current) clearInterval(lockIntervalRef.current);
+        };
+
+    }, []);
+
+    // 🔒 Check lock status on mount (handles page reload)
+    useEffect(() => {
+        const personId = localStorage.getItem("person_id");
+        if (!personId) return;
+
+        axios.get(`${API_BASE_URL}/api/check-lock-status/${personId}`)
+            .then((res) => {
+                if (res.data.locked) {
+                    setIsLocked(true);
+                    setLockTimer(res.data.remainingSeconds);
+                    setAuthError(`Account locked. Try again in ${Math.ceil(res.data.remainingSeconds / 60)} minute(s).`);
+
+                    if (lockIntervalRef.current) clearInterval(lockIntervalRef.current);
+
+                    lockIntervalRef.current = setInterval(() => {
+                        setLockTimer((prev) => {
+                            if (prev <= 1) {
+                                clearInterval(lockIntervalRef.current);
+                                setIsLocked(false);
+                                setAuthError("");
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                }
+            })
+            .catch((err) => console.error("Lock check failed:", err));
+    }, []);
+
 
     const [persons, setPersons] = useState([]);
     const [selectedPerson, setSelectedPerson] = useState(null);
@@ -613,94 +692,307 @@ const StudentNumbering = () => {
 
 
     if (!authPassed) {
+
+        const minutes = Math.floor(lockTimer / 60);
+        const seconds = lockTimer % 60;
+
         return (
             <Dialog
                 open={authOpen}
-                onClose={(event, reason) => {
-                    if (reason === "backdropClick") return;
+                onClose={(_, reason) => {
+                    if (reason === "backdropClick" || isLocked) return;
                     setAuthOpen(false);
-                    navigate("/enrollment_officer_dashboard"); // or wherever you want to go
+                    navigate("/registrar_dashboard");
+                }}
+                PaperProps={{
+                    sx: {
+                        borderRadius: "16px",
+                        overflow: "hidden",
+                        minWidth: 420,
+                        boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+                    },
                 }}
             >
+                {/* ✅ NEW: Flat DialogTitle header matching the reference style */}
                 <DialogTitle
                     sx={{
-                        color: "maroon",
-                        fontWeight: "bold",
+                        bgcolor: isLocked ? "#7a0000" : settings?.header_color || "#1976d2",
+                        color: "white",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
+                        fontWeight: "bold",
+                        px: 3,
+                        py: 2,
                     }}
                 >
-                    Enter Password to Continue
-
-                    <IconButton
-                        aria-label="close"
-                        onClick={() => {
-                            setAuthOpen(false);
-                            navigate("/registrar_dashboard"); // optional redirect
-                        }}
-                        sx={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            color: "#fff",
-                            backgroundColor: settings?.header_color || "#1976d2",
-
-                            border: `1px solid ${borderColor}`,
-
-                            "&:hover": {
-                                bgcolor: "black",
-                            },
-                        }}
-                    >
-                        <CloseIcon />
-                    </IconButton>
-
+                    <Box display="flex" alignItems="center" gap={1.5}>
+                        <Box
+                            sx={{
+                                backgroundColor: "rgba(255,255,255,0.2)",
+                                borderRadius: "50%",
+                                width: 40,
+                                height: 40,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 20,
+                            }}
+                        >
+                            {isLocked ? "🔒" : "🔐"}
+                        </Box>
+                        <Box>
+                            <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                                {isLocked ? "Access Locked" : "Identity Verification"}
+                            </Typography>
+                            <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                                {isLocked ? "Too many failed attempts" : "Confirm your credentials to continue"}
+                            </Typography>
+                        </Box>
+                    </Box>
+                    {!isLocked && (
+                        <IconButton
+                            onClick={() => {
+                                setAuthOpen(false);
+                                navigate("/registrar_dashboard");
+                            }}
+                            sx={{
+                                color: "white",
+                                border: "2px solid rgba(255,255,255,0.6)",
+                                borderRadius: "50%",
+                                width: 38,
+                                height: 38,
+                                padding: 0,
+                                "&:hover": {
+                                    backgroundColor: "rgba(255,255,255,0.2)",
+                                    border: "2px solid white",
+                                },
+                            }}
+                        >
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    )}
                 </DialogTitle>
-                <DialogContent>
-                    <Typography mb={2}>
-                        ⚠️ This action <strong>cannot be undone</strong>. You are acknowledging
-                        this student as <strong>officially enrolled</strong>.
-                    </Typography>
 
-                    <TextField
-                        label="Password"
-                        type={showAuthPassword ? "text" : "password"}
-                        fullWidth
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        autoComplete="new-password"
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAuthSubmit(); // 🔑 Trigger submit on Enter
-                        }}
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton onClick={() => setShowAuthPassword(!showAuthPassword)}>
-                                        {showAuthPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
+                <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
+                    {isLocked ? (
+                        <Box textAlign="center" py={2}>
+                            <Box
+                                sx={{
+                                    width: 90,
+                                    height: 90,
+                                    borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #fff0f0, #ffe0e0)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    margin: "0 auto 20px",
+                                    border: "3px solid #f44336",
+                                }}
+                            >
+                                <Typography fontSize={38}>🔒</Typography>
+                            </Box>
+                            <Typography fontWeight="bold" fontSize={18} color="#c62828" mb={1}>
+                                Account Temporarily Locked
+                            </Typography>
+                            <Typography fontSize={13} color="#555" mb={3}>
+                                You've exceeded the maximum number of password attempts.
+                                Please wait before trying again.
+                            </Typography>
+                            <Box
+                                sx={{
+                                    background: "linear-gradient(135deg, #fff3e0, #ffe0b2)",
+                                    borderRadius: "12px",
+                                    border: "1px solid #ffb74d",
+                                    py: 2.5,
+                                    px: 3,
+                                    mb: 2,
+                                }}
+                            >
+                                <Typography fontSize={12} color="#e65100" fontWeight="bold" mb={0.5}>
+                                    TIME REMAINING
+                                </Typography>
+                                <Typography
+                                    fontSize={40}
+                                    fontWeight="bold"
+                                    color="#bf360c"
+                                    fontFamily="monospace"
+                                    letterSpacing={4}
+                                >
+                                    {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+                                </Typography>
+                                <Typography fontSize={11} color="#e65100" mt={0.5}>
+                                    minutes : seconds
+                                </Typography>
+                            </Box>
 
-                    {authError && (
-                        <Typography color="error" sx={{ mt: 1 }}>
-                            {authError}
-                        </Typography>
+                        </Box>
+                    ) : (
+                        <Box>
+                            {/* ✅ NEW: 4-step flow diagram matching the image */}
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 0,
+                                    mb: 2.5,
+                                    mt: 3,
+                                }}
+                            >
+                                {[
+                                    { label: "Verify identity", sub: "Your password", active: true },
+                                    { label: "Assign number", sub: "Student ID minted", active: false },
+                                    { label: "Send email", sub: "Credentials sent", active: false },
+                                    { label: "Mark enrolled", sub: "Cannot be undone", active: false },
+                                ].map((step, i, arr) => (
+                                    <Box key={i} sx={{ display: "flex", alignItems: "center" }}>
+                                        <Box
+                                            sx={{
+                                                border: step.active
+                                                    ? `2px solid ${settings?.header_color || "#1976d2"}`
+                                                    : "2px solid #bbb",
+                                                borderRadius: "8px",
+                                                px: 1.2,
+                                                py: 0.6,
+                                                textAlign: "center",
+                                                minWidth: 90,
+                                                backgroundColor: step.active
+                                                    ? `${settings?.header_color || "#1976d2"}15`
+                                                    : "transparent",
+                                            }}
+                                        >
+                                            <Typography
+                                                fontSize={11}
+                                                fontWeight="bold"
+                                                color={step.active ? settings?.header_color || "#1976d2" : "#555"}
+                                            >
+                                                {step.label}
+                                            </Typography>
+                                            <Typography fontSize={10} color="#888">
+                                                {step.sub}
+                                            </Typography>
+                                        </Box>
+                                        {i < arr.length - 1 && (
+                                            <Typography sx={{ color: "#aaa", mx: 0.3, fontSize: 16 }}>→</Typography>
+                                        )}
+                                    </Box>
+                                ))}
+                            </Box>
+
+                            {/* Warning Notice */}
+                            <Box
+                                sx={{
+                                    border: "1px solid #f5a623",
+                                    borderRadius: "8px",
+                                    p: 1.5,
+                                    mb: 2.5,
+                                    display: "flex",
+                                    gap: 1,
+                                    alignItems: "flex-start",
+                                    backgroundColor: "#fffbf2",
+                                }}
+                            >
+                                <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+                                <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
+                                    All four steps above run automatically and{" "}
+                                    <strong>cannot be reversed</strong>. The student will receive login credentials
+                                    immediately.
+                                </Typography>
+                            </Box>
+
+                            {/* Password Field */}
+                            <Typography fontSize={13} fontWeight="bold" color="#333" mb={0.75}>
+                                Enter your password
+                            </Typography>
+                            <TextField
+                                type={showAuthPassword ? "text" : "password"}
+                                fullWidth
+                                size="small"
+                                placeholder="••••••••"
+                                value={authPassword}
+                                onChange={(e) => setAuthPassword(e.target.value)}
+                                autoComplete="new-password"
+                                onKeyDown={(e) => { if (e.key === "Enter") handleAuthSubmit(); }}
+                                disabled={isLocked}
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: "10px",
+                                        fontSize: 14,
+                                        "&.Mui-focused fieldset": {
+                                            borderColor: settings?.header_color || "#1976d2",
+                                            borderWidth: 2,
+                                        },
+                                    },
+                                }}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => setShowAuthPassword(!showAuthPassword)}
+                                                size="small"
+                                                edge="end"
+                                            >
+                                                {showAuthPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+
+                            {/* Error Message */}
+                            {authError && !isLocked && (
+                                <Box
+                                    sx={{
+                                        mt: 1.5,
+                                        p: 1.25,
+                                        backgroundColor: "#ffebee",
+                                        borderRadius: "8px",
+                                        border: "1px solid #ef9a9a",
+                                    }}
+                                >
+                                    <Typography fontSize={12.5} color="#c62828">
+                                        {authError}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
                     )}
                 </DialogContent>
-                <DialogActions>
-                    <Button
-                        variant="contained"
 
-                        onClick={handleAuthSubmit}
-                    >
-                        Yes, I Confirm
-                    </Button>
+                <DialogActions sx={{ px: 3, pb: 3, pt: 1.5, gap: 1 }}>
+                    {!isLocked && (
+                        <>
+                            <Button
+                                onClick={() => {
+                                    setAuthOpen(false);
+                                    navigate("/registrar_dashboard");
+                                }}
+                                color="error"
+                                variant="outlined"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={handleAuthSubmit}
+                                disabled={isLocked}
+                                sx={{
+                                    borderRadius: "10px",
+                                    textTransform: "none",
+                                    px: 3,
+                                    fontWeight: "bold",
+                                    backgroundColor: mainButtonColor,
+                                    "&:hover": { opacity: 0.9 },
+                                }}
+                            >
+                                Yes, confirm enrollment
+                            </Button>
+                        </>
+                    )}
                 </DialogActions>
             </Dialog>
-
         );
     }
 
@@ -1448,43 +1740,61 @@ const StudentNumbering = () => {
             >
                 <DialogTitle
                     sx={{
-                        color: "maroon",
-                        fontWeight: "bold",
+                        bgcolor: settings?.header_color || "#1976d2",
+                        color: "white",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
+                        fontWeight: "bold",
+                        px: 3,
+                        py: 2,
                     }}
                 >
-                    Enter Password to Continue
-
+                    <Box display="flex" alignItems="center" gap={1.5}>
+                        <Box
+                            sx={{
+                                backgroundColor: "rgba(255,255,255,0.2)",
+                                borderRadius: "50%",
+                                width: 40,
+                                height: 40,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 20,
+                            }}
+                        >
+                            🔐
+                        </Box>
+                        <Box>
+                            <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                                Confirm Student Number Assignment
+                            </Typography>
+                            <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                                Review the email before confirming
+                            </Typography>
+                        </Box>
+                    </Box>
                     <IconButton
-                        aria-label="close"
-                        onClick={() => {
-                            setOpenModal(false);
-                        }}
+                        onClick={() => setOpenModal(false)}
                         sx={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            color: "#fff",
-                            backgroundColor: settings?.header_color || "#1976d2",
-
-                            border: `1px solid ${borderColor}`,
-
+                            color: "white",
+                            border: "2px solid rgba(255,255,255,0.6)",
+                            borderRadius: "50%",
+                            width: 38,
+                            height: 38,
+                            padding: 0,
                             "&:hover": {
-                                bgcolor: "black",
+                                backgroundColor: "rgba(255,255,255,0.2)",
+                                border: "2px solid white",
                             },
                         }}
                     >
-                        <CloseIcon />
+                        <CloseIcon fontSize="small" />
                     </IconButton>
-
                 </DialogTitle>
 
                 <DialogContent>
-                    <Typography sx={{ mb: 1.5, fontSize: 13, color: "#555" }}>
-                        Review the email content before assigning the student number.
-                    </Typography>
+
                     <TextField
                         multiline
                         fullWidth

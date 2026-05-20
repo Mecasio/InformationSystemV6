@@ -287,6 +287,7 @@ const ApplicantScoringReadOnly = () => {
     const [userID, setUserID] = useState("");
     const [user, setUser] = useState("");
     const [userRole, setUserRole] = useState("");
+    const [adminData, setAdminData] = useState({ dprtmnt_id: "" });
 
     const queryParams = new URLSearchParams(location.search);
     const queryPersonId = queryParams.get("person_id")?.trim() || "";
@@ -345,6 +346,21 @@ const ApplicantScoringReadOnly = () => {
 
         window.location.href = "/login";
     }, [queryPersonId]);
+
+    const fetchPersonData = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/admin_data/${user}`);
+            setAdminData(res.data);
+        } catch (err) {
+            console.error("Error fetching admin data:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchPersonData();
+        }
+    }, [user]);
 
 
     const [error, setError] = useState('');
@@ -478,6 +494,20 @@ const ApplicantScoringReadOnly = () => {
     const [selectedProgramFilter, setSelectedProgramFilter] = useState("");
     const [department, setDepartment] = useState([]);
     const [allCurriculums, setAllCurriculums] = useState([]);
+    const selectedDepartmentFilterValue =
+        selectedDepartmentFilter === "" ||
+            department.some(
+                (dep) => String(dep.dprtmnt_name) === String(selectedDepartmentFilter)
+            )
+            ? selectedDepartmentFilter
+            : "";
+    const selectedProgramFilterValue =
+        selectedProgramFilter === "" ||
+            curriculumOptions.some(
+                (prog) => String(prog.program_code) === String(selectedProgramFilter)
+            )
+            ? selectedProgramFilter
+            : "";
 
 
 
@@ -708,16 +738,39 @@ const ApplicantScoringReadOnly = () => {
     }
 
     useEffect(() => {
+        if (!adminData.dprtmnt_id) return;
+
         const fetchDepartments = async () => {
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/departments`);
+                const response = await axios.get(
+                    `${API_BASE_URL}/api/departments/${adminData.dprtmnt_id}`
+                );
                 setDepartment(response.data);
             } catch (error) {
                 console.error("Error fetching departments:", error);
             }
         };
+
         fetchDepartments();
-    }, []);
+    }, [adminData.dprtmnt_id]);
+
+    useEffect(() => {
+        if (!adminData.dprtmnt_id) return;
+
+        const fetchCurriculums = async () => {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/api/applied_program/${adminData.dprtmnt_id}`
+                );
+                setAllCurriculums(response.data);
+                setCurriculumOptions(response.data);
+            } catch (error) {
+                console.error("Error fetching curriculum options:", error);
+            }
+        };
+
+        fetchCurriculums();
+    }, [adminData.dprtmnt_id]);
 
     useEffect(() => {
         if (department.length > 0 && allCurriculums.length > 0 && !selectedDepartmentFilter) {
@@ -765,8 +818,9 @@ const ApplicantScoringReadOnly = () => {
         if (!selectedDept) {
             setCurriculumOptions(allCurriculums);
         } else {
-            const filtered = allCurriculums.filter((opt) => opt.dprtmnt_name === selectedDept);
-            setCurriculumOptions(filtered.length > 0 ? filtered : allCurriculums);
+            setCurriculumOptions(
+                allCurriculums.filter((opt) => opt.dprtmnt_name === selectedDept)
+            );
         }
         setSelectedProgramFilter("");
         setCurrentPage(1);
@@ -1469,7 +1523,7 @@ const ApplicantScoringReadOnly = () => {
                             <Typography fontSize={13} sx={{ minWidth: "100px" }}>Department:</Typography>
                             <FormControl size="small" sx={{ width: "400px" }}>
                                 <Select
-                                    value={selectedDepartmentFilter}
+                                    value={selectedDepartmentFilterValue}
                                     onChange={(e) => {
                                         const selectedDept = e.target.value;
                                         setSelectedDepartmentFilter(selectedDept);
@@ -1491,7 +1545,7 @@ const ApplicantScoringReadOnly = () => {
                             <Typography fontSize={13} sx={{ minWidth: "100px" }}>Program:</Typography>
                             <FormControl size="small" sx={{ width: "350px" }}>
                                 <Select
-                                    value={selectedProgramFilter}
+                                    value={selectedProgramFilterValue}
                                     onChange={(e) => handleProgramFilterChange(e.target.value)}
                                     displayEmpty
                                 >

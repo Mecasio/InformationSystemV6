@@ -547,7 +547,6 @@ router.post("/api/page_access/revoke-all", async (req, res) => {
 });
 
 
-
 router.get("/api/registrars", async (req, res) => {
   try {
     const sql = `
@@ -560,22 +559,27 @@ router.get("/api/registrars", async (req, res) => {
         ua.last_name,
         ua.email,
         ua.access_level,
+        ua.dprtmnt_id,   
         at.access_description,
         ua.role,
         ua.status,
+        ua.program_id,
         d.dprtmnt_name,
-        d.dprtmnt_code
+        d.dprtmnt_code,
+        pt.program_description,
+        pt.program_code,
+        pt.major
       FROM user_accounts ua
-      LEFT JOIN access_table at ON ua.access_level = at.access_id
+      INNER JOIN access_table at ON ua.access_level = at.access_id
       LEFT JOIN dprtmnt_table d ON ua.dprtmnt_id = d.dprtmnt_id
-      WHERE ua.role IN ('registrar', 'admission', 'enrollment', 'clinic', 'superadmin')
+      LEFT JOIN program_table pt ON ua.program_id = pt.program_id
       ORDER BY ua.id DESC;
     `;
 
     const [results] = await db3.query(sql);
     res.json(results);
   } catch (error) {
-    console.error(" Server error:", error);
+    console.error("Server error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });

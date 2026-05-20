@@ -3408,43 +3408,111 @@ app.post("/api/update-requirement", async (req, res) => {
 });
 
 // ----------------- VERIFY PASSWORD -----------------
+// In-memory lockout store (or use Redis for multi-instance)
+const loginAttempts = new Map();
+// Structure: { attempts: number, lockedUntil: Date | null }
+
+const MAX_ATTEMPTS = 3;
+const LOCK_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+
+
+
+// ----------------- VERIFY PASSWORD -----------------
+app.get("/api/check-lock-status/:person_id", (req, res) => {
+  const { person_id } = req.params;
+  const key = `person_${person_id}`;
+  const now = Date.now();
+  const record = loginAttempts.get(key) || { attempts: 0, lockedUntil: null };
+
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const remainingMs = record.lockedUntil - now;
+    const remainingSec = Math.ceil(remainingMs / 1000);
+    return res.json({
+      locked: true,
+      remainingSeconds: remainingSec,
+    });
+  }
+
+  // Lock expired — clean it up
+  if (record.lockedUntil && now >= record.lockedUntil) {
+    loginAttempts.set(key, { attempts: 0, lockedUntil: null });
+  }
+
+  res.json({ locked: false, remainingSeconds: 0 });
+});
+
 app.post("/api/verify-password", async (req, res) => {
   const { person_id, password } = req.body;
 
   if (!person_id || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Person ID and password required" });
+    return res.status(400).json({ success: false, message: "Person ID and password required" });
+  }
+
+  const key = `person_${person_id}`;
+  const now = Date.now();
+
+  // 🔒 Check if currently locked
+  const record = loginAttempts.get(key) || { attempts: 0, lockedUntil: null };
+
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const remainingMs = record.lockedUntil - now;
+    const remainingSec = Math.ceil(remainingMs / 1000);
+    return res.status(429).json({
+      success: false,
+      locked: true,
+      remainingSeconds: remainingSec,
+      message: `Account locked. Try again in ${Math.ceil(remainingSec / 60)} minute(s).`,
+    });
+  }
+
+  // Reset if lock expired
+  if (record.lockedUntil && now >= record.lockedUntil) {
+    loginAttempts.set(key, { attempts: 0, lockedUntil: null });
   }
 
   try {
     const [rows] = await db3.query(
       "SELECT * FROM user_accounts WHERE person_id = ?",
-      [person_id],
+      [person_id]
     );
 
     if (rows.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User not found" });
+      return res.status(400).json({ success: false, message: "User not found" });
     }
 
     const user = rows[0];
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid password" });
+      const current = loginAttempts.get(key) || { attempts: 0, lockedUntil: null };
+      const newAttempts = current.attempts + 1;
+
+      if (newAttempts >= MAX_ATTEMPTS) {
+        loginAttempts.set(key, { attempts: newAttempts, lockedUntil: now + LOCK_DURATION_MS });
+        return res.status(429).json({
+          success: false,
+          locked: true,
+          remainingSeconds: LOCK_DURATION_MS / 1000,
+          message: "Too many failed attempts. Locked for 3 minutes.",
+        });
+      }
+
+      loginAttempts.set(key, { attempts: newAttempts, lockedUntil: null });
+      return res.status(401).json({
+        success: false,
+        locked: false,
+        attemptsLeft: MAX_ATTEMPTS - newAttempts,
+        message: `Invalid password. ${MAX_ATTEMPTS - newAttempts} attempt(s) remaining.`,
+      });
     }
 
+    // ✅ Success — clear attempts
+    loginAttempts.delete(key);
     res.json({ success: true });
+
   } catch (err) {
     console.error("verify-password error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Server error during password verification",
-    });
+    res.status(500).json({ success: false, message: "Server error during password verification" });
   }
 });
 

@@ -124,7 +124,8 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
       password,
       status,
       dprtmnt_id,
-      access_level
+      access_level,
+      program_id      // ✅ NEW
     } = req.body;
 
     const file = req.file;
@@ -136,7 +137,6 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 🧩 Check duplicate email
     const [existing] = await db3.query(
       "SELECT id FROM user_accounts WHERE LOWER(email) = ?",
       [normalizedEmail]
@@ -145,14 +145,8 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // 🔒 Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 👤 Create person record
-    // const [personInsert] = await db3.query("INSERT INTO person_table () VALUES ()");
-    // const person_id = personInsert.insertId;
-
-    // 🖼 IMAGE HANDLING — SAME AS POST & PUT
     let profilePicName = null;
 
     if (file) {
@@ -163,12 +157,10 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
       const uploadDir = path.join(__dirname, "../../uploads/Admin1by1");
       const finalPath = path.join(uploadDir, profilePicName);
 
-      // Ensure directory exists
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      // Clean old images (safety)
       const files = await fs.promises.readdir(uploadDir);
       for (const f of files) {
         if (f.startsWith(`${employee_id}_1by1_`)) {
@@ -179,8 +171,8 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
       await fs.promises.writeFile(finalPath, file.buffer);
     }
 
-    // 🏷 Department NULL allowed
     const deptValue = dprtmnt_id === "" ? null : dprtmnt_id;
+    const programValue = program_id && program_id !== "" ? Number(program_id) : null; // ✅ NEW
 
     const [registrar] = await db3.query(
       `SELECT MAX(person_id) AS latest_person_id FROM user_accounts;`
@@ -188,12 +180,11 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
 
     const personIdForRegistrar = registrar[0].latest_person_id;
 
-
-    // 💾 Save registrar
+    // 💾 Save registrar — added program_id column
     await db3.query(
       `INSERT INTO user_accounts 
-       (person_id, employee_id, last_name, middle_name, first_name, role, email, password, status, dprtmnt_id, profile_picture, access_level)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (person_id, employee_id, last_name, middle_name, first_name, role, email, password, status, dprtmnt_id, profile_picture, access_level, program_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         personIdForRegistrar + 1,
         employee_id,
@@ -206,11 +197,11 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
         status || 1,
         deptValue,
         profilePicName,
-        Number(access_level)
+        Number(access_level),
+        programValue    // ✅ NEW
       ]
     );
 
-    // 📄 Page access from access_table
     const [accessRows] = await db3.query(
       "SELECT access_page FROM access_table WHERE access_id = ?",
       [access_level]
@@ -252,48 +243,123 @@ router.post("/register_registrar", upload.single("profile_picture"), async (req,
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
 // POST CREATION AND UPDATE OF PROFILE PICTURE
-router.post("/update_registrar", upload.single("profile_picture"), async (req, res) => {
-  const { person_id } = req.body;
-
-  if (!person_id || !req.file) {
-    return res.status(400).send("Missing person_id or file.");
-  }
+router.put("/update_registrar/:id", upload.single("profile_picture"), async (req, res) => {
+  const { id } = req.params;
+  const data = req.body;
+  const file = req.file;
 
   try {
-    // ✅ Get student_number from person_id
-    const [rows] = await db3.query(
-      "SELECT employee_id FROM user_accounts WHERE person_id = ?",
-      [person_id]
+    const [existing] = await db3.query(
+      "SELECT * FROM user_accounts WHERE id = ?",
+      [id]
     );
 
-    if (!rows.length) {
-      return res.status(404).json({ message: "student number not found for person_id " + person_id });
+    if (!existing.length) {
+      return res.status(404).json({ message: "Registrar not found" });
     }
 
-    const employee_id = rows[0].employee_id;
-    const ext = path.extname(req.file.originalname).toLowerCase();
-    const year = new Date().getFullYear();
-    const filename = `${employee_id}_1by1_${year}${ext}`;
-    const uploadDir = path.join(__dirname, "../../uploads/Admin1by1");
-    const finalPath = path.join(uploadDir, filename);
+    const current = existing[0];
+    let finalFilename = current.profile_picture;
 
-    const files = await fs.promises.readdir(uploadDir);
-    for (const file of files) {
-      if (file.startsWith(`${employee_id}_1by1_`)) {
-        await fs.promises.unlink(path.join(uploadDir, file));
+    if (file) {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const year = new Date().getFullYear();
+      finalFilename = `${current.employee_id}_1by1_${year}${ext}`;
+
+      const uploadDir = path.join(__dirname, "../../uploads/Admin1by1");
+      const finalPath = path.join(uploadDir, finalFilename);
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const files = await fs.promises.readdir(uploadDir);
+      for (const f of files) {
+        if (f.startsWith(`${current.employee_id}_1by1_`)) {
+          await fs.promises.unlink(path.join(uploadDir, f));
+        }
+      }
+
+      await fs.promises.writeFile(finalPath, file.buffer);
+    }
+
+    const deptValue = data.dprtmnt_id === "" ? null : data.dprtmnt_id;
+
+    // ✅ NEW — resolve program_id: explicit empty string clears it, otherwise keep current
+    const programValue = data.program_id !== undefined
+      ? (data.program_id === "" ? null : Number(data.program_id))
+      : (current.program_id ?? null);
+
+    await db3.query(
+      `UPDATE user_accounts 
+       SET employee_id=?, last_name=?, middle_name=?, first_name=?, role=?, email=?, status=?, dprtmnt_id=?, profile_picture=?, access_level=?, program_id=?
+       WHERE id=?`,
+      [
+        data.employee_id || current.employee_id,
+        data.last_name || current.last_name,
+        data.middle_name || current.middle_name,
+        data.first_name || current.first_name,
+        "registrar",
+        data.email?.toLowerCase() || current.email,
+        data.status ?? current.status,
+        deptValue,
+        finalFilename,
+        data.access_level ? Number(data.access_level) : current.access_level,
+        programValue,   // ✅ NEW
+        id
+      ]
+    );
+
+    if (data.access_level) {
+      const newEmployeeId = data.employee_id || current.employee_id;
+      const [accessRows] = await db3.query(
+        "SELECT access_page FROM access_table WHERE access_id = ?",
+        [data.access_level]
+      );
+
+      if (accessRows.length) {
+        const pagePermissions = parseAccessPermissions(accessRows[0].access_page);
+
+        await db3.query("DELETE FROM page_access WHERE user_id = ?", [newEmployeeId]);
+
+        if (pagePermissions.length) {
+          const values = pagePermissions.map((permission) => [
+            permission.page_privilege,
+            permission.page_id,
+            newEmployeeId,
+            permission.can_create,
+            permission.can_edit,
+            permission.can_delete,
+          ]);
+          await db3.query(
+            "INSERT INTO page_access (page_privilege, page_id, user_id, can_create, can_edit, can_delete) VALUES ?",
+            [values]
+          );
+        }
       }
     }
 
-    await fs.promises.writeFile(finalPath, req.file.buffer);
+    const { actorId, actorRole } = getAuditActor(req);
+    const roleLabel = formatAuditActorRole(actorRole);
+    await insertRegistrarAuditLog({
+      req,
+      action: "REGISTRAR_ACCOUNT_UPDATE",
+      message: `${roleLabel} (${actorId}) updated registrar account ${getRegistrarLabel({
+        employee_id: data.employee_id || current.employee_id,
+        last_name: data.last_name || current.last_name,
+        first_name: data.first_name || current.first_name,
+        middle_name: data.middle_name || current.middle_name,
+        email: data.email || current.email,
+        id,
+      })}.`,
+    });
 
-    await db3.query("UPDATE user_accounts SET profile_picture = ? WHERE person_id = ?", [filename, person_id]);
+    res.json({ success: true, message: "Registrar updated successfully" });
 
-    res.status(200).json({ message: "Uploaded successfully", filename });
-  } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).send("Failed to upload image.");
+  } catch (error) {
+    console.error("❌ Error updating registrar:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -429,10 +495,12 @@ router.delete("/delete_registrar/:id", CanDelete, async (req, res) => {
     conn = await db3.getConnection();
     await conn.beginTransaction();
 
+    // ✅ INNER JOIN access_table instead of hardcoded role IN (...)
     const [registrarRows] = await conn.query(
-      `SELECT id, employee_id, first_name, middle_name, last_name, email, profile_picture
-       FROM user_accounts
-       WHERE id = ? AND role IN ('registrar', 'admission', 'enrollment', 'clinic', 'superadmin')
+      `SELECT ua.id, ua.employee_id, ua.first_name, ua.middle_name, ua.last_name, ua.email, ua.profile_picture
+       FROM user_accounts ua
+       INNER JOIN access_table at ON ua.access_level = at.access_id
+       WHERE ua.id = ?
        LIMIT 1`,
       [id],
     );

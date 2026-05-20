@@ -1668,28 +1668,28 @@ const SuperAdminStudentDashboard1 = () => {
                   <MenuItem value="">
                     <em>Select Applying</em>
                   </MenuItem>
-                  <MenuItem value="Senior High School Graduate">
+                  <MenuItem value="1">
                     Senior High School Graduate
                   </MenuItem>
-                  <MenuItem value="Senior High School Graduating Student">
+                  <MenuItem value="2">
                     Senior High School Graduating Student
                   </MenuItem>
-                  <MenuItem value="ALS Passer">
+                  <MenuItem value="3">
                     ALS (Alternative Learning System) Passer
                   </MenuItem>
-                  <MenuItem value="Transferee">
+                  <MenuItem value="4">
                     Transferee from other University/College
                   </MenuItem>
-                  <MenuItem value="Cross Enrolee">
+                  <MenuItem value="5">
                     Cross Enrolee Student
                   </MenuItem>
-                  <MenuItem value="Foreign Applicant">
+                  <MenuItem value="6">
                     Foreign Applicant/Student
                   </MenuItem>
-                  <MenuItem value="Baccalaureate Graduate">
+                  <MenuItem value="7">
                     Baccalaureate Graduate
                   </MenuItem>
-                  <MenuItem value="Master Degree Graduate">
+                  <MenuItem value="8">
                     Master Degree Graduate
                   </MenuItem>
                 </Select>
@@ -1744,9 +1744,8 @@ const SuperAdminStudentDashboard1 = () => {
                         </MenuItem>
                         {filteredCurriculum.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            {`(${item.program_code}): ${item.program_description}${
-                              item.major ? ` (${item.major})` : ""
-                            } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
+                            {`(${item.program_code}): ${item.program_description}${item.major ? ` (${item.major})` : ""
+                              } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
                           </MenuItem>
                         ))}
                       </Select>

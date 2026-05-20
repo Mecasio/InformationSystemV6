@@ -37,6 +37,11 @@ import API_BASE_URL from "../apiConfig";
 import SaveIcon from '@mui/icons-material/Save';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import SearchIcon from "@mui/icons-material/Search";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+
 
 const RegisterRegistrar = () => {
 
@@ -173,7 +178,7 @@ const RegisterRegistrar = () => {
     const [editData, setEditData] = useState(null);
     const [registrarToDelete, setRegistrarToDelete] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-
+    const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({
         employee_id: "",
         last_name: "",
@@ -184,11 +189,18 @@ const RegisterRegistrar = () => {
         status: "",
         dprtmnt_id: "",
         access_level: "",
-        profile_picture: null, // ✅ holds the uploaded file
-        preview: "", // ✅ for preview URL
+        profile_picture: null,
+        preview: "",
+        program_id: "",
 
     });
     const [itemsPerPage, setItemsPerPage] = useState(50);
+
+    const handleCloseDialog = () => {
+        setOpenDialog(false);
+        setEditData(null);
+        setShowPassword(false); // ← reset
+    };
 
 
     const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState("");
@@ -247,11 +259,25 @@ const RegisterRegistrar = () => {
 
 
 
+    // Add near other state declarations
+    const [programs, setPrograms] = useState([]);
+
+    // Add fetch in useEffect
     useEffect(() => {
         fetchDepartments();
         fetchRegistrars();
         fetchAccessLevels();
+        fetchPrograms(); // ✅ NEW
     }, []);
+
+    const fetchPrograms = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/applied_program`);
+            setPrograms(res.data || []);
+        } catch (err) {
+            console.error("❌ Program fetch error:", err);
+        }
+    };
 
     // 📥 Fetch Departments
     const fetchDepartments = async () => {
@@ -315,10 +341,17 @@ const RegisterRegistrar = () => {
             });
 
             // Ensure numbers
+            // After your existing "Ensure numbers" block, add:
             if (form.dprtmnt_id) fd.set("dprtmnt_id", Number(form.dprtmnt_id));
             if (form.status) fd.set("status", Number(form.status));
             if (form.access_level) fd.set("access_level", Number(form.access_level));
 
+            // ✅ ADD THIS — send program_id as number or delete it if empty
+            if (form.program_id && form.program_id !== "") {
+                fd.set("program_id", Number(form.program_id));
+            } else {
+                fd.delete("program_id"); // don't send empty string, let backend default to NULL
+            }
             // Debug
             for (let pair of fd.entries()) console.log(pair[0], pair[1]);
 
@@ -393,15 +426,12 @@ const RegisterRegistrar = () => {
             status: Number(r.status), // ✅ ensure numeric
             dprtmnt_id: r.dprtmnt_id || "",
             access_level: r.access_level || "",
+            program_id: r.program_id || "",
         });
         setOpenDialog(true);
     };
 
-    const handleCloseDialog = () => {
-        setOpenDialog(false);
-        setEditData(null);
-    };
-
+ 
     // Export CSV
     const handleExportCSV = () => {
         if (registrars.length === 0) return alert("No data to export!");
@@ -499,8 +529,8 @@ const RegisterRegistrar = () => {
     }
 
     return (
-       
-   <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+
+        <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
 
 
 
@@ -525,11 +555,11 @@ const RegisterRegistrar = () => {
                         fontSize: "36px",
                     }}
                 >
-              REGISTRAR ACCOUNTS
+                    REGISTRAR ACCOUNTS
                 </Typography>
 
 
-           <TextField
+                <TextField
                     size="small"
                     placeholder="Search registrar..."
                     value={searchTerm}
@@ -572,7 +602,7 @@ const RegisterRegistrar = () => {
                                 <Box display="flex" justifyContent="space-between" alignItems="center">
                                     {/* Left: Registrar List Count */}
                                     <Typography fontSize="14px" fontWeight="bold" color="white">
-                                      Total Registrar Account's: {filteredRegistrar.length} account{filteredRegistrar.length !== 1 ? 's' : ''}
+                                        Total Registrar Account's: {filteredRegistrar.length} account{filteredRegistrar.length !== 1 ? 's' : ''}
                                     </Typography>
 
                                     {/* Right: Pagination Controls */}
@@ -757,6 +787,7 @@ const RegisterRegistrar = () => {
                                         startIcon={<AddIcon />}
                                         variant="contained"
                                         onClick={() => {
+                                            setEditData(null);   // ← clear editData so dialog shows "Add" not "Edit"
                                             setForm({
                                                 employee_id: "",
                                                 last_name: "",
@@ -767,6 +798,9 @@ const RegisterRegistrar = () => {
                                                 status: "",
                                                 dprtmnt_id: "",
                                                 access_level: "",
+                                                program_id: "",          // ✅
+                                                profile_picture: null,   // ✅
+                                                preview: "",             // ✅
                                             });
                                             setOpenDialog(true);
                                         }}
@@ -853,6 +887,7 @@ const RegisterRegistrar = () => {
                                 "Full Name",
                                 "Email",
                                 "Department",
+                                "Program",
                                 "Access Level",
                                 "Actions",
                                 "Status",
@@ -907,6 +942,12 @@ const RegisterRegistrar = () => {
                                     <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                                         {r.dprtmnt_name || "N/A"}
                                     </TableCell>
+                                    <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
+                                        {r.program_description
+                                            ? `${r.program_description}${r.major ? ` — ${r.major}` : ""} (${r.program_code})`
+                                            : "N/A"
+                                        }
+                                    </TableCell>
 
                                     <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                                         {r.access_description || "N/A"}
@@ -937,7 +978,7 @@ const RegisterRegistrar = () => {
                                                 <Button
                                                     onClick={() => handleDeleteClick(r)}
                                                     sx={{
-                                                    backgroundColor: "#9E0000",
+                                                        backgroundColor: "#9E0000",
                                                         color: "white",
                                                         borderRadius: "5px",
                                                         padding: "8px 14px",
@@ -946,7 +987,7 @@ const RegisterRegistrar = () => {
                                                         alignItems: "center",
                                                         justifyContent: "center",
                                                         gap: "5px",
-                                                     
+
                                                     }}
                                                 >
                                                     <DeleteIcon fontSize="small" /> Delete
@@ -981,7 +1022,7 @@ const RegisterRegistrar = () => {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={9} align="center">
                                     No registrar accounts found.
                                 </TableCell>
                             </TableRow>
@@ -1139,12 +1180,26 @@ const RegisterRegistrar = () => {
 
                         <TextField
                             size="small"
-                            label={editData ? "New Password (optional)" : "Password"}
+                            label={editData ? "New Password (leave blank to keep current)" : "Password"}
                             name="password"
                             value={form.password}
                             onChange={handleChange}
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             fullWidth
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                            edge="end"
+                                            size="small"
+                                        >
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                            helperText={editData ? "Leave blank to keep the current password unchanged." : ""}
                         />
                     </Stack>
 
@@ -1154,14 +1209,38 @@ const RegisterRegistrar = () => {
                             <InputLabel>Department</InputLabel>
                             <Select
                                 name="dprtmnt_id"
-                                value={form.dprtmnt_id}
+                                value={form.dprtmnt_id}          // ← also missing value!
                                 label="Department"
-                                onChange={handleChange}
+                                onChange={(e) => setForm({ ...form, dprtmnt_id: e.target.value, program_id: "" })}
                             >
                                 <MenuItem value="">Select Department</MenuItem>
                                 {department.map((dep) => (
                                     <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_id}>
                                         {dep.dprtmnt_name} ({dep.dprtmnt_code})
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        {/* Program (optional) — only shows programs linked to selected department */}
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Program (Optional)</InputLabel>
+                            <Select
+                                value={form.program_id}
+                                label="Program (Optional)"
+                                onChange={(e) => setForm({ ...form, program_id: e.target.value })}
+                                disabled={!form.dprtmnt_id}  // disabled until department is chosen
+                            >
+                                <MenuItem value="">Select Program</MenuItem>
+                                {[...new Map(
+                                    programs
+                                        .filter((p) => String(p.dprtmnt_id) === String(form.dprtmnt_id))
+                                        .map((p) => [p.program_id, p])   // key by program_id to dedupe
+                                ).values()].map((p) => (
+                                    <MenuItem key={p.program_id} value={p.program_id}>
+                                        {p.program_description}
+                                        {p.major ? ` — ${p.major}` : ""}
+                                        {` (${p.program_code})`}
                                     </MenuItem>
                                 ))}
                             </Select>
