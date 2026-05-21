@@ -3,6 +3,8 @@ import { SettingsContext } from "../App";
 
 import '../styles/TempStyles.css';
 import axios from 'axios';
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import {
   Box,
   Grid,
@@ -22,6 +24,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import SchoolIcon from "@mui/icons-material/School";
 import PersonIcon from "@mui/icons-material/Person";
 import CertificateOfRegistration from "../student/CertificateOfRegistration";
+import EaristLogo from "../assets/EaristLogo.png";
 import {
   AccountBalanceWallet,
   AssignmentTurnedIn,
@@ -46,6 +49,42 @@ import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+
+const gradeYearOrder = {
+  "First Year": 1,
+  "Second Year": 2,
+  "Third Year": 3,
+  "Fourth Year": 4,
+  "Fifth Year": 5,
+};
+
+const gradeSemesterOrder = {
+  "First Semester": 1,
+  "Second Semester": 2,
+  Summer: 3,
+};
+
+const parseGradeTerm = (term) => {
+  const parts = String(term || "").split(" ");
+  const yearLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : term;
+  const semesterLabel = parts.slice(2).join(" ");
+
+  return { yearLabel, semesterLabel };
+};
+
+const sortGradeTerms = (terms) =>
+  [...terms].sort((a, b) => {
+    const termA = parseGradeTerm(a);
+    const termB = parseGradeTerm(b);
+    const yA = gradeYearOrder[termA.yearLabel] || 0;
+    const yB = gradeYearOrder[termB.yearLabel] || 0;
+
+    if (yA !== yB) return yB - yA;
+    return (
+      (gradeSemesterOrder[termB.semesterLabel] || 0) -
+      (gradeSemesterOrder[termA.semesterLabel] || 0)
+    );
+  });
 
 const StudentDashboard = ({ profileImage, setProfileImage }) => {
   const navigate = useNavigate();
@@ -122,6 +161,11 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
   });
   const [studentAssessment, setStudentAssessment] = useState(null);
   const [studentAssessmentRows, setStudentAssessmentRows] = useState([]);
+  const [gradeSummary, setGradeSummary] = useState({
+    gwa: null,
+    loading: true,
+    message: "Loading GWA...",
+  });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -142,6 +186,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         fetchStudentDetails(storedID);
         fetchTotalCourse(storedID);
         fetchStudentAssessment(storedID);
+        fetchGradeSummary(storedID);
         console.log("you are an student");
       }
     } else {
@@ -261,66 +306,377 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
 
 
   const divToPrintRef = useRef();
+  const [isCorReadyToPrint, setIsCorReadyToPrint] = useState(false);
+  const [isGeneratingCorPdf, setIsGeneratingCorPdf] = useState(false);
+  const isCorReadyToPrintRef = useRef(false);
 
-  const printDiv = () => {
-    const divToPrint = divToPrintRef.current;
-    if (divToPrint) {
-      const newWin = window.open('', 'Print-Window');
-      newWin.document.open();
-      newWin.document.write(`
-      <html>
-        <head>
-          <title>Print</title>
-          <style>
-            @page {
-              size: A4;
-              margin: 0;
-            }
+  const handleCorReadyChange = (isReady) => {
+    isCorReadyToPrintRef.current = isReady;
+    setIsCorReadyToPrint(isReady);
+  };
 
-            html, body {
-              margin: 0;
-              padding: 0;
-              width: 210mm;
-              height: 297mm;
-            
-              font-family: Arial, sans-serif;
-              overflow: hidden;
-            }
+  const fetchMatriculationBalance = async (studentNumber) => {
+    if (!studentNumber) return { hasBalance: false, balance: 0 };
 
-            .print-container {
-              width: 110%;
-              height: 100%;
+    try {
+      const { data } = await axios.post(
+        `${API_BASE_URL}/api/check-student-balance`,
+        { student_number: studentNumber },
+      );
+      const balance = Number(data?.balance || 0);
 
-              box-sizing: border-box;
-   
-              transform: scale(0.90);
-              transform-origin: top left;
-            }
+      return {
+        hasBalance: Boolean(data?.hasBalance) && balance > 0,
+        balance: Number.isFinite(balance) ? balance : 0,
+      };
+    } catch (error) {
+      console.error("Failed to check matriculation balance:", error);
+      return { hasBalance: false, balance: 0 };
+    }
+  };
 
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
+  const fetchGradeSummary = async (id) => {
+    setGradeSummary({ gwa: null, loading: true, message: "Loading GWA..." });
 
-            button {
-              display: none;
-            }
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/student_grade/${id}`);
+      const grades = Array.isArray(res.data) ? res.data : [];
 
-            .student-table {
-              margin-top: 5px !important;
-            }
-          </style>
-        </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 100);">
-          <div class="print-container">
-            ${divToPrint.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-      newWin.document.close();
-    } else {
-      console.error("divToPrintRef is not set.");
+      if (!grades.length) {
+        setGradeSummary({ gwa: null, loading: false, message: "No grades posted" });
+        return;
+      }
+
+      const balanceInfo = await fetchMatriculationBalance(grades[0]?.student_number);
+      if (balanceInfo.hasBalance) {
+        setGradeSummary({
+          gwa: null,
+          loading: false,
+          message: "Hidden due to balance",
+        });
+        return;
+      }
+
+      const groupedByTerm = {};
+      grades.forEach((subject) => {
+        const termKey = `${subject.year_level_description || "N/A"} ${subject.semester_description || "N/A"}`;
+        if (!groupedByTerm[termKey]) groupedByTerm[termKey] = [];
+        groupedByTerm[termKey].push(subject);
+      });
+
+      const processedGrades = Object.values(groupedByTerm).flatMap((termSubjects) => {
+        const allReleased = termSubjects.every(
+          (subject) => subject.fe_status === 1 || subject.is_migrated,
+        );
+
+        if (allReleased) return termSubjects;
+
+        return termSubjects.map((subject) => ({
+          ...subject,
+          final_grade:
+            subject.fe_status === 1 || subject.is_migrated ? subject.final_grade : null,
+          numeric_grade:
+            subject.fe_status === 1 || subject.is_migrated ? subject.numeric_grade : null,
+          descriptive_grade:
+            subject.fe_status === 1 || subject.is_migrated ? subject.descriptive_grade : null,
+          en_remarks:
+            subject.fe_status === 1 || subject.is_migrated ? subject.en_remarks : null,
+          gwa: subject.fe_status === 1 || subject.is_migrated ? subject.gwa : null,
+        }));
+      });
+
+      const sortedTerms = sortGradeTerms([
+        ...new Set(
+          processedGrades.map(
+            (row) => `${row.year_level_description} ${row.semester_description}`,
+          ),
+        ),
+      ]);
+      const latestTerm = sortedTerms[0];
+      const latestTermGwa = processedGrades.find(
+        (row) =>
+          `${row.year_level_description} ${row.semester_description}` === latestTerm &&
+          row.gwa !== null &&
+          row.gwa !== undefined &&
+          row.gwa !== "",
+      )?.gwa;
+
+      setGradeSummary({
+        gwa: latestTermGwa ?? null,
+        loading: false,
+        message: latestTermGwa ? "" : "Not yet posted",
+      });
+    } catch (error) {
+      console.error("Failed to fetch grade summary:", error);
+      setGradeSummary({ gwa: null, loading: false, message: "Unable to load GWA" });
+    }
+  };
+
+  const waitForCorReady = () =>
+    new Promise((resolve, reject) => {
+      const startedAt = Date.now();
+      const check = () => {
+        if (isCorReadyToPrintRef.current) {
+          resolve();
+          return;
+        }
+
+        if (Date.now() - startedAt > 10000) {
+          reject(new Error("Certificate data is still loading."));
+          return;
+        }
+
+        setTimeout(check, 250);
+      };
+
+      check();
+    });
+
+  const waitForImages = async (element) => {
+    const images = Array.from(element.querySelectorAll("img"));
+    await Promise.all(
+      images.map(
+        (img) =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+              img.onload = resolve;
+              img.onerror = resolve;
+            }),
+      ),
+    );
+  };
+
+  const nextFrame = () =>
+    new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+  const fileToDataUrl = (blob) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+  const waitForImage = (img) =>
+    img.complete
+      ? Promise.resolve()
+      : new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+
+  const inlineImages = async (element) => {
+    const images = Array.from(element.querySelectorAll("img"));
+
+    await Promise.all(
+      images.map(async (img) => {
+        const source = img.currentSrc || img.src;
+        if (!source || source.startsWith("data:")) return;
+
+        try {
+          const response = await fetch(source, {
+            mode: "cors",
+            credentials: "omit",
+          });
+
+          if (!response.ok) {
+            throw new Error(`Image request failed with ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          img.removeAttribute("crossorigin");
+          img.crossOrigin = null;
+          img.src = await fileToDataUrl(blob);
+          await waitForImage(img);
+        } catch (error) {
+          console.warn("Failed to inline image for COR PDF:", source, error);
+        }
+      }),
+    );
+  };
+
+  const replaceFormFields = (source, clone) => {
+    const sourceFields = source.querySelectorAll("input, textarea, select");
+    const cloneFields = clone.querySelectorAll("input, textarea, select");
+
+    sourceFields.forEach((sourceField, index) => {
+      const cloneField = cloneFields[index];
+      if (!cloneField) return;
+
+      const computedStyle = window.getComputedStyle(sourceField);
+      const bounds = sourceField.getBoundingClientRect();
+      const width = sourceField.offsetWidth || bounds.width;
+      const height = sourceField.offsetHeight || bounds.height;
+      const textNode = document.createElement("span");
+      textNode.style.cssText = sourceField.getAttribute("style") || "";
+      textNode.style.display =
+        computedStyle.display === "none" ? "none" : "inline-block";
+      textNode.style.boxSizing = "border-box";
+      textNode.style.verticalAlign = "middle";
+      textNode.style.whiteSpace = "nowrap";
+      textNode.style.overflow = "visible";
+      textNode.style.textOverflow = "clip";
+      textNode.style.visibility = "visible";
+      textNode.style.opacity = "1";
+      textNode.style.color = "#000";
+      textNode.style.webkitTextFillColor = "#000";
+      textNode.style.fontFamily = computedStyle.fontFamily || "Arial";
+      textNode.style.fontSize = computedStyle.fontSize || "12px";
+      textNode.style.fontWeight = computedStyle.fontWeight || "normal";
+      textNode.style.textAlign = computedStyle.textAlign || "left";
+      textNode.style.lineHeight =
+        computedStyle.lineHeight === "normal" ? "1.15" : computedStyle.lineHeight;
+      textNode.style.background = "transparent";
+      textNode.style.border = "none";
+      textNode.style.outline = "none";
+      textNode.style.padding = sourceField.style.padding || "0";
+      textNode.style.margin = sourceField.style.margin || "0";
+      textNode.style.width = width ? `${Math.ceil(width)}px` : "100%";
+      textNode.style.minHeight = height ? `${Math.ceil(height)}px` : "auto";
+      textNode.style.height = height ? `${Math.ceil(height)}px` : "auto";
+
+      if (sourceField.tagName === "SELECT") {
+        textNode.textContent =
+          sourceField.selectedOptions?.[0]?.textContent || sourceField.value;
+        cloneField.replaceWith(textNode);
+        return;
+      }
+
+      if (sourceField.type === "checkbox" || sourceField.type === "radio") {
+        textNode.textContent = sourceField.checked ? "X" : "";
+        cloneField.replaceWith(textNode);
+        return;
+      }
+
+      textNode.textContent = sourceField.value || sourceField.getAttribute("value") || "";
+      cloneField.replaceWith(textNode);
+    });
+  };
+
+  const cloneCertificateForCapture = (certificate) => {
+    const clone = certificate.cloneNode(true);
+    replaceFormFields(certificate, clone);
+
+    clone.querySelectorAll("*").forEach((node) => {
+      node.style.visibility = "visible";
+      node.style.opacity = node.classList.contains("certificate-watermark")
+        ? node.style.opacity
+        : "1";
+    });
+
+    clone.querySelectorAll("img").forEach((img) => {
+      img.style.visibility = "visible";
+      img.style.opacity = "1";
+    });
+
+    return clone;
+  };
+
+  const downloadCorPdf = async () => {
+    let captureHost = null;
+
+    try {
+      setIsGeneratingCorPdf(true);
+      await waitForCorReady();
+
+      const certificate = divToPrintRef.current;
+      if (!certificate) {
+        throw new Error("Certificate is not available.");
+      }
+
+      await document.fonts?.ready;
+      await waitForImages(certificate);
+      await nextFrame();
+
+      captureHost = document.createElement("div");
+      captureHost.style.position = "absolute";
+      captureHost.style.left = "-99999px";
+      captureHost.style.top = "0";
+      captureHost.style.width = "8in";
+      captureHost.style.height = "auto";
+      captureHost.style.overflow = "visible";
+      captureHost.style.background = "#ffffff";
+      captureHost.style.zIndex = "0";
+      captureHost.style.pointerEvents = "none";
+      captureHost.style.opacity = "1";
+      captureHost.appendChild(cloneCertificateForCapture(certificate));
+      document.body.appendChild(captureHost);
+
+      const captureTarget =
+        captureHost.querySelector(".certificate-wrapper") || captureHost;
+      captureTarget.style.width = "8in";
+      captureTarget.style.height = "auto";
+      captureTarget.style.maxHeight = "none";
+      captureTarget.style.overflow = "visible";
+      captureTarget.style.margin = "0";
+      captureTarget.style.transform = "none";
+
+      await inlineImages(captureTarget);
+      await waitForImages(captureTarget);
+      await nextFrame();
+
+      const targetBounds = captureTarget.getBoundingClientRect();
+      const captureWidth = Math.ceil(
+        Math.max(
+          captureTarget.scrollWidth,
+          captureTarget.offsetWidth,
+          targetBounds.width,
+        ),
+      );
+      const captureHeight = Math.ceil(
+        Math.max(
+          captureTarget.scrollHeight,
+          captureTarget.offsetHeight,
+          targetBounds.height,
+        ),
+      );
+
+      if (!captureWidth || !captureHeight) {
+        throw new Error("Certificate layout is empty and cannot be captured.");
+      }
+
+      const canvas = await html2canvas(captureTarget, {
+        backgroundColor: "#ffffff",
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth,
+        windowHeight: captureHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      const imageData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 5;
+
+      pdf.addImage(
+        imageData,
+        "PNG",
+        margin,
+        margin,
+        pageWidth - margin * 2,
+        pageHeight - margin * 2,
+      );
+      pdf.save(
+        `certificate-of-registration-${personData.student_number || "student"}.pdf`,
+      );
+    } catch (error) {
+      console.error("Failed to generate COR PDF:", error);
+      window.alert(
+        error?.message ||
+          "Failed to generate Certificate of Registration PDF. Please try again.",
+      );
+    } finally {
+      if (captureHost) {
+        captureHost.remove();
+      }
+      setIsGeneratingCorPdf(false);
     }
   };
 
@@ -527,7 +883,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
   const quickLinks = [
     { label: "Schedule", icon: <CalendarMonth />, href: "/student_schedule" },
     { label: "Grades", icon: <StarBorder />, href: "/grades_page" },
-    { label: "Curriculum", icon: <MenuBook />, href: "/student_dashboard" },
+    { label: "Curriculum", icon: <MenuBook />, href: "/student_section_offering" },
     { label: "Faculty Evaluation", icon: <AssignmentTurnedIn />, href: "/student_faculty_evaluation" },
     { label: "Student Profile", icon: <BadgeOutlined />, href: "/student_personal_data_form" },
     { label: "Account Balance", icon: <CreditCard />, href: "/student_account_balance" },
@@ -543,8 +899,22 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         fontFamily: "Poppins, sans-serif",
       }}
     >
-      <div style={{ display: "none" }}>
-        <CertificateOfRegistration ref={divToPrintRef} student_number={String(personData.student_number || "")} />
+      <div
+        style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: "max-content",
+          background: "#fff",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      >
+        <CertificateOfRegistration
+          ref={divToPrintRef}
+          student_number={String(personData.student_number || "")}
+          onReadyChange={handleCorReadyChange}
+        />
       </div>
       <Box
         sx={{
@@ -606,9 +976,9 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         </Box>
       </Box>
 
-      <Box sx={{ p: { xs: 2, md: 2.5 }, maxWidth: "1800px", mx: "auto" }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6} lg>
+      <Box sx={{ py: { xs: 2, md: 2.5 }, mx: { xs: 1.5, md: 3 }, maxWidth: "none" }}>
+        <Grid container spacing={2} sx={{ width: "100%" }}>
+          <Grid item xs={12} md={6} lg={3}>
             <Card sx={cardSx}>
               <CardContent sx={{ p: 3 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
@@ -650,7 +1020,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6} lg>
+          <Grid item xs={12} md={6} lg={3}>
             <Card sx={cardSx}>
               <CardContent sx={{ p: 3 }}>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5 }}>
@@ -674,7 +1044,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6} lg>
+          <Grid item xs={12} md={6} lg={3}>
             <Card sx={cardSx}>
               <CardContent sx={{ p: 3 }}>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5 }}>
@@ -705,8 +1075,8 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6} lg="auto">
-            <Card sx={{ ...cardSx, width: { xs: "100%", lg: 468 }, flexShrink: 0 }}>
+          <Grid item xs={12} md={6} lg={3}>
+            <Card sx={{ ...cardSx, width: "100%", flexShrink: 0 }}>
               <CardContent sx={{ p: 2.5 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
                   <IconButton disabled sx={{ border: `1px solid ${softBorder}`, borderRadius: "8px" }}><ArrowBackIos fontSize="small" /></IconButton>
@@ -739,7 +1109,16 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}><Box sx={iconBoxSx}><StarBorder /></Box><Typography sx={{ fontSize: 18, fontWeight: 700 }}>Grade Summary</Typography></Stack>
                     <Box sx={{ border: "1px solid #f0cfcd", borderRadius: "8px", p: 2.5, textAlign: "center", mb: 2.5 }}>
                       <Typography sx={{ fontSize: 16 }}>GWA</Typography>
-                      <Typography sx={{ fontSize: 42, color: maroon, fontWeight: 800 }}>0.00</Typography>
+                      <Typography sx={{ fontSize: 42, color: maroon, fontWeight: 800 }}>
+                        {gradeSummary.gwa !== null && gradeSummary.gwa !== undefined
+                          ? Number(gradeSummary.gwa).toFixed(3)
+                          : "N/A"}
+                      </Typography>
+                      {gradeSummary.message && (
+                        <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 12 }}>
+                          {gradeSummary.message}
+                        </Typography>
+                      )}
                     </Box>
                     {[["Passed", passed, "#2e7d32"], ["Failed", failed, "#d32f2f"], ["Incomplete", incomplete, "#d97706"], ["Dropped", dropped, "#1d4ed8"]].map(([label, value, color]) => (
                       <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.65 }}><Typography sx={{ color, fontWeight: 700 }}>{label}</Typography><Typography>{value}</Typography></Stack>
@@ -762,7 +1141,15 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
                     <Box sx={{ ...iconBoxSx, width: 64, height: 64 }}><FactCheck sx={{ fontSize: 34 }} /></Box>
                     <Box><Typography sx={{ fontSize: 17, fontWeight: 700 }}>Certificate of Registration</Typography><Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 14 }}>Download your official enrollment certificate for this semester.</Typography></Box>
                   </Stack>
-                  <Button variant="outlined" startIcon={<DownloadIcon />} onClick={printDiv} sx={{ borderColor: softBorder, color: "text.primary", textTransform: "none", borderRadius: "8px", px: 3 }}>Download student's copy</Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={downloadCorPdf}
+                    disabled={!isCorReadyToPrint || isGeneratingCorPdf}
+                    sx={{ borderColor: softBorder, color: "text.primary", textTransform: "none", borderRadius: "8px", px: 3 }}
+                  >
+                    {isGeneratingCorPdf ? "Generating PDF..." : "Download student's copy"}
+                  </Button>
                 </Stack>
               </CardContent>
             </Card>

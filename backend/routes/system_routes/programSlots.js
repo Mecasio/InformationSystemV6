@@ -87,27 +87,14 @@ setInterval(() => {
 }, 1000000);
 
 router.get("/programs/availability", async (req, res) => {
-  const { year_id, semester_id } = req.query;
-
   try {
-    if (!year_id || !semester_id) {
-      return res
-        .status(400)
-        .json({ message: "Missing year_id or semester_id" });
-    }
-
-    // Check cache first
-    const cacheKey = `prog_${year_id}_${semester_id}`;
-    const cached = memoryCache.get(cacheKey);
-    if (cached) {
-      return res.json(cached);
-    }
+    // Payment save routes update matriculation/UNIFAST outside this module, so
+    // keep availability live instead of serving stale slot counts from cache.
 
     // Parallel query execution
     const [activeResult, programsResult] = await Promise.all([
       db3.query(
-        "SELECT id FROM active_school_year_table WHERE year_id = ? AND semester_id = ? LIMIT 1",
-        [year_id, semester_id],
+        "SELECT id FROM active_school_year_table WHERE astatus = 1 LIMIT 1",
       ),
       db3.query(`
         SELECT 
@@ -142,15 +129,15 @@ router.get("/programs/availability", async (req, res) => {
     const programs = programsResult[0];
 
     if (programs.length === 0) {
-      const emptyResult = [];
-      memoryCache.set(cacheKey, emptyResult);
-      return res.json(emptyResult);
+      return res.json([]);
     }
 
     // Extract curriculum IDs efficiently
     const curriculumIds = programs.map((p) => p.curriculum_id);
 
-    // Parallel fetch slots and enrollment data
+    // Parallel fetch slots and official enrollment data.
+    // A first-year student is officially enrolled once saved to either
+    // matriculation or UNIFAST for this active school year.
     const [slotsResult, enrollmentResult] = await Promise.all([
       db.query(
         `SELECT curriculum_id, max_slots, active_school_year_id
@@ -159,16 +146,30 @@ router.get("/programs/availability", async (req, res) => {
         [curriculumIds, activeSchoolYearId],
       ),
       db3.query(
-        `SELECT curriculum_id, COUNT(DISTINCT student_number) as total_enrolled
-         FROM enrollment.enrolled_subject es
-         WHERE curriculum_id IN (?)
-           AND active_school_year_id = ?
-           AND EXISTS (
-             SELECT 1 FROM enrollment.student_status_table sts
-             WHERE sts.student_number = es.student_number 
-             AND sts.year_level_id = 1
+        `SELECT
+           sts.active_curriculum AS curriculum_id,
+           COUNT(DISTINCT sts.student_number) AS total_enrolled
+         FROM enrollment.student_status_table sts
+         WHERE sts.active_curriculum IN (?)
+           AND sts.active_school_year_id = ?
+           AND sts.year_level_id = 1
+           AND (
+             EXISTS (
+               SELECT 1
+               FROM enrollment.matriculation m
+               WHERE m.student_number = sts.student_number
+                 AND m.active_school_year_id = sts.active_school_year_id
+                 AND m.status = 1
+             )
+             OR EXISTS (
+               SELECT 1
+               FROM enrollment.unifast u
+               WHERE u.student_number = sts.student_number
+                 AND u.active_school_year_id = sts.active_school_year_id
+                 AND u.status = 1
+             )
            )
-         GROUP BY curriculum_id`,
+         GROUP BY sts.active_curriculum`,
         [curriculumIds, activeSchoolYearId],
       ),
     ]);
@@ -219,9 +220,6 @@ router.get("/programs/availability", async (req, res) => {
         remaining: maxSlots - totalEnrolled > 0 ? maxSlots - totalEnrolled : 0,
       };
     }
-
-    // Cache the results
-    memoryCache.set(cacheKey, results);
 
     res.json(results);
   } catch (err) {

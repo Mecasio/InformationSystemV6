@@ -338,6 +338,29 @@ const CourseTagging = () => {
     } catch (err) { console.error("Failed to fetch subject counts", err); }
   };
 
+  const applyEnrolledCourses = (data) => {
+    const nextEnrolled = Array.isArray(data) ? data : [];
+    setEnrolled(nextEnrolled);
+    setIsEnrolled(nextEnrolled.length > 0);
+    if (nextEnrolled.length > 0) {
+      setCourseCode(cleanDisplayValue(nextEnrolled[0].program_code));
+      setCourseDescription(cleanDisplayValue(nextEnrolled[0].program_description));
+      setSectionDescription(cleanDisplayValue(nextEnrolled[0].section));
+    }
+  };
+
+  const refreshEnrolledCourses = async () => {
+    if (!userId || !currId) {
+      applyEnrolledCourses([]);
+      return [];
+    }
+
+    const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`);
+    applyEnrolledCourses(data);
+    if (selectedSection) await fetchSubjectCounts(selectedSection);
+    return data;
+  };
+
   useEffect(() => {
     axios.get(`${API_BASE_URL}/get_year_level`).then((res) => setYearLevel(res.data)).catch((err) => console.error(err));
   }, []);
@@ -361,7 +384,7 @@ const CourseTagging = () => {
   }, [currId]);
 
   useEffect(() => {
-    if (userId && currId) axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`).then((res) => setEnrolled(res.data)).catch((err) => console.error(err));
+    if (userId && currId) refreshEnrolledCourses().catch((err) => console.error(err));
   }, [userId, currId]);
 
   useEffect(() => { fetchDepartmentSections(); }, []);
@@ -448,8 +471,7 @@ const CourseTagging = () => {
     const payload = { subject_id: course.course_id, department_section_id: selectedSection };
     try {
       await axios.post(`${API_BASE_URL}/add-to-enrolled-courses/${userId}/${currId}/`, payload, auditConfig);
-      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`);
-      setEnrolled(data);
+      await refreshEnrolledCourses();
       setSnack({ open: true, message: `Enrolled ${course.course_code} successfully.`, severity: "success" });
     } catch (err) { setSnack({ open: true, message: "Error enrolling in this course. Please try again.", severity: "error" }); }
   };
@@ -459,8 +481,7 @@ const CourseTagging = () => {
     if (!canDelete) { setSnack({ open: true, message: "You do not have permission to unenroll subjects.", severity: "error" }); return; }
     try {
       await axios.delete(`${API_BASE_URL}/courses/delete/${id}`, auditConfig);
-      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`);
-      setEnrolled(data);
+      await refreshEnrolledCourses();
       setSnack({ open: true, message: "Subject unenrolled successfully.", severity: "success" });
     } catch (err) { setSnack({ open: true, message: "Error unenrolling subject.", severity: "error" }); }
   };
@@ -480,8 +501,7 @@ const CourseTagging = () => {
           setDisableYearButtons(true);
         } catch (err) { console.error("Error enrolling course in bulk:", err); }
       }));
-      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`);
-      setEnrolled(data);
+      const data = await refreshEnrolledCourses();
       if (data.length > 0) { setCourseCode(cleanDisplayValue(data[0].program_code)); setCourseDescription(cleanDisplayValue(data[0].program_description)); setSectionDescription(cleanDisplayValue(data[0].section)); }
       setSnack({ open: true, message: enrolledCount > 0 ? "Bulk enroll finished. All available subjects were enrolled." : "No new subjects were enrolled.", severity: enrolledCount > 0 ? "success" : "info" });
     } catch (err) { setSnack({ open: true, message: "Unexpected error during bulk enrollment.", severity: "error" }); }
@@ -491,8 +511,7 @@ const CourseTagging = () => {
     if (!canDelete) { setSnack({ open: true, message: "You do not have permission to unenroll subjects.", severity: "error" }); return; }
     try {
       await axios.delete(`${API_BASE_URL}/courses/user/${userId}`, auditConfig);
-      const { data } = await axios.get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`);
-      setEnrolled(data);
+      await refreshEnrolledCourses();
       setDisableYearButtons(false);
     } catch (err) { console.error("Error deleting cart:", err); }
   };
@@ -506,7 +525,7 @@ const CourseTagging = () => {
       setUserId(cleanDisplayValue(studentNum)); setUserFirstName(cleanDisplayValue(first_name)); setUserMiddleName(cleanDisplayValue(middle_name)); setUserLastName(cleanDisplayValue(last_name)); setApplyingAs(cleanDisplayValue(applyingAsValue)); setCurr(cleanDisplayValue(effectiveProgram)); setCourseCode(cleanDisplayValue(courseCode)); setCourseDescription(cleanDisplayValue(courseDescription)); setPersonID(cleanDisplayValue(person_id2)); setSectionDescription(cleanDisplayValue(section)); setIsEnrolled(isEnrolled);
       await logStudentBasicInfoSearch({ studentNumber: studentNum, firstName: first_name, middleName: middle_name, lastName: last_name });
       setSnack({ open: true, message: "Student found and authenticated!", severity: "success" });
-    } catch (error) { setApplyingAs(""); setUserId(null); setCurr(null); setCourses([]); setEnrolled([]); setSectionDescription(""); setSnack({ open: true, message: "Student not found or error processing request.", severity: "error" }); }
+    } catch (error) { setApplyingAs(""); setUserId(null); setCurr(null); setCourses([]); setEnrolled([]); setIsEnrolled(false); setSectionDescription(""); setSnack({ open: true, message: "Student not found or error processing request.", severity: "error" }); }
   };
 
   useEffect(() => {

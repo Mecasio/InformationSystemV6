@@ -27,6 +27,11 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import SendIcon from "@mui/icons-material/Send";
+import { Chip } from "@mui/material";
 
 const RequirementUploader = () => {
   const settings = useContext(SettingsContext);
@@ -34,8 +39,15 @@ const RequirementUploader = () => {
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
+  const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
+  const [subButtonColor, setSubButtonColor] = useState("#ffffff");   // ✅ NEW
+  const [stepperColor, setStepperColor] = useState("#000000");       // ✅ NEW
+
+  const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [shortTerm, setShortTerm] = useState("");
+  const [campusAddress, setCampusAddress] = useState("");
+  const [branches, setBranches] = useState([]);
 
   useEffect(() => {
     if (!settings) return;
@@ -44,11 +56,38 @@ const RequirementUploader = () => {
     if (settings.title_color) setTitleColor(settings.title_color);
     if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
     if (settings.border_color) setBorderColor(settings.border_color);
+    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
+    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color);
+    if (settings.stepper_color) setStepperColor(settings.stepper_color);
 
-    // 🏷️ School Information
+    // 🏫 Logo
+    if (settings.logo_url) {
+      setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
+    } else {
+      setFetchedLogo(EaristLogo);
+    }
+
+    // 🏷️ School Info
     if (settings.company_name) setCompanyName(settings.company_name);
     if (settings.short_term) setShortTerm(settings.short_term);
+    if (settings.campus_address) setCampusAddress(settings.campus_address);
+
+    // ✅ Branches (JSON stored in DB)
+    if (settings.branches) {
+      setBranches(
+        typeof settings.branches === "string"
+          ? JSON.parse(settings.branches)
+          : settings.branches
+      );
+    }
+
   }, [settings]);
+
+  const getBranchLabel = (branchId) => {
+    const branch = branches.find((item) => String(item.id) === String(branchId));
+    return branch?.branch || "—";
+  };
+
 
   const [requirements, setRequirements] = useState([]); // ✅ dynamic requirements
 
@@ -452,163 +491,367 @@ const RequirementUploader = () => {
         </Alert>
       </Snackbar>
 
+      {/* ===== APPLICATION SUBMITTED SUCCESSFULLY DIALOG ===== */}
+      {/* ===== APPLICATION SUBMITTED SUCCESSFULLY DIALOG ===== */}
       <Dialog
         open={openModal}
         onClose={() => setOpenModal(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "16px",
+            overflow: "hidden",
+            minWidth: 420,
+            boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+            position: "relative",
+          },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: "bold", textAlign: "center" }}>
-          🎉 Application Submitted Successfully!
+
+        <DialogTitle
+          sx={{
+            bgcolor: settings?.header_color || "#1976d2",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "bold",
+            px: 3,
+            py: 2,
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box
+              sx={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: "50%",
+                width: 40,
+                height: 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20,
+                flexShrink: 0,
+              }}
+            >
+              <Typography fontSize={20}>🎉</Typography>
+            </Box>
+            <Box>
+              <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                Application Submitted Successfully!
+              </Typography>
+              <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                Your application has been received
+              </Typography>
+            </Box>
+          </Box>
         </DialogTitle>
 
-        <DialogContent>
-          <Typography sx={{ mt: 2, textAlign: "justify", fontSize: "16px" }}>
-            Congratulations! You have successfully submitted your application to{" "}
-            <strong>{companyName}</strong>.
-          </Typography>
+        <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
+          {/* Trophy ring */}
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 2.5, mt: 1 }}>
+            <Box
+              sx={{
+                width: 76, height: 76,
+                borderRadius: "50%",
+                backgroundColor: "rgba(255,255,255,0.9)",
+                border: `3px solid ${settings?.header_color || "#1976d2"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 34,
+                position: "relative",
+                "&::before": {
+                  content: '""',
+                  position: "absolute", inset: -7,
+                  borderRadius: "50%",
+                  border: `2px dashed ${settings?.header_color || "#1976d2"}`,
+                  opacity: 0.4,
+                  animation: "spin 8s linear infinite",
+                },
+                "@keyframes spin": { to: { transform: "rotate(360deg)" } },
+              }}
+            >
+              🎓
+            </Box>
+          </Box>
 
-          <Typography sx={{ mt: 2, textAlign: "justify", fontSize: "16px" }}>
-            Please wait for the <strong>Admission Office</strong> to contact you
-            regarding the evaluation of your original documents that you
-            uploaded.
-          </Typography>
+          <Box sx={{ textAlign: "center", mb: 2 }}>
+            <Typography sx={{ fontSize: 17, fontWeight: 700, color: "#1a1a1a", mb: 1 }}>
+              Congratulations, Applicant!
+            </Typography>
+            <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.65, mb: 1 }}>
+              Your application to{" "}
+              <strong style={{ color: settings?.header_color || "#1976d2" }}>
+                {companyName}
+              </strong>{" "}
+              has been successfully received.
+            </Typography>
+            <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.65 }}>
+              The{" "}
+              <strong style={{ color: settings?.header_color || "#1976d2" }}>
+                Admission Office
+              </strong>{" "}
+              will contact you regarding the evaluation of your submitted documents.
+            </Typography>
+          </Box>
 
-          <Typography sx={{ mt: 2, textAlign: "justify", fontSize: "15px" }}>
-            Kindly check your Gmail account and Applicant Dashboard regularly
-            for updates regarding your application status.
-          </Typography>
+          <Box sx={{ borderTop: "1px solid #e0e0e0", my: 2 }} />
+
+          {/* Info cards */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1 }}>
+            {[
+              {
+                icon: <EmailOutlinedIcon sx={{ fontSize: 18, color: settings?.header_color || "#1976d2", flexShrink: 0 }} />,
+                label: "Check your Gmail for email updates from the Admission Office.",
+              },
+              {
+                icon: <DashboardOutlinedIcon sx={{ fontSize: 18, color: settings?.header_color || "#1976d2", flexShrink: 0 }} />,
+                label: "Monitor your Applicant Dashboard for real-time status updates.",
+              },
+            ].map((item, i) => (
+              <Box
+                key={i}
+                sx={{
+                  flex: 1,
+                  backgroundColor: "#f0f7ff",
+                  borderLeft: `3px solid ${settings?.header_color || "#1976d2"}`,
+                  borderRadius: "0 9px 9px 0",
+                  p: 1.5,
+                  display: "flex", gap: 1, alignItems: "flex-start",
+                }}
+              >
+                {item.icon}
+                <Typography sx={{ fontSize: 12.5, color: "#333", lineHeight: 1.5 }}>
+                  {item.label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         </DialogContent>
 
-        <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5 }}>
           <Button
+            fullWidth
             variant="contained"
+            endIcon={<ArrowForwardIcon />}
             onClick={() => {
               setOpenModal(false);
-
               window.location.href = "/applicant_dashboard";
             }}
-
             sx={{
-              fontWeight: "bold",
+              height: 44,
+              borderRadius: "10px",
+              backgroundColor: settings?.header_color || "#1976d2",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
               textTransform: "none",
-              minWidth: "120px",
+              boxShadow: "none",
+              "&:hover": {
+                backgroundColor: settings?.header_color || "#1976d2",
+                opacity: 0.9,
+                boxShadow: "none",
+              },
             }}
           >
-            Close
+            Go to Applicant Dashboard
           </Button>
         </DialogActions>
       </Dialog>
 
+
+      {/* ===== REVIEW UPLOADED REQUIREMENTS DIALOG ===== */}
       <Dialog
         open={openConfirmModal}
         onClose={() => setOpenConfirmModal(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "16px",
+            overflow: "hidden",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+          },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: "bold", textAlign: "center" }}>
-          📄 Review Your Uploaded Requirements
+        <DialogTitle
+          sx={{
+            bgcolor: settings?.header_color || "#1976d2",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "bold",
+            px: 3,
+            py: 2,
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box
+              sx={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: "50%",
+                width: 40,
+                height: 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20,
+                flexShrink: 0,
+              }}
+            >
+              <Typography fontSize={20}>📄</Typography>
+            </Box>
+            <Box>
+              <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                Review Your Uploaded Requirements
+              </Typography>
+              <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                Check all documents carefully before submitting
+              </Typography>
+            </Box>
+          </Box>
         </DialogTitle>
 
-        <DialogContent>
-          <Typography sx={{ mb: 2, textAlign: "center" }}>
-            Please review your uploaded documents before final submission.
-          </Typography>
-
-          {/* 🔹 Requirements List */}
-          {requirements
-            .filter((r) => r.category === "Main")
-            .map((doc) => {
-              const uploaded = uploads.find(
-                (u) => Number(u.requirements_id) === Number(doc.id),
-              );
-
-              return (
-                <Box
-                  key={doc.id}
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    border: "1px solid #ccc",
-                    borderRadius: "8px",
-                    p: 1.5,
-                    mb: 1,
-                  }}
-                >
-                  <Box>
-                    <Typography sx={{ fontWeight: "bold" }}>
-                      {doc.description}
-                    </Typography>
-
-                    <Typography sx={{ fontSize: "13px", color: "#555" }}>
-                      {uploaded?.original_name || "No file uploaded"}
-                    </Typography>
-                  </Box>
-
-                  {uploaded && (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<VisibilityIcon />}
-                      href={`${API_BASE_URL}/ApplicantOnlineDocuments/${uploaded.file_path}`}
-                      target="_blank"
-                    >
-                      Preview
-                    </Button>
-                  )}
-                </Box>
-              );
-            })}
-
-          {/* 🔔 Notice */}
+        <DialogContent sx={{ pt: 2.5, px: 3, pb: 1 }}>
+          {/* Warning notice */}
           <Box
             sx={{
-              mt: 3,
-              p: 2,
-              backgroundColor: "#fff3cd",
-              border: "1px solid #ffeeba",
+              border: "1px solid #f5a623",
               borderRadius: "8px",
+              p: 1.5,
+              mb: 2.5,
+              mt: 2,
+              display: "flex",
+              gap: 1,
+              alignItems: "flex-start",
+              backgroundColor: "#fffbf2",
             }}
           >
-            <Typography sx={{ fontSize: "14px" }}>
-              ⚠ <strong>Notice:</strong> Please ensure that all uploaded
-              documents are correct and clear.
+            <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+            <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
+              <strong>Notice:</strong> Ensure all uploaded documents are{" "}
+              <strong>correct, clear, and valid</strong>. Incomplete or unclear
+              files may delay the processing of your admission application.
             </Typography>
+          </Box>
+
+          {/* Document list */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
+            {requirements
+              .filter((r) => r.category === "Main")
+              .map((doc) => {
+                const uploaded = uploads.find(
+                  (u) => Number(u.requirements_id) === Number(doc.id)
+                );
+                return (
+                  <Box
+                    key={doc.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      backgroundColor: uploaded ? "#f0fff4" : "#fafafa",
+                      border: uploaded ? "1px solid #4caf50" : "1px solid #e0e0e0",
+                      borderRadius: "10px",
+                      p: "10px 14px",
+                      transition: "border-color 0.2s",
+                    }}
+                  >
+                    {/* Status circle */}
+                    <Box
+                      sx={{
+                        width: 36, height: 36,
+                        borderRadius: "50%",
+                        backgroundColor: uploaded ? "#4caf50" : "#e0e0e0",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Typography fontSize={16} color="white" fontWeight="bold">
+                        {uploaded ? "✓" : "–"}
+                      </Typography>
+                    </Box>
+
+                    {/* Info */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 13.5, fontWeight: 600, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {doc.description}
+                      </Typography>
+                      <Typography sx={{ fontSize: 11.5, color: uploaded ? "#2e7d32" : "#999", mt: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {uploaded?.original_name || "No file uploaded"}
+                      </Typography>
+                    </Box>
+
+                    {/* Action */}
+                    {uploaded ? (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        href={`${API_BASE_URL}/ApplicantOnlineDocuments/${uploaded.file_path}`}
+                        target="_blank"
+                        startIcon={<VisibilityIcon />}
+                        sx={{
+                          color: "white",
+                          fontWeight: "bold",
+                          height: "40px",
+                          textTransform: "none",
+                          minWidth: "140px",
+                        }}
+                      >
+                        Preview
+                      </Button>
+                    ) : (
+                      <Chip
+                        label="Missing"
+                        size="small"
+                        sx={{
+                          height: 24, fontSize: 11, fontWeight: 700,
+                          backgroundColor: "#FEE2E2", color: "#B91C1C",
+                          borderRadius: "6px", flexShrink: 0,
+                          "& .MuiChip-label": { px: 1.2 },
+                        }}
+                      />
+                    )}
+                  </Box>
+                );
+              })}
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 2 }}>
-          {/* Cancel */}
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, display: "flex", justifyContent: "space-between" }}>
           <Button
             color="error"
             variant="outlined"
-
             onClick={() => setOpenConfirmModal(false)}
+
           >
             Cancel
           </Button>
 
-          {/* Final Submit */}
           <Button
             variant="contained"
-            color="success"
+            endIcon={<SendIcon />}
             onClick={() => {
-              // ✅ VALIDATION
-              if (!isFormValid()) {
-                return;
-              }
-
-              // Close review modal
+              if (!isFormValid()) return;
               setOpenConfirmModal(false);
-
-              // Mark completed
               localStorage.setItem("requirementsCompleted", "1");
-
-              // Show Congratulations dialog
               setOpenModal(true);
             }}
+            sx={{
+              minWidth: 200,
+              height: 42,
 
+              backgroundColor: settings?.header_color || "#1976d2",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": {
+                backgroundColor: settings?.header_color || "#1976d2",
+                opacity: 0.9,
+                boxShadow: "none",
+              },
+            }}
           >
             Submit Requirements
           </Button>

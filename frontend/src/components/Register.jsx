@@ -36,7 +36,7 @@ import API_BASE_URL from "../apiConfig";
 import AnnouncementSlider from "../components/AnnouncementSlider";
 import RedirectLoading from "../components/RedirectLoading";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-
+import Autocomplete from "@mui/material/Autocomplete";
 import CampaignIcon from "@mui/icons-material/Campaign";
 
 const Register = () => {
@@ -537,20 +537,34 @@ const Register = () => {
 
   const selectedBranch = branches.find((b) => b.id.toString() === branchId);
 
-  const filteredCurriculum = curriculumOptions.filter((item) => {
-    if (branchId && Number(item.components) !== Number(branchId)) {
-      return false;
-    }
+  const filteredCurriculum = React.useMemo(() => {
+    const filtered = curriculumOptions.filter((item) => {
+      if (branchId && Number(item.components) !== Number(branchId)) {
+        return false;
+      }
 
-    if (
-      academicProgram &&
-      Number(item.academic_program) !== Number(academicProgram)
-    ) {
-      return false;
-    }
+      if (
+        academicProgram &&
+        Number(item.academic_program) !== Number(academicProgram)
+      ) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+
+    // REMOVE DUPLICATES
+    const uniqueMap = new Map();
+
+    filtered.forEach((item) => {
+      // use curriculum_id as unique key
+      if (!uniqueMap.has(item.curriculum_id)) {
+        uniqueMap.set(item.curriculum_id, item);
+      }
+    });
+
+    return Array.from(uniqueMap.values());
+  }, [curriculumOptions, branchId, academicProgram]);
 
   const handleKeyDownRegister = (e) => {
     if (e.key === "Enter" && !isSubmitting) {
@@ -1001,19 +1015,29 @@ const Register = () => {
               </div>
 
               <div className="TextField" style={{ position: "relative" }}>
-                <label style={{ color: "black" }}>Course Applied<span style={{ color: "red" }}> *</span></label>
-                <select
-                  required
-                  value={selectedCurriculum}
+                <label style={{ color: "black" }}>
+                  Course Applied<span style={{ color: "red" }}> *</span>
+                </label>
+
+                <Autocomplete
                   disabled={fieldDisabled || !academicProgram}
-                  onChange={(e) => {
-                    const value = e.target.value;
+                  options={filteredCurriculum}
+                  getOptionLabel={(option) =>
+                    `(${option.program_code}): ${option.program_description}${option.major ? ` (${option.major})` : ""
+                    } (${getBranchLabel(option.components)})`
+                  }
+                  value={
+                    filteredCurriculum.find(
+                      (c) => String(c.curriculum_id) === String(selectedCurriculum)
+                    ) || null
+                  }
+                  onChange={(event, selected) => {
+                    if (!selected) {
+                      setSelectedCurriculum("");
+                      return;
+                    }
 
-                    const selected = filteredCurriculum.find(
-                      (c) => String(c.curriculum_id) === String(value)
-                    );
-
-                    const availability = availabilityMap[selected?.curriculum_id];
+                    const availability = availabilityMap[selected.curriculum_id];
                     const isFull = availability?.isFull;
 
                     if (isFull) {
@@ -1025,65 +1049,70 @@ const Register = () => {
                       return;
                     }
 
-                    setSelectedCurriculum(value);
+                    setSelectedCurriculum(selected.curriculum_id);
                   }}
-                  className="border"
-                  style={{
-                    paddingLeft: "1rem",
-                    height: "45px",
-                    border: errors.selectedCurriculum
-                      ? "2px solid red"
-                      : "2px solid black",
-                    width: "100%",
-                    appearance: "none",
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
-                  }}
-                >
-                  <option value="">Select Curriculum / Course</option>
-
-                  {filteredCurriculum.map((item, index) => {
-                    const availability = availabilityMap[item.curriculum_id];
+                  isOptionEqualToValue={(option, value) =>
+                    option.curriculum_id === value.curriculum_id
+                  }
+                  getOptionDisabled={(option) =>
+                    availabilityMap[option.curriculum_id]?.isFull
+                  }
+                  renderOption={(props, option) => {
+                    const availability = availabilityMap[option.curriculum_id];
                     const remaining = availability?.remaining ?? 0;
                     const isFull = availability?.isFull;
 
                     return (
-                      <option
-                        key={index}
-                        value={item.curriculum_id}
-                        disabled={isFull}
+                      <li
+                        {...props}
                         style={{
                           color: isFull ? "red" : "green",
-                          fontWeight: isFull ? "normal" : "normal",
                         }}
                       >
-                        {`(${item.program_code}): ${item.program_description}${item.major ? ` (${item.major})` : ""
-                          } (${getBranchLabel(item.components)})`}
+                        {`(${option.program_code}): ${option.program_description}${option.major ? ` (${option.major})` : ""
+                          } (${getBranchLabel(option.components)})`}
                         {isFull
                           ? " — FULL (0 slots left)"
                           : ` — (${remaining} slots left)`}
-                      </option>
+                      </li>
                     );
-                  })}
-                </select>
-
-                {errors.selectedCurriculum && (
-                  <span style={{ color: "red", fontSize: "12px" }}>
-                    This field is required
-                  </span>
-                )}
-                <ArrowDropDownIcon
-                  sx={{
-                    position: "absolute",
-                    right: "10px",
-                    top: getIconTop(errors.selectedCurriculum),
-                    transform: "translateY(-50%)",
-                    fontSize: "30px",
-                    color: "black",
-                    pointerEvents: "none",
                   }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      required
+                      placeholder="Select Curriculum / Course"
+                      error={!!errors.selectedCurriculum}
+                      helperText={
+                        errors.selectedCurriculum
+                          ? "This field is required"
+                          : ""
+                      }
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          height: "45px",
+                          "& fieldset": {
+                            border: errors.selectedCurriculum
+                              ? "2px solid red"
+                              : "2px solid black",
+                          },
+                          "&:hover fieldset": {
+                            border: errors.selectedCurriculum
+                              ? "2px solid red"
+                              : "2px solid black",
+                          },
+                          "&.Mui-focused fieldset": {
+                            border: errors.selectedCurriculum
+                              ? "2px solid red"
+                              : "2px solid black",
+                          },
+                        },
+                      }}
+                    />
+                  )}
                 />
               </div>
+
 
               <div style={{ display: "flex", alignItems: "center", margin: "1.5rem 0" }}>
                 <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
@@ -1540,7 +1569,7 @@ const Register = () => {
           </Alert>
         </Snackbar>
 
-        {/* Important Reminder Dialog */}
+        {/* ===== 1. IMPORTANT REMINDER DIALOG ===== */}
         <Dialog
           open={openReminder}
           onClose={() => setOpenReminder(false)}
@@ -1548,69 +1577,77 @@ const Register = () => {
           fullWidth
           PaperProps={{
             sx: {
-              borderRadius: "6px",
+              borderRadius: "16px",
               overflow: "hidden",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
+              minWidth: 420,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
             },
           }}
         >
           <DialogTitle
             sx={{
+              bgcolor: mainButtonColor,
+              color: "white",
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 1.5,
-              backgroundColor: "#f5f5f5",
-              borderBottom: "1px solid #e0e0e0",
-              py: 1.5,
-              px: 2.5,
+              fontWeight: "bold",
+              px: 3,
+              py: 2,
             }}
           >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                backgroundColor: "#f5a623",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <WarningAmberIcon sx={{ color: "#fff", fontSize: 16 }} />
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <Box
+                sx={{
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  borderRadius: "50%",
+                  width: 40,
+                  height: 40,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                }}
+              >
+                <WarningAmberIcon sx={{ color: "white", fontSize: 22 }} />
+              </Box>
+              <Box>
+                <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                  Important Reminder for Applicants
+                </Typography>
+                <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                  Please read before proceeding
+                </Typography>
+              </Box>
             </Box>
-            <Typography sx={{ fontWeight: 700, fontSize: "15px", color: "#222" }}>
-              Important Reminder for Applicants
-            </Typography>
           </DialogTitle>
 
           <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
-            <Typography
+            {/* Warning notice box */}
+            <Box
               sx={{
-                fontSize: "13.5px",
-                color: "#333",
-                lineHeight: 1.6,
-                mb: 1.5,
+                border: "1px solid #f5a623",
+                borderRadius: "8px",
+                p: 1.5,
+                mb: 2,
+                mt: 2,
+                display: "flex",
+                gap: 1,
+                alignItems: "flex-start",
+                backgroundColor: "#fffbf2",
               }}
             >
-              <Box sx={{ mt: 3 }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+              <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
                 Please ensure all information is accurate and complete. Submitting{" "}
                 <strong>multiple accounts or duplicate applications is strictly prohibited</strong>{" "}
                 and may result in automatic disqualification.
-              </Box>
-            </Typography>
+              </Typography>
+            </Box>
 
-            <Typography
-              sx={{
-                fontSize: "13.5px",
-                color: "#333",
-                lineHeight: 1.6,
-              }}
-            >
-              <Box sx={{ mt: 3 }}>
-                Each applicant must register and submit only one application. Await the official
-                announcement for screening results.
-              </Box>
+            <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6, mb: 2 }}>
+              Each applicant must register and submit only one application. Await the official
+              announcement for screening results.
             </Typography>
 
             <Box
@@ -1624,10 +1661,10 @@ const Register = () => {
                 borderRadius: "4px",
                 px: 1.5,
                 py: 1.25,
-                mt: 3,
+                mt: 2,
                 mb: 0.5,
                 cursor: "pointer",
-                "&:hover": { backgroundColor: "#fff5f5" },
+               
                 transition: "background 0.15s",
               }}
             >
@@ -1648,7 +1685,7 @@ const Register = () => {
             </Box>
           </DialogContent>
 
-          <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1, mt: 2 }}>
+          <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1, mt: 1 }}>
             <Button
               variant="contained"
               disabled={!agreeChecked}
@@ -1660,7 +1697,7 @@ const Register = () => {
                 fontSize: "14px",
                 px: 4,
                 py: 1.25,
-                borderRadius: "4px",
+
                 textTransform: "none",
                 letterSpacing: "0.02em",
                 boxShadow: "none",
@@ -1680,31 +1717,108 @@ const Register = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Registration Closed Dialog */}
-        <Dialog open={openClosedDialog} maxWidth="sm" fullWidth>
-          <DialogTitle sx={dialogStyles.title}>
-            🚫 Registration Closed
+
+        {/* ===== 2. REGISTRATION CLOSED DIALOG ===== */}
+        <Dialog
+          open={openClosedDialog}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: "16px",
+              overflow: "hidden",
+              minWidth: 420,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              bgcolor: "#7a0000",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              fontWeight: "bold",
+              px: 3,
+              py: 2,
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <Box
+                sx={{
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  borderRadius: "50%",
+                  width: 40,
+                  height: 40,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                }}
+              >
+                <Typography fontSize={20}>🚫</Typography>
+              </Box>
+              <Box>
+                <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                  Registration Closed
+                </Typography>
+                <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                  Applications are not being accepted
+                </Typography>
+              </Box>
+            </Box>
           </DialogTitle>
 
-          <DialogContent>
-            <Typography sx={{ fontSize: "16px", textAlign: "center" }}>
-              Registration is currently closed. Please wait for the official
-              announcement.
-            </Typography>
+          <DialogContent sx={{ px: 3, pt: 3, pb: 1 }}>
+            <Box textAlign="center" py={1}>
+              <Box
+                sx={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: "50%",
+                  backgroundColor: "#fff0f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 16px",
+                  border: "3px solid #f44336",
+                }}
+              >
+                <Typography fontSize={34}>🚫</Typography>
+              </Box>
+              <Typography fontWeight="bold" fontSize={17} color="#c62828" mb={1}>
+                Registration is Currently Closed
+              </Typography>
+              <Typography fontSize={13.5} color="#555" lineHeight={1.6}>
+                Please wait for the official announcement before attempting to register.
+              </Typography>
+            </Box>
           </DialogContent>
 
-          <DialogActions sx={dialogStyles.actions}>
+          <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1.5 }}>
             <Button
               variant="contained"
               onClick={() => navigate("/login_applicant")}
-              sx={dialogStyles.button}
+              sx={{
+                backgroundColor: "#7a0000",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: "14px",
+                px: 4,
+                py: 1.25,
+                borderRadius: "10px",
+                textTransform: "none",
+                boxShadow: "none",
+            
+              }}
             >
               Go to Login
             </Button>
           </DialogActions>
         </Dialog>
 
-        {/* Branch Admissions Closed Dialog */}
+
+        {/* ===== 3. BRANCH ADMISSIONS CLOSED DIALOG ===== */}
         <Dialog
           open={openBranchDialog}
           onClose={() => setOpenBranchDialog(false)}
@@ -1712,63 +1826,87 @@ const Register = () => {
           fullWidth
           PaperProps={{
             sx: {
-              borderRadius: "6px",
+              borderRadius: "16px",
               overflow: "hidden",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
+              minWidth: 420,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
             },
           }}
         >
           <DialogTitle
             sx={{
+              bgcolor: mainButtonColor,
+              color: "white",
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 1.5,
-              backgroundColor: "#f5f5f5",
-              borderBottom: "1px solid #e0e0e0",
-              py: 1.5,
-              px: 2.5,
+              fontWeight: "bold",
+              px: 3,
+              py: 2,
             }}
           >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                backgroundColor: "#f5a623",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <CampaignIcon sx={{ color: "#fff", fontSize: 16 }} />
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <Box
+                sx={{
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  borderRadius: "50%",
+                  width: 40,
+                  height: 40,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CampaignIcon sx={{ color: "white", fontSize: 22 }} />
+              </Box>
+              <Box>
+                <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                  Admissions Currently Closed
+                </Typography>
+                <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                  This campus is not accepting applications
+                </Typography>
+              </Box>
             </Box>
-            <Typography sx={{ fontWeight: 700, fontSize: "15px", color: "#222" }}>
-              Admissions Currently Closed
-            </Typography>
           </DialogTitle>
 
           <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
-            <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6, mb: 1.5, mt: 3 }}>
-              We sincerely apologize that during this time, this campus is not currently
-              accepting applications. Registration is only available during the officially
-              designated hours, and any submissions outside this period cannot be processed.
-            </Typography>
+            {/* Warning notice */}
+            <Box
+              sx={{
+                border: "1px solid #f5a623",
+                borderRadius: "8px",
+                p: 1.5,
+                mb: 2,
+                mt: 2,
+                display: "flex",
+                gap: 1,
+                alignItems: "flex-start",
+                backgroundColor: "#fffbf2",
+              }}
+            >
+              <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+              <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
+                Registration is only available during the officially designated hours.
+                Submissions outside this period <strong>cannot be processed</strong>.
+              </Typography>
+            </Box>
 
-            <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6, mb: 1.5 }}>
               Kindly return during the authorized registration hours to complete your
               application. We highly encourage reviewing the official schedule to ensure
               timely submission.
             </Typography>
 
+            {/* Registration hours box */}
             {selectedBranch?.start_date && selectedBranch?.end_date && (
               <Box
                 sx={{
                   textAlign: "center",
-                  mt: 3,
+                  mt: 2,
                   p: 2,
                   background: "#fff9ec",
-                  borderRadius: "4px",
+                  borderRadius: "8px",
                   border: "1.5px solid #e2e8f0",
                 }}
               >
@@ -1811,8 +1949,8 @@ const Register = () => {
 
             <Typography
               sx={{
-                fontSize: "13.5px",
-                color: "#333",
+                fontSize: "13px",
+                color: "#888",
                 lineHeight: 1.6,
                 textAlign: "center",
                 fontStyle: "italic",
@@ -1824,28 +1962,48 @@ const Register = () => {
             </Typography>
           </DialogContent>
 
-          <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1 }}>
+          <DialogActions
+            sx={{
+              px: 3,
+              pb: 2.5,
+              pt: 1.5,
+              gap: 1.5,
+              display: "flex",
+            }}
+          >
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => setOpenBranchDialog(false)}
+              fullWidth
+              sx={{
+                height: 48,
+              
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "14px",
+              }}
+            >
+              Close
+            </Button>
+
             <Button
               variant="contained"
-              onClick={() => setOpenBranchDialog(false)}
+              onClick={() => navigate("/login_applicant")}
+              fullWidth
               sx={{
+                height: 48,
                 backgroundColor: mainButtonColor,
                 color: "#fff",
                 fontWeight: 600,
                 fontSize: "14px",
-                px: 4,
-                py: 1.25,
-                borderRadius: "4px",
+            
                 textTransform: "none",
-                letterSpacing: "0.02em",
                 boxShadow: "none",
-                "&:hover": {
-                  backgroundColor: mainButtonColor,
-                  boxShadow: "none",
-                },
+            
               }}
             >
-              Okay
+              Go to Login
             </Button>
           </DialogActions>
         </Dialog>

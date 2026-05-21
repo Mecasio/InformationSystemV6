@@ -95,41 +95,8 @@ const isDifferent = (oldVal, newVal) => {
 };
 
 const formatResultStatus = (value) => {
-  if (value === null || value === undefined || value === "") return "No Result";
-
-  const normalized = Number(value);
-  if (normalized === 1) return "Passed";
-  if (normalized === 0) return "Failed";
-
-  return String(value);
-};
-
-const normalizeCollegeApprovalStatus = (value) => {
-  const normalized = String(value ?? "").trim().toLowerCase();
-
-  if (normalized === "1" || normalized === "accepted") return 1;
-  if (normalized === "2" || normalized === "rejected") return 2;
-  if (
-    normalized === "0" ||
-    normalized === "waiting list" ||
-    normalized === "waiting_list" ||
-    normalized === "on process" ||
-    normalized === ""
-  ) {
-    return 0;
-  }
-
-  return value;
-};
-
-const formatCollegeApprovalStatus = (value) => {
-  const normalized = normalizeCollegeApprovalStatus(value);
-
-  if (Number(normalized) === 1) return "Accepted";
-  if (Number(normalized) === 2) return "Rejected";
-  if (Number(normalized) === 0) return "Waiting List";
-
-  return String(value ?? "NONE");
+  if (value === null || value === undefined || value === "") return null;
+  return Number(value);
 };
 
 const formatAuditActorRole = (role) => {
@@ -249,11 +216,7 @@ router.get("/api/applicants-with-number", async (req, res) => {
         er.final_rating,
         er.status AS exam_status,
 
-        CASE
-          WHEN ia.status = 1 OR ia.status = 'Accepted' THEN 'Accepted'
-          WHEN ia.status = 2 OR ia.status = 'Rejected' THEN 'Rejected'
-          ELSE 'Waiting List'
-        END AS college_approval_status,
+        COALESCE(CAST(ia.status AS UNSIGNED), 0) AS college_approval_status,
         ia.action,
         ia.email_sent,
         ia.qualifying_status,
@@ -331,7 +294,7 @@ router.get("/api/applicants-with-number", async (req, res) => {
         exam_status:
           row.exam_status !== null && row.exam_status !== undefined
             ? row.exam_status
-            : "Pending",
+            : null,
       };
     });
 
@@ -370,8 +333,8 @@ router.put("/api/interview_applicants/assign-max", async (req, res) => {
     // Insert/update into interview_applicants with action = 1
     for (const applicant of topApplicants) {
       await db.query(
-        `INSERT INTO interview_applicants (applicant_id, action, email_sent)
-         VALUES (?, 1, 0)
+        `INSERT INTO interview_applicants (applicant_id, action, email_sent, status)
+         VALUES (?, 1, 0, 0)
          ON DUPLICATE KEY UPDATE action = 1`,
         [applicant.applicant_id],
       );
@@ -410,8 +373,8 @@ router.put("/api/interview_applicants/assign-custom", async (req, res) => {
     // Insert/update into interview_applicants with action = 1
     for (const applicant of topApplicants) {
       await db.query(
-        `INSERT INTO interview_applicants (applicant_id, action, email_sent)
-         VALUES (?, 1, 0)
+        `INSERT INTO interview_applicants (applicant_id, action, email_sent, status)
+         VALUES (?, 1, 0, 0)
          ON DUPLICATE KEY UPDATE action = 1`,
         [applicant.applicant_id],
       );
@@ -540,21 +503,22 @@ router.post(
       const hasStatusPayload =
         status !== undefined && String(status).trim() !== "";
 
-      const newStatus = hasStatusPayload
-        ? normalizeCollegeApprovalStatus(status)
-        : oldStatus;
+      const newStatus = hasStatusPayload ? Number(status) : Number(oldStatus ?? 0);
+
+      if (hasStatusPayload && ![0, 1, 2].includes(newStatus)) {
+        return res.status(400).json({ error: "Status must be 0, 1, or 2" });
+      }
 
       const statusIsLocked =
-        Number(oldStatusRows[0]?.email_sent) === 1 ||
         Number(oldStatusRows[0]?.applicant_interview_status) === 1;
 
       if (
         hasStatusPayload &&
         statusIsLocked &&
-        isDifferent(normalizeCollegeApprovalStatus(oldStatus), newStatus)
+        isDifferent(Number(oldStatus ?? 0), newStatus)
       ) {
         return res.status(409).json({
-          error: "Status can no longer be changed after email has been sent.",
+          error: "Status can no longer be changed after interview_status is set.",
         });
       }
 
@@ -597,9 +561,9 @@ router.post(
         );
       }
 
-      if (isDifferent(normalizeCollegeApprovalStatus(oldStatus), newStatus)) {
+      if (hasStatusPayload && isDifferent(Number(oldStatus ?? 0), newStatus)) {
         changes.push(
-          `Status: ${formatCollegeApprovalStatus(oldStatus)} -> ${formatCollegeApprovalStatus(newStatus)}`
+          `Status: ${Number(oldStatus ?? 0)} -> ${newStatus}`
         );
       }
 

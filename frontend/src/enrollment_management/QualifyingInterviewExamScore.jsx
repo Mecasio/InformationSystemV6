@@ -211,33 +211,18 @@ const QualifyingExamScore = () => {
     }
   };
 
-  const normalizeCollegeApprovalStatusLabel = (value) => {
-    const normalized = String(value ?? "").trim().toLowerCase();
-
-    if (normalized === "1" || normalized === "accepted") return "Accepted";
-    if (normalized === "2" || normalized === "rejected") return "Rejected";
-    if (
-      normalized === "0" ||
-      normalized === "waiting list" ||
-      normalized === "waiting_list" ||
-      normalized === "on process" ||
-      normalized === ""
-    ) {
-      return "Waiting List";
-    }
-
-    return "Waiting List";
+  const COLLEGE_APPROVAL_STATUS = {
+    WAITING_LIST: 0,
+    ACCEPTED: 1,
+    REJECTED: 2,
   };
 
   const isCollegeStatusLocked = (person) =>
-    Number(person?.applicant_interview_status) === 1 ||
-    Number(person?.email_sent) === 1;
+    Number(person?.applicant_interview_status) === 1;
 
   const buildPayload = (person, overrides = {}, options = {}) => {
     const edits = { ...(editScores[person.person_id] || {}), ...overrides };
-    const selectedStatus = normalizeCollegeApprovalStatusLabel(
-      edits.status ?? person.college_approval_status
-    );
+    const selectedStatus = Number(edits.status ?? person.college_approval_status ?? 0);
     const includeStatus = options.includeStatus !== false;
 
     return {
@@ -501,9 +486,7 @@ const QualifyingExamScore = () => {
       const withAssignedFlag = data.map((p) => ({
         ...p,
         assigned: false,
-        college_approval_status: normalizeCollegeApprovalStatusLabel(
-          p.college_approval_status
-        ),
+        college_approval_status: Number(p.college_approval_status ?? 0),
         qualifying_exam_score: Number(p.qualifying_exam_score) || 0,
         qualifying_interview_score: Number(p.qualifying_interview_score) || 0,
         qualifying_status: p.qualifying_status ?? null,           // ✅ NEW
@@ -889,9 +872,7 @@ const QualifyingExamScore = () => {
             qualifying_interview_score:
               res.data.qualifying_interview_score ?? 0,
             final_rating: res.data.final_rating ?? 0,
-            college_approval_status: normalizeCollegeApprovalStatusLabel(
-              res.data.college_approval_status
-            ),
+            college_approval_status: Number(res.data.college_approval_status ?? 0),
             qualifying_status: res.data.qualifying_status ?? null,
             interview_status_result: res.data.interview_status_result ?? null,
           };
@@ -911,14 +892,14 @@ const QualifyingExamScore = () => {
 
 
   const handleStatusChange = async (applicantId, newStatus) => {
-    const nextStatus = normalizeCollegeApprovalStatusLabel(newStatus);
+    const nextStatus = Number(newStatus);
     try {
       const targetPerson = persons.find((p) => p.applicant_number === applicantId);
 
       if (isCollegeStatusLocked(targetPerson)) {
         setSnack({
           open: true,
-          message: "Status can no longer be changed after email has been sent.",
+          message: "Status can no longer be changed after interview_status is set.",
           severity: "warning",
         });
         return;
@@ -985,7 +966,10 @@ const QualifyingExamScore = () => {
 
       setSnack({
         open: true,
-        message: "Failed to update status.",
+        message:
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to update status.",
         severity: "error",
       });
     }
@@ -1173,9 +1157,9 @@ const QualifyingExamScore = () => {
         (item) => item.curriculum_id?.toString() === person.program?.toString()
       )?.program_code ?? "N/A"}</td>
                   <td>${qualifyingExam}</td>
-              <td>${person.qualifying_status === 1 ? "Passed" : person.qualifying_status === 0 ? "Failed" : "—"}</td>
+              <td>${person.qualifying_status ?? "—"}</td>
                   <td>${qualifyingInterview}</td>
-<td>${person.interview_status_result === 1 ? "Passed" : person.interview_status_result === 0 ? "Failed" : "—"}</td>
+<td>${person.interview_status_result ?? "—"}</td>
                   <td>${computedTotalAve.toFixed(2)}</td>
                   <td>${person.college_approval_status ?? "N/A"}</td>
                 </tr>
@@ -1290,7 +1274,7 @@ const QualifyingExamScore = () => {
               qualifying_exam_score: Number(patch.qualifying_result) || 0,
               qualifying_interview_score: Number(patch.interview_result) || 0,
               exam_result: Number(patch.exam_result) || 0,
-              college_approval_status: patch.college_approval_status,
+              college_approval_status: Number(patch.college_approval_status ?? 0),
             };
           })
         );
@@ -1447,6 +1431,7 @@ const QualifyingExamScore = () => {
   };
 
   const applyLocalCollegeStatusForApplicants = (applicantNumbers, status) => {
+    const nextStatus = Number(status);
     const applicantNumberSet = new Set(
       applicantNumbers.map((applicantNumber) => String(applicantNumber))
     );
@@ -1456,10 +1441,10 @@ const QualifyingExamScore = () => {
         applicantNumberSet.has(String(p.applicant_number))
           ? {
             ...p,
-            assigned: status === "Accepted",
-            college_approval_status: status,
+            assigned: nextStatus === COLLEGE_APPROVAL_STATUS.ACCEPTED,
+            college_approval_status: nextStatus,
             applicant_interview_status:
-              status === "Waiting List" ? 0 : p.applicant_interview_status,
+              nextStatus === COLLEGE_APPROVAL_STATUS.WAITING_LIST ? 0 : p.applicant_interview_status,
           }
           : p,
       ),
@@ -1472,7 +1457,7 @@ const QualifyingExamScore = () => {
         if (!p.person_id || !applicantNumberSet.has(String(p.applicant_number))) return;
         next[p.person_id] = {
           ...next[p.person_id],
-          status,
+          status: nextStatus,
         };
       });
 
@@ -1481,13 +1466,10 @@ const QualifyingExamScore = () => {
   };
 
   const getCurrentCollegeApprovalStatus = (personData) =>
-    normalizeCollegeApprovalStatusLabel(
-      editScores[personData.person_id]?.status ??
-      personData.college_approval_status
-    );
+    Number(editScores[personData.person_id]?.status ?? personData.college_approval_status ?? 0);
 
   const handleAssignSingle = (applicant_number) => {
-    applyLocalCollegeStatus(applicant_number, "Accepted");
+    applyLocalCollegeStatus(applicant_number, COLLEGE_APPROVAL_STATUS.ACCEPTED);
 
     axios
       .put(
@@ -1517,7 +1499,7 @@ const QualifyingExamScore = () => {
   const handleAssignMax = () => {
     // ✅ Get only unassigned applicants in the selected department
     const unassigned = persons.filter((p) => {
-      if (getCurrentCollegeApprovalStatus(p) === "Accepted") return false;
+      if (getCurrentCollegeApprovalStatus(p) === COLLEGE_APPROVAL_STATUS.ACCEPTED) return false;
 
       const programInfo = allCurriculums.find(
         (opt) => opt.curriculum_id?.toString() === p.program?.toString(),
@@ -1570,7 +1552,7 @@ const QualifyingExamScore = () => {
     const toAssign = unassigned.slice(0, maxToAssign);
 
     const applicantNumbersToAssign = toAssign.map((a) => a.applicant_number);
-    applyLocalCollegeStatusForApplicants(applicantNumbersToAssign, "Accepted");
+    applyLocalCollegeStatusForApplicants(applicantNumbersToAssign, COLLEGE_APPROVAL_STATUS.ACCEPTED);
 
     axios
       .put(`${API_BASE_URL}/api/interview_applicants/assign`, {
@@ -1608,7 +1590,7 @@ const QualifyingExamScore = () => {
 
     // ✅ Get only unassigned applicants in the selected department
     const unassigned = persons.filter((p) => {
-      if (getCurrentCollegeApprovalStatus(p) === "Accepted") return false;
+      if (getCurrentCollegeApprovalStatus(p) === COLLEGE_APPROVAL_STATUS.ACCEPTED) return false;
 
       const programInfo = allCurriculums.find(
         (opt) => opt.curriculum_id?.toString() === p.program?.toString(),
@@ -1687,7 +1669,7 @@ const QualifyingExamScore = () => {
 
     // ✅ Update persons list (mark assigned)
     const applicantNumbersToAssign = toAssign.map((a) => a.applicant_number);
-    applyLocalCollegeStatusForApplicants(applicantNumbersToAssign, "Accepted");
+    applyLocalCollegeStatusForApplicants(applicantNumbersToAssign, COLLEGE_APPROVAL_STATUS.ACCEPTED);
 
     axios
       .put(`${API_BASE_URL}/api/interview_applicants/assign`, {
@@ -1709,7 +1691,7 @@ const QualifyingExamScore = () => {
   };
 
   const handleUnassignImmediate = (applicant_number) => {
-    applyLocalCollegeStatus(applicant_number, "Waiting List");
+    applyLocalCollegeStatus(applicant_number, COLLEGE_APPROVAL_STATUS.WAITING_LIST);
 
     axios
       .put(
@@ -1717,13 +1699,12 @@ const QualifyingExamScore = () => {
         auditPayload({ assignment_mode: "single" }),
       )
       .then((res) => {
-        console.log("Unassign response:", res.data);
-
         setSnack({
           open: true,
           message: `Applicant ${applicant_number} unassigned.`,
           severity: "info",
         });
+        console.log("Unassign response:", res.data);
       })
       .catch((err) => {
         console.error("Failed to unassign applicant:", err);
@@ -1742,7 +1723,7 @@ const QualifyingExamScore = () => {
       prev.map((p) => ({
         ...p,
         assigned: false,
-        college_approval_status: "Waiting List",
+        college_approval_status: COLLEGE_APPROVAL_STATUS.WAITING_LIST,
         applicant_interview_status: 0,
       })),
     );
@@ -1752,7 +1733,7 @@ const QualifyingExamScore = () => {
         if (!p.person_id) return;
         next[p.person_id] = {
           ...next[p.person_id],
-          status: "Waiting List",
+          status: COLLEGE_APPROVAL_STATUS.WAITING_LIST,
         };
       });
       return next;
@@ -2134,6 +2115,8 @@ Thank you, best regards
           senderName: emailSender,
           user_person_id: loggedInPersonId,
           applicant_number: applicant.applicant_number,
+          update_interview_status: true,
+          interview_status_value: 1,
           applicant_name: [
             applicant.first_name,
             applicant.middle_name,
@@ -2141,11 +2124,6 @@ Thank you, best regards
           ].filter(Boolean).join(" "),
           ...auditPayload(),
         });
-
-        // Mark as emailed
-        await axios.put(
-          `${API_BASE_URL}/api/interview_applicants/${applicant.applicant_number}/action`,
-        );
 
         successCount++;
         successfulApplicantNumbers.add(applicant.applicant_number);
@@ -2161,7 +2139,7 @@ Thank you, best regards
     setPersons((prev) =>
       prev.map((p) =>
         successfulApplicantNumbers.has(p.applicant_number)
-          ? { ...p, applicant_interview_status: 1, email_sent: 1, action: 1 }
+          ? { ...p, applicant_interview_status: 1 }
           : p,
       ),
     );
@@ -2183,7 +2161,7 @@ Thank you, best regards
       ? persons.filter((p) => p.applicant_number === selectedApplicant)
       : persons.filter(
         (p) =>
-          p.college_approval_status === "Accepted" &&
+          Number(p.college_approval_status) === COLLEGE_APPROVAL_STATUS.ACCEPTED &&
           Number(p.applicant_interview_status) !== 1,
       );
 
@@ -2221,6 +2199,8 @@ Thank you, best regards
           senderName: emailSender,
           user_person_id: userID,
           applicant_number: applicant.applicant_number,
+          update_interview_status: true,
+          interview_status_value: 1,
           applicant_name: [
             applicant.first_name,
             applicant.middle_name,
@@ -2228,11 +2208,6 @@ Thank you, best regards
           ].filter(Boolean).join(" "),
           ...auditPayload(),
         });
-
-        // Mark as emailed
-        await axios.put(
-          `${API_BASE_URL}/api/interview_applicants/${applicant.applicant_number}/action`,
-        );
 
         successCount++;
         successfulApplicantNumbers.add(applicant.applicant_number);
@@ -2248,7 +2223,7 @@ Thank you, best regards
     setPersons((prev) =>
       prev.map((p) =>
         successfulApplicantNumbers.has(p.applicant_number)
-          ? { ...p, applicant_interview_status: 1, email_sent: 1, action: 1 }
+          ? { ...p, applicant_interview_status: 1 }
           : p,
       ),
     );
@@ -2300,7 +2275,7 @@ Thank you, best regards
       }
 
       const unassigned = persons.filter((p) => {
-        if (getCurrentCollegeApprovalStatus(p) === "Accepted") return false;
+        if (getCurrentCollegeApprovalStatus(p) === COLLEGE_APPROVAL_STATUS.ACCEPTED) return false;
 
         const programInfo = allCurriculums.find(
           (opt) => opt.curriculum_id?.toString() === p.program?.toString(),
@@ -2377,7 +2352,7 @@ Thank you, best regards
       const toAssign = sortedUnassigned.slice(0, maxToAssign);
 
       const applicantNumbersToAssign = toAssign.map((a) => a.applicant_number);
-      applyLocalCollegeStatusForApplicants(applicantNumbersToAssign, "Accepted");
+      applyLocalCollegeStatusForApplicants(applicantNumbersToAssign, COLLEGE_APPROVAL_STATUS.ACCEPTED);
 
       axios
         .put(`${API_BASE_URL}/api/interview_applicants/assign`, {
@@ -3053,7 +3028,7 @@ Thank you, best regards
                 </FormControl>
               </Box>
 
-              {/* ✅ Accept Top N Waiting List */}
+              {/* Accept top N applicants with status 0 */}
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography
                   fontSize={13}
@@ -3664,6 +3639,7 @@ Thank you, best regards
                         }
                         size="small"
                         type="number"
+                        disabled={statusLocked}
                         sx={{ width: 70 }}
                       />
                     </TableCell>
@@ -3678,11 +3654,12 @@ Thank you, best regards
                           onChange={(e) =>
                             handleScoreChange(person, "qualifying_status", e.target.value === "" ? null : Number(e.target.value))
                           }
+                          disabled={statusLocked}
                           displayEmpty
                         >
                           <MenuItem value=""><em>—</em></MenuItem>
-                          <MenuItem value={1}>✅ Passed</MenuItem>
-                          <MenuItem value={0}>❌ Failed</MenuItem>
+                          <MenuItem value={0}>Passed</MenuItem>
+                          <MenuItem value={1}>Failed</MenuItem>
                         </Select>
                       </FormControl>
                     </TableCell>
@@ -3706,6 +3683,7 @@ Thank you, best regards
                         }
                         size="small"
                         type="number"
+                        disabled={statusLocked}
                         sx={{ width: 70 }}
                       />
                     </TableCell>
@@ -3724,11 +3702,12 @@ Thank you, best regards
                           onChange={(e) =>
                             handleScoreChange(person, "interview_status_result", e.target.value === "" ? null : Number(e.target.value))
                           }
+                          disabled={statusLocked}
                           displayEmpty
                         >
                           <MenuItem value=""><em>—</em></MenuItem>
-                          <MenuItem value={1}>✅ Passed</MenuItem>
-                          <MenuItem value={0}>❌ Failed</MenuItem>
+                          <MenuItem value={0}>Passed</MenuItem>
+                          <MenuItem value={1}>Failed</MenuItem> 
                         </Select>
                       </FormControl>
                     </TableCell>
@@ -3752,7 +3731,7 @@ Thank you, best regards
                     >
                       <FormControl fullWidth size="small">
                         <Select
-                          value={currentCollegeApprovalStatus}
+                          value={getCurrentCollegeApprovalStatus(person)}
                           onChange={(e) =>
                             handleStatusChange(
                               person.applicant_number,
@@ -3762,9 +3741,9 @@ Thank you, best regards
                           disabled={statusLocked}
                           displayEmpty
                         >
-                          <MenuItem value="Accepted">Accepted</MenuItem>
-                          <MenuItem value="Rejected">Rejected</MenuItem>
-                          <MenuItem value="Waiting List">Waiting List</MenuItem>
+                          <MenuItem value={1}>Accepted</MenuItem>
+                          <MenuItem value={2}>Rejected</MenuItem>
+                          <MenuItem value={0}>Waiting List</MenuItem>
                         </Select>
                       </FormControl>
                     </TableCell>
@@ -3803,6 +3782,7 @@ Thank you, best regards
                         color="primary"
                         size="small"
                         sx={{ width: "100px", height: "35px" }}
+                        disabled={statusLocked}
                         onClick={() => saveSingleRow(person)}
                       >
                         SAVE
@@ -3816,7 +3796,7 @@ Thank you, best regards
                         fontSize: "12px",
                       }}
                     >
-                      {currentCollegeApprovalStatus === "Accepted" ? (
+                      {currentCollegeApprovalStatus === COLLEGE_APPROVAL_STATUS.ACCEPTED ? (
                         Number(person.applicant_interview_status) === 1 ? (
                           <Button
                             variant="contained"

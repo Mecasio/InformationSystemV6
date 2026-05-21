@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import API_BASE_URL from "../apiConfig";
+import EaristLogo from "../assets/EaristLogo.png";
 import PersonIcon from "@mui/icons-material/Person";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -85,19 +86,29 @@ const semesterOrder = {
   Summer: 3,
 };
 
+const parseTerm = (term) => {
+  const parts = String(term || "").split(" ");
+  const yearLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : term;
+  const semesterLabel = parts.slice(2).join(" ");
+
+  return { yearLabel, semesterLabel };
+};
+
 const sortTerms = (terms) =>
   [...terms].sort((a, b) => {
-    const [yearA, ...semA] = a.split(" ");
-    const [yearB, ...semB] = b.split(" ");
-
-    const yA = yearOrder[yearA + " " + semA[0]] || yearOrder[yearA] || 0;
-    const yB = yearOrder[yearB + " " + semB[0]] || yearOrder[yearB] || 0;
+    const termA = parseTerm(a);
+    const termB = parseTerm(b);
+    const yA = yearOrder[termA.yearLabel] || 0;
+    const yB = yearOrder[termB.yearLabel] || 0;
 
     // ✅ DESCENDING YEAR (4th → 1st)
     if (yA !== yB) return yB - yA;
 
     // ✅ DESCENDING SEM (2nd → 1st → summer)
-    return semesterOrder[semB.join(" ")] - semesterOrder[semA.join(" ")];
+    return (
+      (semesterOrder[termB.semesterLabel] || 0) -
+      (semesterOrder[termA.semesterLabel] || 0)
+    );
   });
 // ─── Main Component ───────────────────────────────────────────────
 const StudentGradingPage = () => {

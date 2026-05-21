@@ -36,6 +36,7 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckIcon from "@mui/icons-material/Check";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import KeyboardBackspaceIcon from "@mui/icons-material/KeyboardBackspace";
+import EaristLogo from "../assets/EaristLogo.png";
 import API_BASE_URL from "../apiConfig";
 import { useParams } from "react-router-dom";
 // Add these imports at the top of ApplicantDashboard.jsx
@@ -256,9 +257,15 @@ const ApplicantDashboard = (props) => {
         }
       }
 
-      setQualifyingExamScore(qExam !== undefined ? qExam : null);
-      setQualifyingInterviewScore(qInterview !== undefined ? qInterview : null);
-      setExamScore(ex !== undefined ? ex : null);
+      setQualifyingExamScore(
+        qExam !== undefined && qExam !== null ? normalizeExamStatus(qExam) : null,
+      );
+      setQualifyingInterviewScore(
+        qInterview !== undefined && qInterview !== null
+          ? normalizeExamStatus(qInterview)
+          : null,
+      );
+      setExamScore(ex !== undefined && ex !== null ? normalizeExamStatus(ex) : null);
 
       console.info("final mapped scores:", { qExam, qInterview, ex });
     } catch (err) {
@@ -322,6 +329,17 @@ const ApplicantDashboard = (props) => {
     if (["PASSED", "PASS"].includes(normalized)) return "PASSED";
     if (["FAILED", "FAIL"].includes(normalized)) return "FAILED";
     return "PENDING";
+  };
+
+  const normalizeCollegeApproval = (status) => {
+    const normalized = String(status ?? "").trim().toUpperCase();
+    if (status === 1 || normalized === "1" || normalized === "ACCEPTED") {
+      return "Accepted";
+    }
+    if (status === 2 || normalized === "2" || normalized === "REJECTED") {
+      return "Rejected";
+    }
+    return "";
   };
 
   const fetchEntranceExamScores = async (applicantNumber) => {
@@ -393,9 +411,11 @@ const ApplicantDashboard = (props) => {
       const qInterview = res.data.interview_result ?? null;
       const ex = res.data.exam_result ?? null;
 
-      setQualifyingExamScore(qExam);
-      setQualifyingInterviewScore(qInterview);
-      setExamScore(ex);
+      setQualifyingExamScore(qExam !== null ? normalizeExamStatus(qExam) : null);
+      setQualifyingInterviewScore(
+        qInterview !== null ? normalizeExamStatus(qInterview) : null,
+      );
+      setExamScore(ex !== null ? normalizeExamStatus(ex) : null);
 
       setHasInterviewScores(
         qExam !== null || qInterview !== null || ex !== null,
@@ -419,7 +439,7 @@ const ApplicantDashboard = (props) => {
       const res = await axios.get(
         `${API_BASE_URL}/api/interview_applicants/${applicantNumber}`,
       );
-      setCollegeApproval(res.data?.status || "");
+      setCollegeApproval(normalizeCollegeApproval(res.data?.status));
     } catch (err) {
       console.error("❌ Failed to fetch college approval:", err);
     }
@@ -614,7 +634,7 @@ const ApplicantDashboard = (props) => {
   }, [year]);
 
   const [announcements, setAnnouncements] = useState([]);
-  
+
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
@@ -727,34 +747,18 @@ const ApplicantDashboard = (props) => {
     }
   }, []);
 
-  const backgroundImage = settings?.bg_image
-    ? `url(${API_BASE_URL}${settings.bg_image})`
-    : "linear-gradient(to right, #e0e0e0, #bdbdbd)";
 
   return (
     <Box
       sx={{
-        height: "calc(100vh - 100px)", // fixed viewport height
-        width: "100%",
-        backgroundImage,
-        backgroundRepeat: "no-repeat",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        position: "relative",
+        height: "calc(100vh - 150px)",
+        overflowY: "auto",
+        paddingRight: 1,
+        backgroundColor: "transparent",
+        mt: 1,
+        padding: 2,
       }}
     >
-      {/* Overlay */}
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.1)",
-          backdropFilter: "blur(0.5px)",
-          WebkitBackdropFilter: "blur(0.5px)",
-          zIndex: 0,
-          pointerEvents: "none",
-        }}
-      />
 
       {/* Scrollable content */}
       <Box
@@ -774,7 +778,7 @@ const ApplicantDashboard = (props) => {
                 border: `2px solid ${borderColor}`,
                 boxShadow: 3,
                 height: "135px",
-                width: "1485px",
+                width: "100%",
                 mt: 2,
                 backgroundColor: "#fff9ec",
                 marginLeft: "10px",
@@ -924,7 +928,7 @@ const ApplicantDashboard = (props) => {
                               "&:hover": {
                                 transform: "scale(1.05)",
                               },
-                              width: 245, // same width
+                              width: 263, // same width
                               height: 300, // same height
                               display: "flex",
                               justifyContent: "center",
@@ -1027,7 +1031,7 @@ const ApplicantDashboard = (props) => {
                       backgroundColor: "#fffaf5",
                       border: `2px solid ${borderColor}`,
                       boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
-                      width: "510px", // same width as the two cards together
+                      width: "540px", // same width as the two cards together
                     }}
                   >
                     {/* Icon */}
@@ -1048,12 +1052,17 @@ const ApplicantDashboard = (props) => {
                     </Box>
 
                     {/* Text */}
-                    <Typography sx={{ fontSize: "15px", fontFamily: "Arial" }}>
-                      <strong style={{ color: "maroon" }}>Notice:</strong>&nbsp;
-                      <Typography
-                        component="span"
-                        sx={{ color: "maroon", fontWeight: "bold" }}
-                      >
+                    <Typography
+                      sx={{
+                        fontSize: "15px",
+                        fontFamily: "Arial",
+                        fontWeight: "bold",
+                        color: "maroon",
+                      }}
+                    >
+                      <span>Notice:&nbsp;</span>
+
+                      <Typography component="span" sx={{ fontSize: "inherit", fontWeight: "inherit" }}>
                         {allRequirementsCompleted
                           ? "Your application is registered."
                           : "Please complete all required documents to register your application."}
@@ -1072,7 +1081,7 @@ const ApplicantDashboard = (props) => {
                   marginLeft: "10px",
                   boxShadow: 3,
                   p: 2,
-                  width: "490px",
+                  width: "550px",
                   height: "405px",
                   display: "flex",
                   border: `2px solid ${borderColor}`,
@@ -1463,7 +1472,7 @@ const ApplicantDashboard = (props) => {
               }}
             >
               <Typography
-                sx={{ fontSize: "42px", fontWeight: "bold", color: "white" }}
+                sx={{ fontSize: "42px", fontWeight: "bold", color: "black" }}
               >
                 APPLICATION STATUS
               </Typography>
@@ -1516,6 +1525,7 @@ const ApplicantDashboard = (props) => {
                             alignItems: "center",
                             justifyContent: "center",
                             margin: "0 auto",
+
                           }}
                         >
                           {React.cloneElement(icons[index], {
@@ -1535,7 +1545,7 @@ const ApplicantDashboard = (props) => {
                       sx={{
                         fontSize: "12px",
                         fontWeight: "bold",
-                        color: "white",
+                        color: "black",
                         textAlign: "center",
                       }}
                     >
@@ -1559,7 +1569,7 @@ const ApplicantDashboard = (props) => {
                     sx={{
                       height: 360,
                       width: "100%", // let it stretch with grid
-                      maxWidth: 205, // same size as before
+                      maxWidth: 230, // same size as before
                       border: `2px solid ${borderColor}`,
                       borderRadius: 2,
                       p: 2,
@@ -1794,56 +1804,81 @@ const ApplicantDashboard = (props) => {
             fullWidth
             PaperProps={{
               sx: {
-                borderRadius: "6px",
+                borderRadius: "16px",
                 overflow: "hidden",
-                boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
+                minWidth: 420,
+                boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
               },
             }}
           >
             <DialogTitle
               sx={{
+                bgcolor: mainButtonColor,
+                color: "white",
                 display: "flex",
                 alignItems: "center",
-                gap: 1.5,
-                backgroundColor: "#f5f5f5",
-                borderBottom: "1px solid #e0e0e0",
-                py: 1.5,
-                px: 2.5,
+                fontWeight: "bold",
+                px: 3,
+                py: 2,
               }}
             >
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  backgroundColor: "#f5a623",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <WarningAmberIcon sx={{ color: "#fff", fontSize: 16 }} />
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <Box
+                  sx={{
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                    borderRadius: "50%",
+                    width: 40,
+                    height: 40,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <WarningAmberIcon sx={{ color: "white", fontSize: 22 }} />
+                </Box>
+                <Box>
+                  <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
+                    Important Notice Before Proceeding
+                  </Typography>
+                  <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
+                    Please read carefully before continuing
+                  </Typography>
+                </Box>
               </Box>
-              <Typography sx={{ fontWeight: 700, fontSize: "15px", color: "#222" }}>
-                Important Notice Before Proceeding
-              </Typography>
             </DialogTitle>
 
             <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
+              {/* Warning notice box */}
+              <Box
+                sx={{
+                  border: "1px solid #f5a623",
+                  borderRadius: "8px",
+                  p: 1.5,
+                  mb: 2,
+                  mt: 2,
+                  display: "flex",
+                  gap: 1,
+                  alignItems: "flex-start",
+                  backgroundColor: "#fffbf2",
+                }}
+              >
+                <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+                <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
+                  Failure to complete the required information or document uploads may{" "}
+                  <strong>delay the evaluation of your application</strong>.
+                </Typography>
+              </Box>
 
-              <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6, mt: 2 }}>
+              <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
                 Welcome to the <strong>{companyName}</strong> Applicant Dashboard.
-              </Typography>
-
-              <Typography sx={{ mt: 1.5, fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
                 Before continuing, please make sure that you will:
               </Typography>
 
               <Box
                 sx={{
                   mt: 1.5,
-                  pl: 1.5,
+                  pl: 1,
                   display: "flex",
                   flexDirection: "column",
                   gap: 0.6,
@@ -1858,16 +1893,11 @@ const ApplicantDashboard = (props) => {
                   "Regularly check your Applicant Dashboard or Your provided Gmail Account for updates.",
                 ].map((item, i) => (
                   <Box key={i} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                    <Typography sx={{ fontSize: "13.5px", color: "#555", lineHeight: 1, mt: "2px" }}>•</Typography>
+                    <Typography sx={{ fontSize: "13.5px", color: "#555", lineHeight: 1, mt: "4px" }}>•</Typography>
                     <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>{item}</Typography>
                   </Box>
                 ))}
               </Box>
-
-              <Typography sx={{ mt: 1.5, fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
-                Failure to complete the required information or document uploads may delay
-                the evaluation of your application.
-              </Typography>
 
               <Box
                 component="label"
@@ -1880,7 +1910,7 @@ const ApplicantDashboard = (props) => {
                   borderRadius: "4px",
                   px: 1.5,
                   py: 1.25,
-                  mt: 2,
+                  mt: 2.5,
                   mb: 0.5,
                   cursor: "pointer",
                   "&:hover": { backgroundColor: "#fff5f5" },
@@ -1904,7 +1934,7 @@ const ApplicantDashboard = (props) => {
               </Box>
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1 }}>
+            <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1, mt: 1 }}>
               <Button
                 variant="contained"
                 disabled={!agreeChecked}
@@ -1916,7 +1946,7 @@ const ApplicantDashboard = (props) => {
                   fontSize: "14px",
                   px: 4,
                   py: 1.25,
-                  borderRadius: "4px",
+            
                   textTransform: "none",
                   letterSpacing: "0.02em",
                   boxShadow: "none",

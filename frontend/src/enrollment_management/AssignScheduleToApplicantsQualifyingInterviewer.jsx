@@ -1232,12 +1232,12 @@ ${requirementsSection}
           Promise.all(
             emailRes.sent.map((applicantId) =>
               axios.put(
-                `${API_BASE_URL}/api/interview_applicants/${applicantId}/action`,
+                `${API_BASE_URL}/api/interview_applicants/${applicantId}/email-sent`,
                 auditActor(),
               ),
             ),
           ).catch((err) => {
-            console.error("Failed to update interview_status:", err);
+            console.error("Failed to update email_sent:", err);
           });
         }
         fetchAllApplicants();

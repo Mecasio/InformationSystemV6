@@ -508,10 +508,14 @@ const SideBar = ({
       const updatedData = r === "faculty" ? upd.data[0] : upd.data;
       setPersonData(updatedData);
       setProfileImage(`${API_BASE_URL}/uploads/${uploadDir}/${updatedData.profile_image}?t=${Date.now()}`);
-    } catch { }
+    } catch (error) {
+      console.error("Profile upload failed:", error);
+    } finally {
+      e.target.value = "";
+    }
   };
   const uploadHandlers = {
-    registrar: makeUploadHandler("/admin/update_registrar", "Admin1by1"),
+    registrar: makeUploadHandler("/admin/update_registrar_profile", "Admin1by1"),
     applicant: makeUploadHandler("/form/upload-profile-picture", "Applicant1by1"),
     faculty: makeUploadHandler("/faculty/update_faculty", "Faculty1by1"),
     student: makeUploadHandler("/update_student", "Student1by1"),

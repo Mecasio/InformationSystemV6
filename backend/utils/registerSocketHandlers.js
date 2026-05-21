@@ -1293,15 +1293,7 @@ WHERE proctor LIKE ?
       // 1  Reset interview_applicants table
       await db.query(
         `UPDATE interview_applicants
-       SET schedule_id = NULL, email_sent = 0
-       WHERE applicant_id = ?`,
-        [applicant_id],
-      );
-
-      // 2  Reset person_status_table INTERVIEW STATUS
-      await db.query(
-        `UPDATE person_status_table
-       SET interview_status = NULL
+       SET schedule_id = NULL, email_sent = 0, action = 0
        WHERE applicant_id = ?`,
         [applicant_id],
       );
@@ -1368,7 +1360,7 @@ WHERE proctor LIKE ?
           //  4. Update only those applicants
           const [results] = await db.query(
             `UPDATE interview_applicants
-         SET schedule_id = ?
+         SET schedule_id = ?, action = 1
          WHERE applicant_id IN (?)`,
             [schedule_id, toAssign],
           );
@@ -1397,7 +1389,7 @@ WHERE proctor LIKE ?
       try {
         await db.query(
           `UPDATE interview_applicants
-         SET schedule_id = NULL
+         SET schedule_id = NULL, action = 0
          WHERE schedule_id = ?`,
           [schedule_id],
         );
@@ -1578,7 +1570,7 @@ WHERE proctor LIKE ?
                 err.message,
               );
               await db.query(
-                "UPDATE interview_applicants SET email_sent = -1 WHERE applicant_id = ?",
+                "UPDATE interview_applicants SET email_sent = 0 WHERE applicant_id = ?",
                 [row.applicant_number],
               );
               failed.push(row.applicant_number);
@@ -1827,14 +1819,14 @@ WHERE proctor LIKE ?
                 skipped.push(applicant_number); // already in this schedule
               } else {
                 await db.query(
-                  `UPDATE interview_applicants SET schedule_id = ? WHERE applicant_id = ?`,
+                  `UPDATE interview_applicants SET schedule_id = ?, action = 1 WHERE applicant_id = ?`,
                   [schedule_id, applicant_number],
                 );
                 updated.push(applicant_number);
               }
             } else {
               await db.query(
-                `INSERT INTO interview_applicants (applicant_id, schedule_id) VALUES (?, ?)`,
+                `INSERT INTO interview_applicants (applicant_id, schedule_id, action, email_sent, status) VALUES (?, ?, 1, 0, 0)`,
                 [applicant_number, schedule_id],
               );
               assigned.push(applicant_number);
@@ -4763,18 +4755,16 @@ WHERE proctor LIKE ?
             ...applicant,
 
             qualifying_result:
-              applicant.qualifying_status === 1
-                ? "Passed"
-                : applicant.qualifying_status === 0
-                  ? "Failed"
-                  : "Pending",
+              applicant.qualifying_status === null ||
+              applicant.qualifying_status === undefined
+                ? null
+                : Number(applicant.qualifying_status),
 
             interview_result:
-              applicant.interview_status === 1
-                ? "Passed"
-                : applicant.interview_status === 0
-                  ? "Failed"
-                  : "Pending"
+              applicant.interview_status === null ||
+              applicant.interview_status === undefined
+                ? null
+                : Number(applicant.interview_status)
           });
 
         } else {
@@ -5003,13 +4993,13 @@ WHERE proctor LIKE ?
     },
   );
 
-  //  Mark applicant as emailed (action = 1)
-  app.put("/api/interview_applicants/:applicant_id/action", async (req, res) => {
+  // Mark applicant schedule email state only.
+  const markInterviewApplicantEmailSent = async (req, res) => {
     const { applicant_id } = req.params;
 
     try {
       const [result] = await db.execute(
-        "UPDATE admission.interview_applicants SET action = 1, email_sent = 1 WHERE applicant_id = ?",
+        "UPDATE admission.interview_applicants SET email_sent = 1 WHERE applicant_id = ?",
         [applicant_id],
       );
 
@@ -5017,12 +5007,17 @@ WHERE proctor LIKE ?
         return res.status(404).json({ message: "Applicant not found" });
       }
 
-      res.json({ success: true, message: "Applicant marked as emailed" });
+      res.json({ success: true, message: "Applicant email_sent updated to 1" });
     } catch (err) {
-      console.error(" Error updating action:", err);
+      console.error(" Error updating email_sent:", err);
       res.status(500).json({ success: false, message: "Server error" });
     }
-  });
+  };
+
+  app.put(
+    "/api/interview_applicants/:applicant_id/email-sent",
+    markInterviewApplicantEmailSent,
+  );
 
   app.post("/api/send-email", async (req, res) => {
     const {
@@ -5033,6 +5028,8 @@ WHERE proctor LIKE ?
       user_person_id,
       applicant_number,
       applicant_name,
+      update_interview_status,
+      interview_status_value,
       audit_actor_id,
       audit_actor_role,
     } = req.body;
@@ -5099,22 +5096,26 @@ WHERE proctor LIKE ?
         );
       }
 
+      const nextInterviewStatus =
+        update_interview_status
+          ? interview_status_value === undefined || interview_status_value === null
+            ? 1
+            : Number(interview_status_value)
+          : null;
+
+      if (
+        update_interview_status &&
+        ![0, 1].includes(nextInterviewStatus)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "interview_status_value must be 0 or 1" });
+      }
+
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: senderAccount,
       });
-
-      const [applicantPersonRows] = await db.query(
-        `SELECT person_id FROM person_table WHERE emailAddress = ?`,
-        [to],
-      );
-
-      const personIds = applicantPersonRows.map((row) => row.person_id);
-
-      await db.query(
-        `UPDATE person_status_table SET interview_status = 1 WHERE person_id = ?`,
-        [personIds],
-      );
 
       await transporter.sendMail({
         from: `${shortTerm} - ${depName} <${senderAccount.user}>`,
@@ -5122,6 +5123,17 @@ WHERE proctor LIKE ?
         subject,
         html,
       });
+
+      if (update_interview_status) {
+        await db.query(
+          `INSERT INTO person_status_table (person_id, applicant_id, interview_status)
+           SELECT ant.person_id, ant.applicant_number, ?
+           FROM applicant_numbering_table ant
+           WHERE ant.applicant_number = ?
+           ON DUPLICATE KEY UPDATE interview_status = VALUES(interview_status)`,
+          [nextInterviewStatus, applicant_number],
+        );
+      }
 
       const safeActor = audit_actor_id || actor.employee_id || user_person_id || "unknown";
       const actorRole = audit_actor_role || actor.role || "registrar";
@@ -5182,7 +5194,7 @@ WHERE proctor LIKE ?
       return res.status(400).json({ message: "Missing department ID" });
 
     try {
-      // 1  Select top applicants from Waiting List
+      // 1  Select top applicants from status 0
       const [rows] = await db3.query(
         `SELECT ps.applicant_id
        FROM admission.person_status_table ps
@@ -5190,7 +5202,7 @@ WHERE proctor LIKE ?
        JOIN admission.applicant_numbering_table ant ON ant.applicant_number = ps.applicant_id
        JOIN admission.person_table p ON p.person_id = ant.person_id
        JOIN enrollment.dprtmnt_curriculum_table dct ON dct.curriculum_id = p.academicProgram
-       WHERE ia.status = 'Waiting List' AND dct.dprtmnt_id = ?
+       WHERE ia.status = 0 AND dct.dprtmnt_id = ?
        ORDER BY ((ps.qualifying_result + ps.interview_result)/2) DESC
        LIMIT ?`,
         [Number(dprtmnt_id), Number(count)],
@@ -5199,20 +5211,20 @@ WHERE proctor LIKE ?
       if (!rows.length)
         return res
           .status(404)
-          .json({ message: "No Waiting List applicants found" });
+          .json({ message: "No applicants with status 0 found" });
 
       const ids = rows.map((r) => r.applicant_id);
 
-      // 2  Update their status to Accepted
+      // 2  Update their status to 1
       const [updateResult] = await db3.query(
         `UPDATE admission.interview_applicants
-       SET status = 'Accepted'
+       SET status = 1
        WHERE applicant_id IN (?)`,
         [ids],
       );
 
       res.json({
-        message: `Updated ${ids.length} applicants to Accepted in department ${dprtmnt_id}`,
+        message: `Updated ${ids.length} applicant status value(s) to 1 in department ${dprtmnt_id}`,
         updated: ids,
       });
     } catch (err) {

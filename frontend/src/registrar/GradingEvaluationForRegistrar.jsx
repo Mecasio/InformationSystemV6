@@ -371,8 +371,13 @@ const ProgramEvaluationForRegistrar = () => {
     }
   };
 
-  const totalLec = (course_unit) => Number(course_unit) || 0;
-  const totalLab = (lab_unit) => Number(lab_unit) || 0;
+  const toWholeUnit = (unit) => {
+    const value = Number(unit);
+    return Number.isFinite(value) ? Math.round(value) : 0;
+  };
+
+  const totalLec = (course_unit) => toWholeUnit(course_unit);
+  const totalLab = (lab_unit) => toWholeUnit(lab_unit);
 
   const groupedDetails = {};
   if (Array.isArray(studentDetails)) {
@@ -840,20 +845,20 @@ const ProgramEvaluationForRegistrar = () => {
                               {/* HRS/WK */}
                               <td>
                                 <div style={{ display: "flex", alignItems: "center" }}>
-                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{p.course_unit}</span></div>
-                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{p.lab_unit}</span></div>
+                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{toWholeUnit(p.course_unit)}</span></div>
+                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{toWholeUnit(p.lab_unit)}</span></div>
                                 </div>
                               </td>
                               {/* UNITS */}
                               <td>
                                 <div style={{ display: "flex", alignItems: "center" }}>
-                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{p.course_unit}</span></div>
-                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{p.lab_unit}</span></div>
+                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{toWholeUnit(p.course_unit)}</span></div>
+                                  <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}><span>{toWholeUnit(p.lab_unit)}</span></div>
                                 </div>
                               </td>
                               {/* Total Units */}
                               <td style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "6rem" }}>
-                                {Number(p.course_unit) + Number(p.lab_unit)}
+                                {toWholeUnit(p.course_unit) + toWholeUnit(p.lab_unit)}
                               </td>
 
                               {/* GRADE — GradeSelect dropdown, screen only */}
@@ -1104,10 +1109,10 @@ const ProgramEvaluationForRegistrar = () => {
                             <td>
                               <div style={{ display: "flex", alignItems: "center" }}>
                                 <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}>
-                                  <span>{p.course_unit}</span>
+                                  <span>{toWholeUnit(p.course_unit)}</span>
                                 </div>
                                 <div style={{ fontSize: "0.9rem", width: "2.5rem", textAlign: "center" }}>
-                                  <span>{p.lab_unit}</span>
+                                  <span>{toWholeUnit(p.lab_unit)}</span>
                                 </div>
                               </div>
                             </td>

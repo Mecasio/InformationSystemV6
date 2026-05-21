@@ -31,6 +31,29 @@ app.use(express.json({ limit: "50mb" }));
 app.use(bodyparser.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://192.168.50.211:5173",
+  "http://136.239.248.62:5173",
+  "http://192.168.50.47:5173",
+  "http://192.168.0.180:5173",
+  "http://192.168.1.9:5173",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  }),
+);
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
@@ -55,28 +78,6 @@ const applicantDocsDir = path.join(
   __dirname,
   "uploads",
   "applicant_documents"
-);
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://192.168.50.211:5173",
-  "http://136.239.248.62:5173",
-  "http://192.168.0.180:5173",
-  "http://192.168.1.9:5173",
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  }),
 );
 
 const io = initSocket(http, allowedOrigins);
@@ -736,7 +737,8 @@ app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
         pt.first_name,
         pt.middle_name,
         pt.last_name,
-        pt.emailAddress
+        pt.emailAddress,
+        ps.interview_status
       FROM interview_applicants ia
       LEFT JOIN applicant_numbering_table ant ON ant.applicant_number = ia.applicant_id
       LEFT JOIN person_table pt ON pt.person_id = ant.person_id
@@ -752,7 +754,7 @@ app.put("/api/interview_applicants/:applicant_id/status", async (req, res) => {
     }
 
     if (
-      Number(applicantBefore.email_sent) === 1 ||
+      Number(applicantBefore.interview_status) === 1 ||
       Number(applicantBefore.applicant_interview_status) === 1
     ) {
       return res.status(409).json({

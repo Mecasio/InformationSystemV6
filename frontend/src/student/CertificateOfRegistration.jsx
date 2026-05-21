@@ -16,7 +16,7 @@ import { FcPrint } from "react-icons/fc";
 import { useLocation } from "react-router-dom";
 import API_BASE_URL from "../apiConfig";
 const CertificateOfRegistration = forwardRef(
-  ({ student_number }, divToPrintRef) => {
+  ({ student_number, onReadyChange }, divToPrintRef) => {
     const settings = useContext(SettingsContext);
     const [fetchedLogo, setFetchedLogo] = useState(null);
     const [companyName, setCompanyName] = useState("");
@@ -54,6 +54,15 @@ const CertificateOfRegistration = forwardRef(
     const secondLine = words.slice(middle).join(" ");
 
     const [data, setData] = useState([]);
+    const [studentNumber, setStudentNumber] = useState("");
+    const effectiveStudentNumber =
+      student_number?.trim() || studentNumber?.trim() || "";
+
+    useEffect(() => {
+      if (student_number?.trim()) {
+        setStudentNumber(student_number.trim());
+      }
+    }, [student_number]);
 
     const [profilePicture, setProfilePicture] = useState(null);
     const [personID, setPersonID] = useState("");
@@ -165,7 +174,9 @@ const CertificateOfRegistration = forwardRef(
       ? `${API_BASE_URL}/uploads/${approvedBySignature}`
       : "";
     const showApprovedBySignature = Boolean(
-      student_number && approvedBySignatureUrl && !approvedBySignatureMissing,
+      effectiveStudentNumber &&
+        approvedBySignatureUrl &&
+        !approvedBySignatureMissing,
     );
 
     useEffect(() => {
@@ -194,8 +205,22 @@ const CertificateOfRegistration = forwardRef(
       try {
         const res = await axios.get(`${API_BASE_URL}/api/person/${id}`);
         setPerson(res.data); // make sure backend returns the correct format
+        if (res.data?.student_number) {
+          setStudentNumber(String(res.data.student_number));
+        }
       } catch (error) {
         console.error("Failed to fetch person:", error);
+      }
+    };
+
+    const fetchStudentNumberByPerson = async (id) => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/student/${id}`);
+        if (res.data?.student_number) {
+          setStudentNumber(String(res.data.student_number));
+        }
+      } catch (error) {
+        console.error("Failed to fetch student number:", error);
       }
     };
 
@@ -224,13 +249,14 @@ const CertificateOfRegistration = forwardRef(
         const targetId = searchedPersonId || queryPersonId || loggedInPersonId;
         setUserID(targetId);
         fetchPersonData(targetId);
+        if (!student_number?.trim() && storedRole === "student") {
+          fetchStudentNumberByPerson(targetId);
+        }
         return;
       }
 
       window.location.href = "/login";
     }, [queryPersonId]);
-
-    const [studentNumber, setStudentNumber] = useState("");
 
     const fetchProfilePicture = async (person_id) => {
       try {
@@ -291,6 +317,7 @@ const CertificateOfRegistration = forwardRef(
 
     const [courses, setCourses] = useState([]);
     const [enrolled, setEnrolled] = useState([]);
+    const [isEnrolledLoaded, setIsEnrolledLoaded] = useState(false);
 
     const [userId, setUserId] = useState(null); // Dynamic userId
     const [first_name, setUserFirstName] = useState(null); // Dynamic userId
@@ -350,12 +377,40 @@ const CertificateOfRegistration = forwardRef(
 
     useEffect(() => {
       if (userId && currId) {
+        setIsEnrolledLoaded(false);
         axios
           .get(`${API_BASE_URL}/enrolled_courses/${userId}/${currId}`)
-          .then((res) => setEnrolled(res.data))
-          .catch((err) => console.error(err));
+          .then((res) => setEnrolled(Array.isArray(res.data) ? res.data : []))
+          .catch((err) => {
+            console.error(err);
+            setEnrolled([]);
+          })
+          .finally(() => setIsEnrolledLoaded(true));
+      } else {
+        setIsEnrolledLoaded(false);
       }
     }, [userId, currId]);
+
+    useEffect(() => {
+      if (typeof onReadyChange === "function") {
+        onReadyChange(
+          Boolean(
+            effectiveStudentNumber &&
+              data[0]?.student_number &&
+              userId &&
+              currId &&
+              isEnrolledLoaded,
+          ),
+        );
+      }
+    }, [
+      onReadyChange,
+      effectiveStudentNumber,
+      data,
+      userId,
+      currId,
+      isEnrolledLoaded,
+    ]);
 
     // Fetch department sections when component mounts
     useEffect(() => {
@@ -404,14 +459,14 @@ const CertificateOfRegistration = forwardRef(
     const [selectedPaymentData, setSelectedPaymentData] = useState(null);
 
     useEffect(() => {
-      if (!student_number || !student_number.trim()) return; // don't run if empty
+      if (!effectiveStudentNumber) return; // don't run if empty
 
       const fetchStudent = async () => {
         try {
           // 1. Authenticate and tag student
           const response = await axios.post(
             `${API_BASE_URL}/student-tagging`,
-            { studentNumber: student_number },
+            { studentNumber: effectiveStudentNumber },
             {
               headers: { "Content-Type": "application/json" },
             },
@@ -474,15 +529,49 @@ const CertificateOfRegistration = forwardRef(
 
           console.log(yearLevelDescription);
 
-          const fullData = response.data.corData || {};
+          const fullData = {
+            ...(response.data.corData || {}),
+            student_number: studentNum,
+            first_name,
+            middle_name,
+            last_name,
+            extension:
+              response.data.extension || response.data.corData?.extension || "",
+            major: major || response.data.corData?.major || "",
+            year_level_description: yearLevelDescription,
+            year_description: yearDesc,
+            curriculum_id: active_curriculum,
+            program:
+              active_curriculum ||
+              response.data.program ||
+              response.data.corData?.program ||
+              "",
+            departmentName:
+              dprtmnt_name || response.data.corData?.departmentName || "",
+            dprtmnt_name:
+              dprtmnt_name || response.data.corData?.dprtmnt_name || "",
+            college: dprtmnt_name || response.data.corData?.college || "",
+            age: response.data.age ?? response.data.corData?.age ?? "",
+            gender: response.data.gender ?? response.data.corData?.gender ?? "",
+            email:
+              response.data.email ??
+              response.data.corData?.email ??
+              response.data.emailAddress ??
+              "",
+            emailAddress:
+              response.data.emailAddress ??
+              response.data.email ??
+              response.data.corData?.emailAddress ??
+              "",
+          };
           setData([fullData]); // Wrap in array for data[0] compatibility
 
-          setGender(fullData.gender || null);
-          setAge(fullData.age || null);
+          setGender(fullData.gender ?? null);
+          setAge(fullData.age ?? null);
           console.log(age);
           console.log(major);
           console.log("person.program:", data[0]?.program);
-          setEmail(fullData.email || null);
+          setEmail(fullData.email || fullData.emailAddress || null);
           setProgram(active_curriculum);
         } catch (error) {
           console.error("Student search failed:", error);
@@ -490,10 +579,10 @@ const CertificateOfRegistration = forwardRef(
       };
 
       fetchStudent();
-    }, [student_number]); // 🔑 runs automatically when prop changes
+    }, [effectiveStudentNumber]); // 🔑 runs automatically when prop changes
 
     useEffect(() => {
-      if (!student_number || !student_number.trim()) {
+      if (!effectiveStudentNumber) {
         setSavedUnifast(false);
         setSavedMatriculation(false);
         setIsPaymentStatusLoaded(false);
@@ -504,7 +593,7 @@ const CertificateOfRegistration = forwardRef(
       const fetchPaymentStatus = async () => {
         try {
           const res = await axios.get(
-            `${API_BASE_URL}/payment-status/${student_number}`,
+            `${API_BASE_URL}/payment-status/${effectiveStudentNumber}`,
           );
           if (res.data?.success) {
             setSavedUnifast(!!res.data.saved_unifast);
@@ -523,10 +612,10 @@ const CertificateOfRegistration = forwardRef(
       };
 
       fetchPaymentStatus();
-    }, [student_number]);
+    }, [effectiveStudentNumber]);
 
     useEffect(() => {
-      if (!student_number || !student_number.trim() || !isPaymentStatusLoaded) {
+      if (!effectiveStudentNumber || !isPaymentStatusLoaded) {
         setSelectedPaymentData(null);
         return;
       }
@@ -548,7 +637,7 @@ const CertificateOfRegistration = forwardRef(
           const matched = rows
             .filter(
               (item) =>
-                String(item?.student_number) === String(student_number) &&
+                String(item?.student_number) === String(effectiveStudentNumber) &&
                 Number(item?.status) === 1,
             )
             .sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0));
@@ -562,7 +651,7 @@ const CertificateOfRegistration = forwardRef(
 
       fetchPaymentData();
     }, [
-      student_number,
+      effectiveStudentNumber,
       savedUnifast,
       savedMatriculation,
       isPaymentStatusLoaded,
@@ -614,6 +703,12 @@ const CertificateOfRegistration = forwardRef(
       0,
     );
     const totalCombined = totalCourseUnits + totalLabUnits;
+    const formatGender = (value) => {
+      if (value === null || value === undefined || value === "") return "";
+      if (Number(value) === 0) return "Male";
+      if (Number(value) === 1) return "Female";
+      return value || "";
+    };
 
     const [curriculumOptions, setCurriculumOptions] = useState([]);
 
@@ -642,7 +737,19 @@ const CertificateOfRegistration = forwardRef(
     }
 
     return (
-      <Container className="mb-[4rem]">
+      <Container
+        maxWidth={false}
+        disableGutters
+        className="mb-[4rem]"
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 2,
+          py: 4,
+        }}
+      >
         <div className="flex-container">
           <div className="section">
             <Box></Box>
@@ -787,6 +894,7 @@ const CertificateOfRegistration = forwardRef(
                               <td style={{ width: "20%", textAlign: "center" }}>
                                 <img
                                   src={fetchedLogo || EaristLogo}
+                                  crossOrigin="anonymous"
                                   alt="School Logo"
                                   style={{
                                     marginLeft: "10px",
@@ -880,6 +988,7 @@ const CertificateOfRegistration = forwardRef(
                                   {profilePicture ? (
                                     <img
                                       src={profilePicture}
+                                      crossOrigin="anonymous"
                                       alt="Profile"
                                       style={{
                                         width: "100%",
@@ -1182,13 +1291,7 @@ const CertificateOfRegistration = forwardRef(
                       <td colSpan={11} style={{ fontSize: "62.5%" }}>
                         <input
                           type="text"
-                          value={
-                            data[0]?.gender === 0
-                              ? "Male"
-                              : data[0]?.gender === 1
-                                ? "Female"
-                                : ""
-                          }
+                          value={formatGender(data[0]?.gender)}
                           readOnly
                           style={{
                             fontFamily: "Arial",
@@ -3136,6 +3239,7 @@ const CertificateOfRegistration = forwardRef(
                         {showApprovedBySignature ? (
                           <img
                             src={approvedBySignatureUrl}
+                            crossOrigin="anonymous"
                             alt="Signature"
                             onError={() =>
                               setApprovedBySignatureMissing(true)
@@ -3145,7 +3249,9 @@ const CertificateOfRegistration = forwardRef(
                               objectFit: "contain",
                               width: "250px",
                               marginBottom: "2px",
-                              display: !student_number ? "none" : "block",
+                              display: !effectiveStudentNumber
+                                ? "none"
+                                : "block",
                               marginLeft: "auto",
                               marginRight: "auto",
                             }}
@@ -3154,7 +3260,9 @@ const CertificateOfRegistration = forwardRef(
                           <div
                             style={{
                               height: "60px",
-                              display: !student_number ? "none" : "block",
+                              display: !effectiveStudentNumber
+                                ? "none"
+                                : "block",
                             }}
                           />
                         )}
@@ -3173,7 +3281,9 @@ const CertificateOfRegistration = forwardRef(
                           <div
                             style={{
                               minHeight: "14px",
-                              display: !student_number ? "none" : "block",
+                              display: !effectiveStudentNumber
+                                ? "none"
+                                : "block",
                             }}
                           >
                             {approvedBy?.full_name || ""}
@@ -3402,6 +3512,7 @@ const CertificateOfRegistration = forwardRef(
                         {savedUnifast && (
                           <img
                             src={FreeTuitionImage}
+                            crossOrigin="anonymous"
                             alt="EARIST MIS FEE"
                             style={{
                               marginLeft: "75px",

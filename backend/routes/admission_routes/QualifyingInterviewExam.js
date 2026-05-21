@@ -497,7 +497,7 @@ router.post("/unassign_interview", async (req, res) => {
 
     await db.query(
       `UPDATE interview_applicants
-       SET schedule_id = NULL
+       SET schedule_id = NULL, action = 0
        WHERE applicant_id = ?`,
       [applicant_number],
     );
@@ -537,7 +537,7 @@ router.post("/unassign_all_from_interview", async (req, res) => {
 
     await db.query(
       `UPDATE interview_applicants
-       SET schedule_id = NULL
+       SET schedule_id = NULL, action = 0
        WHERE schedule_id = ?`,
       [schedule_id],
     );
@@ -586,12 +586,12 @@ router.put("/api/interview_applicants/assign", async (req, res) => {
       req,
       action: "QUALIFYING_INTERVIEW_ASSIGN",
       applicantNumbers: applicant_numbers,
-      newStatus: "Accepted",
+      newStatus: INTERVIEW_APPLICANT_STATUS.ACCEPTED,
       affectedRows: result.affectedRows,
     });
 
     res.json({
-      message: `Updated ${result.affectedRows} applicants to Accepted.`,
+      message: `Updated ${result.affectedRows} applicant status value(s) to ${INTERVIEW_APPLICANT_STATUS.ACCEPTED}.`,
       updated: applicant_numbers,
     });
   } catch (err) {
@@ -621,12 +621,12 @@ router.put(
         req,
         action: "QUALIFYING_INTERVIEW_ASSIGN",
         applicantNumbers: [applicant_number],
-        newStatus: "Accepted",
+        newStatus: INTERVIEW_APPLICANT_STATUS.ACCEPTED,
         affectedRows: result.affectedRows,
       });
 
       res.json({
-        message: `Applicant ${applicant_number} updated to Accepted.`,
+        message: `Applicant ${applicant_number} status updated to ${INTERVIEW_APPLICANT_STATUS.ACCEPTED}.`,
         affectedRows: result.affectedRows,
       });
     } catch (err) {
@@ -657,12 +657,12 @@ router.put(
         req,
         action: "QUALIFYING_INTERVIEW_UNASSIGN",
         applicantNumbers: [applicant_number],
-        newStatus: "Waiting List",
+        newStatus: INTERVIEW_APPLICANT_STATUS.WAITING_LIST,
         affectedRows: result.affectedRows,
       });
 
       res.json({
-        message: `Applicant ${applicant_number} updated to Waiting List.`,
+        message: `Applicant ${applicant_number} status updated to ${INTERVIEW_APPLICANT_STATUS.WAITING_LIST}.`,
         affectedRows: result.affectedRows,
       });
     } catch (err) {
@@ -692,12 +692,12 @@ router.put("/api/interview_applicants/unassign-all", async (req, res) => {
       req,
       action: "QUALIFYING_INTERVIEW_UNASSIGN",
       applicantNumbers: applicant_numbers,
-      newStatus: "Waiting List",
+      newStatus: INTERVIEW_APPLICANT_STATUS.WAITING_LIST,
       affectedRows: result.affectedRows,
     });
 
     res.json({
-      message: `Updated ${result.affectedRows} applicants to Waiting List.`,
+      message: `Updated ${result.affectedRows} applicant status value(s) to ${INTERVIEW_APPLICANT_STATUS.WAITING_LIST}.`,
       updated: applicant_numbers,
     });
   } catch (err) {

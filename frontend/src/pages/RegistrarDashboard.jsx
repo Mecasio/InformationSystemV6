@@ -373,12 +373,13 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
     if (!file) return;
     try {
       const role = localStorage.getItem("role");
+      const personId = personData?.person_id || localStorage.getItem("person_id");
       const formData = new FormData();
       formData.append("profile_picture", file);
-      formData.append("person_id", personData.person_id);
-      await axios.post(`${API_BASE_URL}/admin/update_registrar`, formData);
+      formData.append("person_id", personId);
+      await axios.post(`${API_BASE_URL}/admin/update_registrar_profile`, formData);
       const refreshed = await axios.get(
-        `${API_BASE_URL}/api/person_data/${personData.person_id}/${role}`
+        `${API_BASE_URL}/api/person_data/${personId}/${role}`
       );
       setPersonData(refreshed.data);
       setProfileImage(

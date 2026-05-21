@@ -466,8 +466,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
 
     await db.query(
-      `INSERT INTO interview_applicants (schedule_id, applicant_id, email_sent, status, qualifying_status, 	interview_status)
-       VALUES (?, ?, 0, 'Waiting List', null, null)`,
+      `INSERT INTO interview_applicants (schedule_id, applicant_id, email_sent, status, qualifying_status, interview_status)
+       VALUES (?, ?, 0, 0, null, null)`,
       [null, applicant_number],
     );
 

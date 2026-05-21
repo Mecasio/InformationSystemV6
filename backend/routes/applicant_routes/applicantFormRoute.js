@@ -428,7 +428,7 @@ router.post("/add-applicant", async (req, res) => {
 
     await db.query(
       `INSERT INTO interview_applicants (schedule_id, applicant_id, email_sent, status)
-       VALUES (?, ?, 0, 'Waiting List')`,
+       VALUES (?, ?, 0, 0)`,
       [null, applicant_number]
     );
 

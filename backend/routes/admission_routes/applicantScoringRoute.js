@@ -110,11 +110,7 @@ router.get("/api-applicant-scoring", async (req, res) => {
         COALESCE(ps.qualifying_result, 0) AS qualifying_exam_score,
         COALESCE(ps.interview_result, 0) AS qualifying_interview_score,
 
-        CASE
-          WHEN ia.status = 1 OR ia.status = 'Accepted' THEN 'Accepted'
-          WHEN ia.status = 2 OR ia.status = 'Rejected' THEN 'Rejected'
-          ELSE 'Waiting List'
-        END AS college_approval_status
+        COALESCE(CAST(ia.status AS UNSIGNED), 0) AS college_approval_status
 
       FROM person_table p
       INNER JOIN applicant_numbering_table a

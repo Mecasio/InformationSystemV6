@@ -10,6 +10,81 @@ const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+const saveRegistrarProfilePicture = async ({ personId, file }) => {
+  const [existing] = await db3.query(
+    "SELECT * FROM user_accounts WHERE person_id = ? AND role = 'registrar' LIMIT 1",
+    [personId]
+  );
+
+  if (!existing.length) {
+    const error = new Error("Registrar not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const current = existing[0];
+  let finalFilename = current.profile_picture;
+
+  if (file) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const year = new Date().getFullYear();
+    finalFilename = `${current.employee_id}_1by1_${year}${ext}`;
+
+    const uploadDir = path.join(__dirname, "../../uploads/Admin1by1");
+    const finalPath = path.join(uploadDir, finalFilename);
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const files = await fs.promises.readdir(uploadDir);
+    for (const f of files) {
+      if (f.startsWith(`${current.employee_id}_1by1_`)) {
+        await fs.promises.unlink(path.join(uploadDir, f));
+      }
+    }
+
+    await fs.promises.writeFile(finalPath, file.buffer);
+  }
+
+  await db3.query(
+    "UPDATE user_accounts SET profile_picture = ? WHERE person_id = ? AND role = 'registrar'",
+    [finalFilename, personId]
+  );
+
+  return {
+    filename: finalFilename,
+    registrar: current,
+  };
+};
+
+router.post("/update_registrar_profile", upload.single("profile_picture"), async (req, res) => {
+  const { person_id } = req.body;
+
+  if (!person_id || !req.file) {
+    return res.status(400).json({ message: "Missing person_id or file." });
+  }
+
+  try {
+    const { filename } = await saveRegistrarProfilePicture({
+      personId: person_id,
+      file: req.file,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Registrar profile picture updated successfully",
+      filename,
+      profile_image: filename,
+    });
+  } catch (error) {
+    console.error("Registrar profile upload error:", error);
+    res
+      .status(error.status || 500)
+      .json({ message: error.message || "Failed to upload image." });
+  }
+});
+
 const formatAuditActorRole = (role) => {
   const safeRole = String(role || "registrar").trim();
   if (!safeRole) return "Registrar";
