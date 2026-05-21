@@ -37,7 +37,33 @@ const db3 = mysql.createPool({
 });
 
 // ✅ EXPORT BOTH
+let pageAccessPermissionColumnsReady;
+
+const ensurePageAccessPermissionColumns = async () => {
+  if (!pageAccessPermissionColumnsReady) {
+    pageAccessPermissionColumnsReady = (async () => {
+      const requiredColumns = ["can_create", "can_edit", "can_delete"];
+      const [columns] = await db3.query("SHOW COLUMNS FROM page_access");
+      const existingColumns = new Set(columns.map((column) => column.Field));
+
+      for (const column of requiredColumns) {
+        if (!existingColumns.has(column)) {
+          await db3.query(
+            `ALTER TABLE page_access ADD COLUMN ${column} TINYINT(1) NOT NULL DEFAULT 0`,
+          );
+        }
+      }
+    })().catch((error) => {
+      pageAccessPermissionColumnsReady = null;
+      throw error;
+    });
+  }
+
+  return pageAccessPermissionColumnsReady;
+};
+
 module.exports = {
   db,
   db3,
+  ensurePageAccessPermissionColumns,
 };

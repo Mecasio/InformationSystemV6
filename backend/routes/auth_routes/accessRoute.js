@@ -1,8 +1,25 @@
 const express = require('express');
-const { db3 } = require('../database/database');
+const {
+  db3,
+  ensurePageAccessPermissionColumns,
+} = require('../database/database');
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
+
+router.use(async (req, res, next) => {
+  try {
+    await ensurePageAccessPermissionColumns();
+    next();
+  } catch (err) {
+    console.error("Failed to prepare page_access permission columns:", err);
+    res.status(500).json({ error: "Failed to prepare page access permissions" });
+  }
+});
 
 const formatAuditActorRole = (role) => {
   const safeRole = String(role || "registrar").trim();
@@ -38,7 +55,7 @@ const insertAccessAuditLog = async ({ req, action, message }) => {
   });
 };
 
-router.post("/access", async (req, res) => {
+router.post("/access", CanCreate, async (req, res) => {
   const { access_description, access_page } = req.body;
 
   try {
@@ -101,7 +118,7 @@ router.get("/access_level/:employee_id", async (req, res) => {
   }
 });
 
-router.put("/access/:access_id", async (req, res) => {
+router.put("/access/:access_id", CanEdit, async (req, res) => {
   const { access_id } = req.params;
   const { access_description, access_page } = req.body;
 

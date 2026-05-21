@@ -797,16 +797,9 @@ WHERE proctor LIKE ?
           message: `${roleLabel} (${auditActorId}) assigned student number ${student_number} to ${studentName || `person_id ${person_id}`}.`,
         });
 
-        //  Emit success result
-        socket.emit("assign-student-number-result", {
-          success: true,
-          student_number,
-          message: "Student number assigned successfully.",
-        });
-
         //  Fetch company name dynamically
         const [[company]] = await db.query(
-          "SELECT company_name FROM company_settings WHERE id = 1",
+          "SELECT company_name, short_term FROM company_settings WHERE id = 1",
         );
 
         const companyName = company?.company_name || "Enrollment Office";
@@ -844,13 +837,40 @@ WHERE proctor LIKE ?
           `.trim(),
         };
 
-        //  Send email (non-blocking)
-        transporter.sendMail(mailOptions).catch(console.error);
+        let emailSent = false;
+        let emailErrorMessage = "";
+
+        try {
+          if (!emailAddress) {
+            throw new Error("Student email address is empty.");
+          }
+
+          await transporter.sendMail(mailOptions);
+          emailSent = true;
+        } catch (emailError) {
+          emailErrorMessage =
+            emailError?.response ||
+            emailError?.message ||
+            "Failed to send email.";
+          console.error(
+            "[assign-student-number] Email send failed:",
+            emailError,
+          );
+        }
 
         await db.query(
           `UPDATE user_accounts SET status = 0 WHERE person_id = ?`,
           [person_id],
         );
+
+        socket.emit("assign-student-number-result", {
+          success: true,
+          student_number,
+          email_sent: emailSent,
+          message: emailSent
+            ? "Student number assigned and email sent successfully."
+            : `Student number assigned, but email was not sent. ${emailErrorMessage}`,
+        });
       } catch (error) {
         console.error("Error in assign-student-number:", error);
         socket.emit("assign-student-number-result", {

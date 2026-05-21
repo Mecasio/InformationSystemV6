@@ -1,6 +1,10 @@
 const express = require("express");
 const { db3 } = require("../database/database");
-const { CanCreate } = require("../../middleware/pagePermissions");
+const {
+  CanCreate,
+  CanDelete,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
 
 const router = express.Router();
@@ -45,6 +49,32 @@ const getActorLabel = (req) => {
     actorId,
     roleLabel: formatAuditActorRole(actorRole),
   };
+};
+
+const getDepartmentSectionLabel = async (departmentSectionId) => {
+  const [[details]] = await db3.query(
+    `SELECT y.year_description, p.program_code, p.program_description, p.major,
+            st.description AS section_description
+     FROM dprtmnt_section_table dst
+     INNER JOIN curriculum_table c ON dst.curriculum_id = c.curriculum_id
+     INNER JOIN year_table y ON c.year_id = y.year_id
+     INNER JOIN program_table p ON c.program_id = p.program_id
+     INNER JOIN section_table st ON dst.section_id = st.id
+     WHERE dst.id = ?
+     LIMIT 1`,
+    [departmentSectionId],
+  );
+
+  if (!details) return `department section ID ${departmentSectionId}`;
+
+  const programLabel = [
+    details.year_description,
+    details.program_code,
+    details.program_description,
+    details.major,
+  ].filter(Boolean).join(" ");
+
+  return `${programLabel} - ${details.section_description}`;
 };
 
 // ACTIVE CURRICULUM
@@ -276,16 +306,107 @@ router.post("/department_section", CanCreate, async (req, res) => {
   }
 });
 
+// DEPARTMENT SECTION - UPDATE
+router.put("/department_section/:id", CanEdit, async (req, res) => {
+  const { id } = req.params;
+  const { curriculum_id, section_id } = req.body;
+
+  if (!curriculum_id || !section_id) {
+    return res
+      .status(400)
+      .json({ error: "Curriculum ID and Section ID are required" });
+  }
+
+  try {
+    const [existing] = await db3.query(
+      `SELECT id
+       FROM dprtmnt_section_table
+       WHERE curriculum_id = ? AND section_id = ? AND id != ?
+       LIMIT 1`,
+      [curriculum_id, section_id, id],
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({
+        message: "This department-section combination already exists.",
+      });
+    }
+
+    const beforeLabel = await getDepartmentSectionLabel(id);
+
+    const [result] = await db3.query(
+      `UPDATE dprtmnt_section_table
+       SET curriculum_id = ?, section_id = ?
+       WHERE id = ?`,
+      [curriculum_id, section_id, id],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Department section not found" });
+    }
+
+    const afterLabel = await getDepartmentSectionLabel(id);
+    const { actorId, actorRole } = getAuditActor(req);
+    const roleLabel = formatAuditActorRole(actorRole);
+    await insertDepartmentSectionAuditLog({
+      req,
+      action: "DEPARTMENT_SECTION_EDIT",
+      message: `${roleLabel} (${actorId}) edited department section from ${beforeLabel} to ${afterLabel}.`,
+    });
+
+    res.json({ message: "Department section updated successfully" });
+  } catch (err) {
+    console.error("Error updating department section:", err);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: err.message });
+  }
+});
+
+// DEPARTMENT SECTION - DELETE
+router.delete("/department_section/:id", CanDelete, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const sectionLabel = await getDepartmentSectionLabel(id);
+    const [result] = await db3.query(
+      "DELETE FROM dprtmnt_section_table WHERE id = ?",
+      [id],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Department section not found" });
+    }
+
+    const { actorId, actorRole } = getAuditActor(req);
+    const roleLabel = formatAuditActorRole(actorRole);
+    await insertDepartmentSectionAuditLog({
+      req,
+      action: "DEPARTMENT_SECTION_DELETE",
+      message: `${roleLabel} (${actorId}) deleted department section ${sectionLabel}.`,
+    });
+
+    res.json({ message: "Department section deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting department section:", err);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: err.message });
+  }
+});
+
 // DEPARTMENT SECTION - LIST
 router.get("/department_section", async (req, res) => {
   try {
     const query = `
       SELECT
         dst.id as department_section_id,
+        dst.dsstat,
         pt.program_code,
         pt.program_description,
         pt.major,
         ct.curriculum_id,
+        st.id AS section_id,
         dct.dprtmnt_id,
         yt.year_description,
         st.description AS section_description

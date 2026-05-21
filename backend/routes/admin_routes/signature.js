@@ -3,6 +3,11 @@ const { db3 } = require("../database/database");
 const multer = require("multer");
 const path = require("path");
 const { insertAuditLogAdmission } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanDelete,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
 
@@ -66,6 +71,7 @@ const uploadSignature = multer({ storage });
 
 router.post(
   "/api/signature",
+  CanCreate,
   uploadSignature.single("signature"),
   async (req, res) => {
     try {
@@ -243,7 +249,7 @@ router.get("/api/signature/person/:personId", async (req, res) => {
   }
 });
 
-router.put("/api/signature/:id", uploadSignature.single("signature"), async (req, res) => {
+router.put("/api/signature/:id", CanEdit, uploadSignature.single("signature"), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -318,7 +324,7 @@ router.put("/api/signature/:id", uploadSignature.single("signature"), async (req
 |--------------------------------------------------------------------------
 */
 
-router.delete("/api/signature/:id", async (req, res) => {
+router.delete("/api/signature/:id", CanDelete, async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await db3.query(

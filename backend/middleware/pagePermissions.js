@@ -1,4 +1,7 @@
-const { db3 } = require("../routes/database/database");
+const {
+  db3,
+  ensurePageAccessPermissionColumns,
+} = require("../routes/database/database");
 
 const createPermissionMiddleware = (permissionKey, actionLabel) => {
   return async (req, res, next) => {
@@ -13,6 +16,8 @@ const createPermissionMiddleware = (permissionKey, actionLabel) => {
     }
 
     try {
+      await ensurePageAccessPermissionColumns();
+
       const [rows] = await db3.query(
         `SELECT page_privilege, can_create, can_delete, can_edit
          FROM page_access

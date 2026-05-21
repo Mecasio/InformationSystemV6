@@ -51,6 +51,9 @@ const UserPageAccess = () => {
   const pageId = 91;
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [canCreate, setCanCreate] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
 
   // User list
   const [allUsers, setAllUsers] = useState([]);
@@ -82,6 +85,11 @@ const UserPageAccess = () => {
 
   const auditConfig = {
     headers: {
+      "x-employee-id":
+        localStorage.getItem("employee_id") ||
+        localStorage.getItem("email") ||
+        "unknown",
+      "x-page-id": pageId,
       "x-audit-actor-id":
         localStorage.getItem("employee_id") ||
         localStorage.getItem("email") ||
@@ -121,9 +129,22 @@ const UserPageAccess = () => {
       const res = await axios.get(
         `${API_BASE_URL}/api/page_access/${empID}/${pageId}`,
       );
-      setHasAccess(res.data && res.data.page_privilege === 1);
+      if (res.data && Number(res.data.page_privilege) === 1) {
+        setHasAccess(true);
+        setCanCreate(Number(res.data?.can_create) === 1);
+        setCanEdit(Number(res.data?.can_edit) === 1);
+        setCanDelete(Number(res.data?.can_delete) === 1);
+      } else {
+        setHasAccess(false);
+        setCanCreate(false);
+        setCanEdit(false);
+        setCanDelete(false);
+      }
     } catch {
       setHasAccess(false);
+      setCanCreate(false);
+      setCanEdit(false);
+      setCanDelete(false);
     }
   };
 
@@ -171,7 +192,7 @@ const UserPageAccess = () => {
 
       setOpenModal(true);
     } catch {
-      setSnack({ open: true, type: "error", message: "Failed to load access" });
+      setSnack({ open: true, severity: "error", message: "Failed to load access" });
     } finally {
       setLoading(false);
     }
@@ -335,6 +356,22 @@ const UserPageAccess = () => {
   // Update access privilege
   const handleToggleChange = async (pageId, hasAccessNow) => {
     if (!selectedUser) return;
+    if (hasAccessNow && !canDelete) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to revoke page access",
+      });
+      return;
+    }
+    if (!hasAccessNow && !canCreate) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to grant page access",
+      });
+      return;
+    }
 
     const newState = !hasAccessNow;
     const previousState = pageAccess[pageId] || {
@@ -372,7 +409,7 @@ const UserPageAccess = () => {
 
       setSnack({
         open: true,
-        type: "success",
+        severity: "success",
         message: newState ? "Access granted" : "Access revoked",
       });
     } catch {
@@ -380,7 +417,7 @@ const UserPageAccess = () => {
       setPageAccess((prev) => ({ ...prev, [pageId]: previousState }));
       setSnack({
         open: true,
-        type: "error",
+        severity: "error",
         message: "Failed to update access",
       });
     }
@@ -388,6 +425,14 @@ const UserPageAccess = () => {
 
   const handlePermissionToggle = async (pageId, permissionKey) => {
     if (!selectedUser) return;
+    if (!canEdit) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to edit page permissions",
+      });
+      return;
+    }
 
     const currentState = pageAccess[pageId] || {
       access: false,
@@ -439,6 +484,15 @@ const UserPageAccess = () => {
   };
 
   const openCreateAccessModal = async () => {
+    if (!canCreate) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to create access levels",
+      });
+      return;
+    }
+
     try {
       const res = await axios.get(`${API_BASE_URL}/api/pages`);
 
@@ -457,6 +511,15 @@ const UserPageAccess = () => {
   };
 
   const openEditAccessLevelModal = async () => {
+    if (!canEdit) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to edit access levels",
+      });
+      return;
+    }
+
     try {
       const [accessRes, pagesRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/access_table`),
@@ -637,6 +700,15 @@ const UserPageAccess = () => {
   };
 
   const saveEditedAccess = async () => {
+    if (!canEdit) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to edit access levels",
+      });
+      return;
+    }
+
     if (!editAccessId) {
       setSnack({
         open: true,
@@ -693,6 +765,15 @@ const UserPageAccess = () => {
   };
 
   const saveAccess = async () => {
+    if (!canCreate) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to create access levels",
+      });
+      return;
+    }
+
     try {
       const selectedPages = buildAccessLevelPayload(createPageAccess);
 
@@ -729,6 +810,14 @@ const UserPageAccess = () => {
 
   const grantAllAccess = async () => {
     if (!selectedUser) return;
+    if (!canCreate) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to grant page access",
+      });
+      return;
+    }
 
     try {
       await axios.post(`${API_BASE_URL}/api/page_access/grant-all`, {
@@ -759,6 +848,14 @@ const UserPageAccess = () => {
 
   const revokeAllAccess = async () => {
     if (!selectedUser) return;
+    if (!canDelete) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to revoke page access",
+      });
+      return;
+    }
 
     try {
       await axios.post(`${API_BASE_URL}/api/page_access/revoke-all`, {
@@ -789,6 +886,14 @@ const UserPageAccess = () => {
 
   const handleUserBulkPermission = async (permissionKey, enabled) => {
     if (!selectedUser) return;
+    if (!canEdit) {
+      setSnack({
+        open: true,
+        severity: "error",
+        message: "You do not have permission to edit page permissions",
+      });
+      return;
+    }
 
     const previousAccess = pageAccess;
     const nextAccess = setBulkPermissionState(
@@ -1094,22 +1199,26 @@ const UserPageAccess = () => {
                     >
                       Last
                     </Button>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      onClick={openCreateAccessModal}
-                    >
-                      Create Access
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="info"
-                      size="small"
-                      onClick={openEditAccessLevelModal}
-                    >
-                      Edit Access Level
-                    </Button>
+                    {canCreate && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        onClick={openCreateAccessModal}
+                      >
+                        Create Access
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        variant="contained"
+                        color="info"
+                        size="small"
+                        onClick={openEditAccessLevelModal}
+                      >
+                        Edit Access Level
+                      </Button>
+                    )}
                   </Box>
                 </Box>
               </TableCell>
@@ -1279,23 +1388,25 @@ const UserPageAccess = () => {
                         alignItems: "center",
                       }}
                     >
-                      <Button
-                        variant="contained"
-                        onClick={() => loadUserAccess(u)}
-                        sx={{
-                          backgroundColor: "green",
-                          color: "white",
-                          borderRadius: "5px",
-                          padding: "8px 14px",
-                          width: "160px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "5px",
-                        }}
-                      >
-                        <EditIcon fontSize="small" /> Edit Access
-                      </Button>
+                      {(canCreate || canEdit || canDelete) && (
+                        <Button
+                          variant="contained"
+                          onClick={() => loadUserAccess(u)}
+                          sx={{
+                            backgroundColor: "green",
+                            color: "white",
+                            borderRadius: "5px",
+                            padding: "8px 14px",
+                            width: "160px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          <EditIcon fontSize="small" /> Edit Access
+                        </Button>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -1539,6 +1650,7 @@ const UserPageAccess = () => {
                 color="success"
                 startIcon={<LockOpenIcon />}
                 onClick={grantAllAccess}
+                disabled={!canCreate}
                 sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
               >
                 Grant All Access
@@ -1548,6 +1660,7 @@ const UserPageAccess = () => {
                 color="warning"
                 startIcon={<LockIcon />}
                 onClick={revokeAllAccess}
+                disabled={!canDelete}
                 sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
               >
                 Remove All Access
@@ -1563,6 +1676,7 @@ const UserPageAccess = () => {
                     size="small"
                     color="success"
                     onClick={() => handleUserBulkPermission(permissionKey, true)}
+                    disabled={!canEdit}
                     sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
                   >
                     Grant All {label}
@@ -1572,6 +1686,7 @@ const UserPageAccess = () => {
                     size="small"
                     color="error"
                     onClick={() => handleUserBulkPermission(permissionKey, false)}
+                    disabled={!canEdit}
                     sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
                   >
                     Close All {label}
@@ -1614,27 +1729,30 @@ const UserPageAccess = () => {
                         <Switch
                           checked={pageAccess[p.id]?.access || false}
                           onChange={() => handleToggleChange(p.id, pageAccess[p.id]?.access || false)}
+                          disabled={
+                            pageAccess[p.id]?.access ? !canDelete : !canCreate
+                          }
                         />
                       </TableCell>
                       <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.can_create || false}
                           onChange={() => handlePermissionToggle(p.id, "can_create")}
-                          disabled={!pageAccess[p.id]?.access}
+                          disabled={!pageAccess[p.id]?.access || !canEdit}
                         />
                       </TableCell>
                       <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.can_edit || false}
                           onChange={() => handlePermissionToggle(p.id, "can_edit")}
-                          disabled={!pageAccess[p.id]?.access}
+                          disabled={!pageAccess[p.id]?.access || !canEdit}
                         />
                       </TableCell>
                       <TableCell sx={{ textAlign: "center", border: `1px solid ${borderColor}` }}>
                         <Switch
                           checked={pageAccess[p.id]?.can_delete || false}
                           onChange={() => handlePermissionToggle(p.id, "can_delete")}
-                          disabled={!pageAccess[p.id]?.access}
+                          disabled={!pageAccess[p.id]?.access || !canEdit}
                         />
                       </TableCell>
                     </TableRow>

@@ -619,8 +619,12 @@ const StudentNumbering = () => {
                     setOpenModal(false);
                     setSnack({
                         open: true,
-                        message: " Student number assigned and email sent.",
-                        severity: "success",
+                        message:
+                            data.message ||
+                            (data.email_sent
+                                ? "Student number assigned and email sent."
+                                : "Student number assigned, but email was not sent."),
+                        severity: data.email_sent ? "success" : "warning",
                     });
                     fetchPersons();
                     setSelectedPerson(null);

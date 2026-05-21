@@ -181,6 +181,12 @@ const PageCRUD = () => {
 
     const auditConfig = {
         headers: {
+            "x-employee-id":
+                employeeID ||
+                localStorage.getItem("employee_id") ||
+                localStorage.getItem("email") ||
+                "unknown",
+            "x-page-id": pageId,
             "x-audit-actor-id":
                 employeeID ||
                 localStorage.getItem("employee_id") ||
@@ -377,19 +383,21 @@ const PageCRUD = () => {
             <br />
             <br />
 
-            <Button
-                variant="contained"
+            {canCreate && (
+                <Button
+                    variant="contained"
 
-                onClick={handleOpen}
+                    onClick={handleOpen}
 
-                sx={{
-                    px: 4,
-                    fontWeight: 600,
-                    textTransform: "none"
-                }}
-            >
-                + Add New Page
-            </Button>
+                    sx={{
+                        px: 4,
+                        fontWeight: 600,
+                        textTransform: "none"
+                    }}
+                >
+                    + Add New Page
+                </Button>
+            )}
 
             <div style={{ height: "30px" }}></div>
 
@@ -442,25 +450,27 @@ const PageCRUD = () => {
                                                 gap: "10px",
                                             }}
                                         >
-                                            <Button
-                                                variant="contained"
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: "green",
-                                                    color: "white",
-                                                    borderRadius: "5px",
-                                                    padding: "8px 14px",
-                                                    width: "100px",
-                                                    height: "40px",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    gap: "5px",
-                                                }}
-                                                onClick={() => handleEdit(page)}
-                                            >
-                                                <EditIcon fontSize="small" /> Edit
-                                            </Button>
+                                            {canEdit && (
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: "green",
+                                                        color: "white",
+                                                        borderRadius: "5px",
+                                                        padding: "8px 14px",
+                                                        width: "100px",
+                                                        height: "40px",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        gap: "5px",
+                                                    }}
+                                                    onClick={() => handleEdit(page)}
+                                                >
+                                                    <EditIcon fontSize="small" /> Edit
+                                                </Button>
+                                            )}
 
                                             {/* <Button
                                                 variant="contained"

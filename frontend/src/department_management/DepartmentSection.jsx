@@ -24,6 +24,8 @@ import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
 import SaveIcon from '@mui/icons-material/Save';
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 import TextField from "@mui/material/TextField";
 import SearchIcon from "@mui/icons-material/Search";
@@ -84,6 +86,8 @@ const DepartmentSection = () => {
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
   const [canCreate, setCanCreate] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
 
   const [deptSearchQuery, setDeptSearchQuery] = useState("");
 
@@ -150,14 +154,20 @@ const DepartmentSection = () => {
       if (response.data && Number(response.data.page_privilege) === 1) {
         setHasAccess(true);
         setCanCreate(Number(response.data?.can_create) === 1);
+        setCanEdit(Number(response.data?.can_edit) === 1);
+        setCanDelete(Number(response.data?.can_delete) === 1);
       } else {
         setHasAccess(false);
         setCanCreate(false);
+        setCanEdit(false);
+        setCanDelete(false);
       }
     } catch (error) {
       console.error('Error checking access:', error);
       setHasAccess(false);
       setCanCreate(false);
+      setCanEdit(false);
+      setCanDelete(false);
       if (error.response && error.response.data.message) {
         console.log(error.response.data.message);
       } else {
@@ -211,6 +221,7 @@ const DepartmentSection = () => {
 
   const [openFormDialog, setOpenFormDialog] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const handleAddDepartmentSection = async () => {
     const { curriculum_id, section_id } = dprtmntSection;
@@ -223,7 +234,16 @@ const DepartmentSection = () => {
       return false;
     }
 
-    if (!canCreate) {
+    if (editId && !canEdit) {
+      setSnackbar({
+        open: true,
+        message: "You do not have permission to edit items on this page.",
+        severity: "error",
+      });
+      return false;
+    }
+
+    if (!editId && !canCreate) {
       setSnackbar({
         open: true,
         message: "You do not have permission to create items on this page.",
@@ -233,14 +253,23 @@ const DepartmentSection = () => {
     }
 
     try {
-      await axios.post(`${API_BASE_URL}/department_section`, dprtmntSection, {
-        headers: getPermissionHeaders(),
-      });
+      if (editId) {
+        await axios.put(`${API_BASE_URL}/department_section/${editId}`, dprtmntSection, {
+          headers: getPermissionHeaders(),
+        });
+      } else {
+        await axios.post(`${API_BASE_URL}/department_section`, dprtmntSection, {
+          headers: getPermissionHeaders(),
+        });
+      }
       setDprtmntSection({ curriculum_id: '', section_id: '' });
+      setEditId(null);
       fetchDepartmentSections();
       setSnackbar({
         open: true,
-        message: "Department section added successfully!",
+        message: editId
+          ? "Department section updated successfully!"
+          : "Department section added successfully!",
         severity: "success",
       });
       return true;
@@ -252,6 +281,51 @@ const DepartmentSection = () => {
         severity: "error",
       });
       return false;
+    }
+  };
+
+  const openEditDepartmentSection = (section) => {
+    if (!canEdit) return;
+
+    setEditId(section.department_section_id);
+    setDprtmntSection({
+      curriculum_id: section.curriculum_id || "",
+      section_id: section.section_id || "",
+    });
+    setOpenFormDialog(true);
+  };
+
+  const handleDeleteDepartmentSection = async () => {
+    if (!deleteTarget) return;
+
+    if (!canDelete) {
+      setSnackbar({
+        open: true,
+        message: "You do not have permission to delete items on this page.",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${API_BASE_URL}/department_section/${deleteTarget.department_section_id}`,
+        { headers: getPermissionHeaders() },
+      );
+      setDeleteTarget(null);
+      fetchDepartmentSections();
+      setSnackbar({
+        open: true,
+        message: "Department section deleted successfully!",
+        severity: "success",
+      });
+    } catch (err) {
+      console.error(err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to delete department section.",
+        severity: "error",
+      });
     }
   };
 
@@ -608,6 +682,18 @@ const DepartmentSection = () => {
               >
                 Status
               </th>
+              {(canEdit || canDelete) && (
+                <th
+                  style={{
+                    border: `1px solid ${borderColor}`,
+                    padding: "8px",
+                    textAlign: "center",
+                    color: "#000",
+                  }}
+                >
+                  Action
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -649,6 +735,42 @@ const DepartmentSection = () => {
                 >
                   {section.dsstat === 0 ? "Inactive" : "Active"}
                 </td>
+                {(canEdit || canDelete) && (
+                  <td
+                    style={{
+                      border: `1px solid ${borderColor}`,
+                      padding: "8px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <Box display="flex" justifyContent="center" gap={1}>
+                      {canEdit && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          startIcon={<EditIcon />}
+                          onClick={() => openEditDepartmentSection(section)}
+                          sx={{ textTransform: "none" }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => setDeleteTarget(section)}
+                          sx={{ textTransform: "none" }}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </Box>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -974,6 +1096,36 @@ const DepartmentSection = () => {
 
           </Button>
 
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Department Section</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this department section?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="error"
+            variant="outlined"
+            onClick={() => setDeleteTarget(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteDepartmentSection}
+          >
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 

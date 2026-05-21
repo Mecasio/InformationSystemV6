@@ -1,6 +1,10 @@
 const express = require("express");
 const { db3 } = require("../database/database");
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanDelete,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
 
@@ -65,7 +69,7 @@ router.get("/assignments", async (req, res) => {
 });
 
 // ASSIGN ROOM TO DEPARTMENT
-router.post("/assign", async (req, res) => {
+router.post("/assign", CanCreate, async (req, res) => {
   const { dprtmnt_id, room_id } = req.body;
 
   if (!dprtmnt_id || !room_id) {
@@ -125,7 +129,7 @@ router.post("/assign", async (req, res) => {
 });
 
 // UNASSIGN ROOM FROM DEPARTMENT
-router.delete("/unassign/:dprtmnt_room_id", async (req, res) => {
+router.delete("/unassign/:dprtmnt_room_id", CanDelete, async (req, res) => {
   const { dprtmnt_room_id } = req.params;
 
   if (!dprtmnt_room_id) {

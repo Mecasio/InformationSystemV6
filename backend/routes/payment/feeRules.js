@@ -1,6 +1,11 @@
 const express = require("express");
 const { db, db3 } = require("../database/database");
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanDelete,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
 
@@ -120,7 +125,7 @@ router.get("/api/fee_rules", async (req, res) => {
   }
 });
 
-router.post("/insert_fee_rule", async (req, res) => {
+router.post("/insert_fee_rule", CanCreate, async (req, res) => {
   const {
     fee_code,
     description,
@@ -174,7 +179,7 @@ router.post("/insert_fee_rule", async (req, res) => {
 });
 
 // =================== UPDATE an existing fee rule ===================
-router.put("/update_fee_rule/:fee_rule_id", async (req, res) => {
+router.put("/update_fee_rule/:fee_rule_id", CanEdit, async (req, res) => {
   const { fee_rule_id } = req.params;
   const {
     description,
@@ -233,7 +238,7 @@ router.put("/update_fee_rule/:fee_rule_id", async (req, res) => {
 });
 
 // =================== DELETE a fee rule ===================
-router.delete("/delete_fee_rule/:fee_code", async (req, res) => {
+router.delete("/delete_fee_rule/:fee_code", CanDelete, async (req, res) => {
   const { fee_code } = req.params;
 
   try {

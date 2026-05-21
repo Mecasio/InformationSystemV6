@@ -1,6 +1,11 @@
 const express = require("express");
 const { db, db3 } = require("../database/database");
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanDelete,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
 
@@ -46,7 +51,7 @@ const getActorLabel = (req) => {
   };
 };
 //11/29/2025 UPDATE
-router.post("/insert_question", async (req, res) => {
+router.post("/insert_question", CanCreate, async (req, res) => {
   const {
     category,
     question,
@@ -98,7 +103,7 @@ router.post("/insert_question", async (req, res) => {
 });
 
 //11/29/2025 UPDATE
-router.post("/insert_category", async (req, res) => {
+router.post("/insert_category", CanCreate, async (req, res) => {
   const { title, description } = req.body;
 
   try {
@@ -138,7 +143,7 @@ router.get("/get_category", async (req, res) => {
 });
 
 //11/29/2025 UPDATE
-router.put("/update_category/:id", async (req, res) => {
+router.put("/update_category/:id", CanEdit, async (req, res) => {
   const { title, description } = req.body;
   const { id } = req.params;
 
@@ -169,7 +174,7 @@ router.put("/update_category/:id", async (req, res) => {
 });
 
 // DELETE CATEGORY
-router.delete("/delete_category/:id", async (req, res) => {
+router.delete("/delete_category/:id", CanDelete, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -213,7 +218,7 @@ router.get("/get_questions", async (req, res) => {
 });
 
 //11/29/2025 UPDATE
-router.put("/update_question/:id", async (req, res) => {
+router.put("/update_question/:id", CanEdit, async (req, res) => {
   const { category, question, choice1, choice2, choice3, choice4, choice5 } =
     req.body;
   const { id } = req.params;
@@ -259,7 +264,7 @@ router.put("/update_question/:id", async (req, res) => {
 });
 
 // DELETE QUESTION
-router.delete("/delete_question/:id", async (req, res) => {
+router.delete("/delete_question/:id", CanDelete, async (req, res) => {
   const { id } = req.params;
 
   try {

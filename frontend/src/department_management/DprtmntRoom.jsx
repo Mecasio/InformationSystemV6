@@ -88,6 +88,8 @@ const DepartmentRoom = () => {
   const [employeeID, setEmployeeID] = useState("");
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [canCreate, setCanCreate] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
   const pageId = 22;
 
   const getAuditHeaders = () => ({
@@ -129,10 +131,20 @@ const DepartmentRoom = () => {
   const checkAccess = async (employeeID) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`);
-      setHasAccess(response.data?.page_privilege === 1);
+      if (Number(response.data?.page_privilege) === 1) {
+        setHasAccess(true);
+        setCanCreate(Number(response.data?.can_create) === 1);
+        setCanDelete(Number(response.data?.can_delete) === 1);
+      } else {
+        setHasAccess(false);
+        setCanCreate(false);
+        setCanDelete(false);
+      }
     } catch (error) {
       console.error("Error checking access:", error);
       setHasAccess(false);
+      setCanCreate(false);
+      setCanDelete(false);
     }
   };
 
@@ -192,6 +204,15 @@ const DepartmentRoom = () => {
   };
 
   const handleAssignRoom = async () => {
+    if (!canCreate) {
+      setSnackbar({
+        open: true,
+        message: "You do not have permission to create items on this page.",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       await axios.post(`${API_BASE_URL}/api/assign`, room, getAuditHeaders());
       fetchRoomAssignments();
@@ -218,6 +239,15 @@ const DepartmentRoom = () => {
 
 
   const handleUnassignRoom = async (dprtmnt_room_id) => {
+    if (!canDelete) {
+      setSnackbar({
+        open: true,
+        message: "You do not have permission to delete items on this page.",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       await axios.delete(`${API_BASE_URL}/api/unassign/${dprtmnt_room_id}`, getAuditHeaders());
       fetchRoomAssignments();
@@ -320,15 +350,17 @@ const DepartmentRoom = () => {
             </Select>
           </Box>
 
-          <Button
-            variant="contained"
-            style={{ backgroundColor: "#primary", color: "#fff", width: "200px" }}
-            onClick={handleAssignRoom}
-            disabled={!room.room_id || !room.dprtmnt_id}
-            sx={{ height: 56, alignSelf: "flex-end" }}
-          >
-            Save
-          </Button>
+          {canCreate && (
+            <Button
+              variant="contained"
+              style={{ backgroundColor: "#primary", color: "#fff", width: "200px" }}
+              onClick={handleAssignRoom}
+              disabled={!room.room_id || !room.dprtmnt_id}
+              sx={{ height: 56, alignSelf: "flex-end" }}
+            >
+              Save
+            </Button>
+          )}
         </Box>
       </Paper>
       
@@ -363,6 +395,7 @@ const DepartmentRoom = () => {
                       }}
                     >
                       Room {room.room_description}
+                      {canDelete && (
                       <Button
                         onClick={() => {
                           setRoomToUnassign({
@@ -388,6 +421,7 @@ const DepartmentRoom = () => {
                       >
                         ×
                       </Button>
+                      )}
                     </Box>
                   ))
                 ) : (

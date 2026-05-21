@@ -3,12 +3,26 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcryptjs");
-const { db, db3 } = require('../database/database');
+const {
+  db,
+  db3,
+  ensurePageAccessPermissionColumns,
+} = require('../database/database');
 const { CanDelete } = require("../../middleware/pagePermissions");
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+router.use(async (req, res, next) => {
+  try {
+    await ensurePageAccessPermissionColumns();
+    next();
+  } catch (err) {
+    console.error("Failed to prepare page_access permission columns:", err);
+    res.status(500).json({ error: "Failed to prepare page access permissions" });
+  }
+});
 
 const saveRegistrarProfilePicture = async ({ personId, file }) => {
   const [existing] = await db3.query(

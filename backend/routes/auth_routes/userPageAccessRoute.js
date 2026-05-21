@@ -1,10 +1,29 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const { db, db3 } = require("../database/database");
+const {
+  db,
+  db3,
+  ensurePageAccessPermissionColumns,
+} = require("../database/database");
 const { insertAuditLogEnrollment } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanDelete,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
+
+router.use(async (req, res, next) => {
+  try {
+    await ensurePageAccessPermissionColumns();
+    next();
+  } catch (err) {
+    console.error("Failed to prepare page_access permission columns:", err);
+    res.status(500).json({ error: "Failed to prepare page access permissions" });
+  }
+});
 
 const formatAuditActorRole = (role) => {
   const safeRole = String(role || "registrar").trim();
@@ -60,7 +79,7 @@ const getPageLabel = async (pageId) => {
   }
 };
 
-router.post("/api/pages", async (req, res) => {
+router.post("/api/pages", CanCreate, async (req, res) => {
   const { id, page_description, page_group } = req.body;
 
   try {
@@ -106,7 +125,7 @@ router.get("/api/pages", async (req, res) => {
   }
 });
 
-router.put("/api/pages/:id", async (req, res) => {
+router.put("/api/pages/:id", CanEdit, async (req, res) => {
   const { id } = req.params;
   const { page_description, page_group } = req.body;
 
@@ -132,7 +151,7 @@ router.put("/api/pages/:id", async (req, res) => {
   }
 });
 
-router.delete("/api/pages/:id", async (req, res) => {
+router.delete("/api/pages/:id", CanDelete, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -170,7 +189,7 @@ router.get("/api/page_access/:userId", async (req, res) => {
   }
 });
 
-router.post("/api/page_access/:userId/:pageId", async (req, res) => {
+router.post("/api/page_access/:userId/:pageId", CanCreate, async (req, res) => {
   const { userId, pageId } = req.params;
 
   try {
@@ -268,7 +287,7 @@ router.post("/api/access-level/bulk-permission-audit", async (req, res) => {
   }
 });
 
-router.put("/api/page_access/:userId/bulk-permission", async (req, res) => {
+router.put("/api/page_access/:userId/bulk-permission", CanEdit, async (req, res) => {
   const { userId } = req.params;
   const { permission, enabled } = req.body;
   const allowedPermissions = ["can_create", "can_edit", "can_delete"];
@@ -345,7 +364,7 @@ router.put("/api/page_access/:userId/bulk-permission", async (req, res) => {
   }
 });
 
-router.put("/api/page_access/:userId/:pageId", async (req, res) => {
+router.put("/api/page_access/:userId/:pageId", CanEdit, async (req, res) => {
   const { userId, pageId } = req.params;
   const {
     page_privilege = 0,
@@ -417,7 +436,7 @@ router.put("/api/page_access/:userId/:pageId", async (req, res) => {
   }
 });
 
-router.delete("/api/page_access/:userId/:pageId", async (req, res) => {
+router.delete("/api/page_access/:userId/:pageId", CanDelete, async (req, res) => {
   const { userId, pageId } = req.params;
   try {
     const pageLabel = await getPageLabel(pageId);
@@ -475,7 +494,7 @@ router.get("/api/page_access/:userId/:pageId", async (req, res) => {
   }
 });
 
-router.post("/api/page_access/grant-all", async (req, res) => {
+router.post("/api/page_access/grant-all", CanCreate, async (req, res) => {
   const { userId } = req.body;
 
   try {
@@ -524,7 +543,7 @@ router.post("/api/page_access/grant-all", async (req, res) => {
   }
 });
 
-router.post("/api/page_access/revoke-all", async (req, res) => {
+router.post("/api/page_access/revoke-all", CanDelete, async (req, res) => {
   const { userId } = req.body;
 
   try {

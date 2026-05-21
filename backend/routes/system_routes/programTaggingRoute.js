@@ -4,6 +4,11 @@ const { db, db3 } = require("../database/database");
 const {
   insertAuditLogEnrollment,
 } = require("../../utils/auditLogger");
+const {
+  CanCreate,
+  CanDelete,
+  CanEdit,
+} = require("../../middleware/pagePermissions");
 
 const router = express.Router();
 
@@ -172,7 +177,7 @@ async function getLatestTosf() {
   return rows[0];
 }
 
-router.post("/program_tagging", async (req, res) => {
+router.post("/program_tagging", CanCreate, async (req, res) => {
   const {
     curriculum_id,
     year_level_id,
@@ -255,7 +260,7 @@ router.post("/program_tagging", async (req, res) => {
   }
 });
 
-router.put("/program_tagging/:id", async (req, res) => {
+router.put("/program_tagging/:id", CanEdit, async (req, res) => {
   const { id } = req.params;
   const {
     curriculum_id,
@@ -327,7 +332,7 @@ router.put("/program_tagging/:id", async (req, res) => {
   }
 });
 
-router.delete("/program_tagging/:id(\\d+)", async (req, res) => {
+router.delete("/program_tagging/:id(\\d+)", CanDelete, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -356,7 +361,7 @@ router.delete("/program_tagging/:id(\\d+)", async (req, res) => {
   }
 });
 
-router.delete("/program_tagging/delete_all", async (req, res) => {
+router.delete("/program_tagging/delete_all", CanDelete, async (req, res) => {
   const { curriculum_id, year_level_id, semester_id } = req.body;
 
   if (!curriculum_id || !year_level_id || !semester_id) {
