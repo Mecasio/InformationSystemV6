@@ -1081,7 +1081,7 @@ const ApplicantDashboard = (props) => {
                   marginLeft: "10px",
                   boxShadow: 3,
                   p: 2,
-                  width: "550px",
+                  width: "510px",
                   height: "405px",
                   display: "flex",
                   border: `2px solid ${borderColor}`,

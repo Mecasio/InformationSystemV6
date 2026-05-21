@@ -1761,6 +1761,8 @@ const QualifyingExamScore = () => {
   const [selectedApplicants, setSelectedApplicants] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [singleConfirmOpen, setSingleConfirmOpen] = useState(false);
+  const [finalizeConfirmOpen, setFinalizeConfirmOpen] = useState(false);
+  const [finalizeConfirmMode, setFinalizeConfirmMode] = useState("bulk");
   const [emailSender, setEmailSender] = useState("");
   const [dprtmntName, setDepartmentName] = useState("");
 
@@ -2062,6 +2064,60 @@ Thank you, best regards
     const message = buildFullMessage(applicant, reqText);
     setEmailMessage(message);
     setSingleConfirmOpen(true);
+  };
+
+  const getEmailTargets = (mode = finalizeConfirmMode) => {
+    if (mode === "single") {
+      return selectedApplicant
+        ? persons.filter((p) => p.applicant_number === selectedApplicant)
+        : [];
+    }
+
+    return selectedApplicant
+      ? persons.filter((p) => p.applicant_number === selectedApplicant)
+      : persons.filter(
+        (p) =>
+          Number(p.college_approval_status) === COLLEGE_APPROVAL_STATUS.ACCEPTED &&
+          Number(p.applicant_interview_status) !== 1,
+      );
+  };
+
+  const getApplicantDisplayName = (applicant) =>
+    [
+      applicant?.last_name,
+      [applicant?.first_name, applicant?.middle_name].filter(Boolean).join(" "),
+    ]
+      .filter(Boolean)
+      .join(", ") ||
+    applicant?.applicant_number ||
+    "this applicant";
+
+  const openFinalizeConfirmation = (mode) => {
+    const targets = getEmailTargets(mode);
+
+    if (targets.length === 0) {
+      setSnack({
+        open: true,
+        message:
+          mode === "single"
+            ? "Please select one applicant first."
+            : "No applicants to send email to.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    setFinalizeConfirmMode(mode);
+    setFinalizeConfirmOpen(true);
+  };
+
+  const handleFinalizeConfirmed = () => {
+    setFinalizeConfirmOpen(false);
+    if (finalizeConfirmMode === "single") {
+      confirmSendEmailSingle();
+      return;
+    }
+    confirmSendEmails();
   };
 
   const confirmSendEmailSingle = async () => {
@@ -4358,7 +4414,7 @@ Thank you, best regards
 
         <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
           <Button onClick={() => setConfirmOpen(false)} color="error" variant="outlined">Cancel</Button>
-          <Button onClick={confirmSendEmails} color="success" variant="contained" sx={{ minWidth: "140px", height: "40px" }}>Send Emails</Button>
+          <Button onClick={() => openFinalizeConfirmation("bulk")} color="success" variant="contained" sx={{ minWidth: "140px", height: "40px" }}>Send Emails</Button>
         </DialogActions>
       </Dialog>
 
@@ -4665,7 +4721,66 @@ Thank you, best regards
 
         <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
           <Button onClick={() => setSingleConfirmOpen(false)} color="error" variant="outlined">Cancel</Button>
-          <Button onClick={confirmSendEmailSingle} color="success" variant="contained" sx={{ minWidth: "140px", height: "40px" }}>Send Emails</Button>
+          <Button onClick={() => openFinalizeConfirmation("single")} color="success" variant="contained" sx={{ minWidth: "140px", height: "40px" }}>Send Emails</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={finalizeConfirmOpen}
+        onClose={() => setFinalizeConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Confirm Finalization
+        </DialogTitle>
+        <DialogContent dividers>
+          {(() => {
+            const targets = getEmailTargets(finalizeConfirmMode);
+            const singleTarget = targets[0];
+
+            if (targets.length === 1) {
+              return (
+                <Typography sx={{ fontSize: 14, lineHeight: 1.7 }}>
+                  Are you sure you want to finalize the qualifying / interview
+                  examination score of{" "}
+                  <b>
+                    {getApplicantDisplayName(singleTarget)} (
+                    {singleTarget?.applicant_number})
+                  </b>{" "}
+                  before sending the email?
+                </Typography>
+              );
+            }
+
+            return (
+              <Typography sx={{ fontSize: 14, lineHeight: 1.7 }}>
+                Are you sure you want to finalize the qualifying / interview
+                examination scores of <b>{targets.length} applicants</b> before
+                sending emails?
+              </Typography>
+            );
+          })()}
+          <Typography sx={{ mt: 2, fontSize: 13, color: "text.secondary" }}>
+            Once confirmed, the email will be sent and the applicant interview
+            status will be marked as finalized.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+          <Button
+            onClick={() => setFinalizeConfirmOpen(false)}
+            color="inherit"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleFinalizeConfirmed}
+            color="success"
+            variant="contained"
+          >
+            Yes, Finalize and Send
+          </Button>
         </DialogActions>
       </Dialog>
 

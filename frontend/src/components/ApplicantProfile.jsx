@@ -3,6 +3,7 @@ import { SettingsContext } from "../App";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import ApplicantExamPermit from "../components/ApplicantExamPermit";
+import EaristLogo from "../assets/EaristLogo.png";
 import {
   TextField,
   Button,
@@ -231,6 +232,11 @@ const ApplicantProfile = () => {
     String(value ?? "").trim().toUpperCase() === "DONE" ||
     String(value ?? "").trim().toUpperCase() === "PASSED";
 
+  const hasFinalizedScore = (value) =>
+    value !== null &&
+    value !== undefined &&
+    String(value).trim() !== "";
+
   const isAcceptedStatus = (value) =>
     value === 1 ||
     String(value ?? "").trim() === "1" ||
@@ -338,8 +344,12 @@ const ApplicantProfile = () => {
           entrance_exam_status === "FAILED",
 
         // separate step 2 states
-        qualifyingDone: isDoneStatus(qualifying_status),
-        interviewDone: isDoneStatus(interview_status),
+        qualifyingDone:
+          isDoneStatus(qualifying_status) ||
+          hasFinalizedScore(qualifying_result),
+        interviewDone:
+          isDoneStatus(interview_status) ||
+          hasFinalizedScore(interview_result),
 
         step3: isAccepted,
         step4: isRegistrarApproved,
