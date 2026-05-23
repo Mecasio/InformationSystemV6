@@ -163,6 +163,8 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
   const [studentAssessmentRows, setStudentAssessmentRows] = useState([]);
   const [gradeSummary, setGradeSummary] = useState({
     gwa: null,
+    generalAverage: null,
+    latestTermGwa: null,
     loading: true,
     message: "Loading GWA...",
   });
@@ -336,14 +338,26 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
   };
 
   const fetchGradeSummary = async (id) => {
-    setGradeSummary({ gwa: null, loading: true, message: "Loading GWA..." });
+    setGradeSummary({
+      gwa: null,
+      generalAverage: null,
+      latestTermGwa: null,
+      loading: true,
+      message: "Loading GWA...",
+    });
 
     try {
       const res = await axios.get(`${API_BASE_URL}/api/student_grade/${id}`);
       const grades = Array.isArray(res.data) ? res.data : [];
 
       if (!grades.length) {
-        setGradeSummary({ gwa: null, loading: false, message: "No grades posted" });
+        setGradeSummary({
+          gwa: null,
+          generalAverage: null,
+          latestTermGwa: null,
+          loading: false,
+          message: "No grades posted",
+        });
         return;
       }
 
@@ -351,6 +365,8 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
       if (balanceInfo.hasBalance) {
         setGradeSummary({
           gwa: null,
+          generalAverage: null,
+          latestTermGwa: null,
           loading: false,
           message: "Hidden due to balance",
         });
@@ -400,15 +416,40 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           row.gwa !== undefined &&
           row.gwa !== "",
       )?.gwa;
+      const postedTermGwas = sortedTerms
+        .map((term) => {
+          const termGwa = processedGrades.find(
+            (row) =>
+              `${row.year_level_description} ${row.semester_description}` === term &&
+              row.gwa !== null &&
+              row.gwa !== undefined &&
+              row.gwa !== "",
+          )?.gwa;
+          const numericGwa = Number(termGwa);
+          return Number.isFinite(numericGwa) ? numericGwa : null;
+        })
+        .filter((termGwa) => termGwa !== null);
+      const generalAverage = postedTermGwas.length
+        ? postedTermGwas.reduce((sum, termGwa) => sum + termGwa, 0) /
+          postedTermGwas.length
+        : null;
 
       setGradeSummary({
-        gwa: latestTermGwa ?? null,
+        gwa: generalAverage,
+        generalAverage,
+        latestTermGwa: latestTermGwa ?? null,
         loading: false,
-        message: latestTermGwa ? "" : "Not yet posted",
+        message: generalAverage ? "" : "Not yet posted",
       });
     } catch (error) {
       console.error("Failed to fetch grade summary:", error);
-      setGradeSummary({ gwa: null, loading: false, message: "Unable to load GWA" });
+      setGradeSummary({
+        gwa: null,
+        generalAverage: null,
+        latestTermGwa: null,
+        loading: false,
+        message: "Unable to load GWA",
+      });
     }
   };
 
@@ -670,7 +711,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
       console.error("Failed to generate COR PDF:", error);
       window.alert(
         error?.message ||
-          "Failed to generate Certificate of Registration PDF. Please try again.",
+        "Failed to generate Certificate of Registration PDF. Please try again.",
       );
     } finally {
       if (captureHost) {
@@ -920,20 +961,21 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         sx={{
           mx: { xs: 1.5, md: 3 },
           mt: { xs: 1.5, md: 2.5 },
-          borderRadius: "8px 8px 0 0",
+          borderRadius: "12px",
           overflow: "hidden",
-          background: `linear-gradient(135deg, ${maroon}, ${darkMaroon})`,
+          backgroundColor: "#fff9ec",
           color: "#fff",
+          border: `2px solid ${borderColor}`
         }}
       >
-        <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 2.5, md: 3 }, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 2.5, md: 3 }, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap", }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Box position="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} sx={{ display: "inline-flex" }}>
               <Avatar
                 src={profileImage || (personData?.profile_image ? `${API_BASE_URL}/uploads/Student1by1/${personData.profile_image}` : "")}
                 alt={personData?.first_name || "Student"}
                 onClick={() => fileInputRef.current?.click()}
-                sx={{ width: 64, height: 64, border: "2px solid rgba(255,255,255,0.75)", bgcolor: "rgba(255,255,255,0.15)", cursor: "pointer", display: { xs: "none", sm: "flex" } }}
+                sx={{ width: 64, height: 64, border: "1px solid black", bgcolor: "rgba(255,255,255,0.15)", cursor: "pointer", display: { xs: "none", sm: "flex", color: "black" } }}
               >
                 {personData?.first_name?.[0] || <PersonIcon />}
               </Avatar>
@@ -945,22 +987,39 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
               <input type="file" accept="image/*" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: { xs: 25, md: 31 }, fontWeight: 800, lineHeight: 1.1 }}>
-                {personData.last_name || "Student"}, {personData.first_name || ""} {personData.middle_name || ""}
+              <Typography
+                sx={{
+                  fontSize: 32,
+                  fontWeight: 800,
+                  lineHeight: 1.1,
+                  color: titleColor,
+                }}
+              >
+                Welcome Back!{" "}
+                {personData.last_name || "Student"},{" "}
+                {personData.first_name || ""}{" "}
+                {personData.middle_name || ""}
               </Typography>
-              <Typography sx={{ mt: 1, fontSize: 15, letterSpacing: 0, textTransform: "uppercase", opacity: 0.86 }}>
-                Student No. {personData.student_number || "N/A"} - {statusText}
+
+              <Typography
+                sx={{
+                  fontSize: 22,
+                  letterSpacing: 0,
+                  textTransform: "uppercase",
+                  opacity: 0.86,
+                  color: "black",
+                }}
+              >
+                <Box component="span" sx={{ fontWeight: 700 }}>
+                  Student No.
+                </Box>{" "}
+                {personData.student_number || "N/A"} - {statusText}
               </Typography>
             </Box>
           </Stack>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{ textAlign: "right" }}>
-              <Typography sx={{ fontSize: 14, opacity: 0.9 }}>{formattedDate}</Typography>
-              <Typography sx={{ fontSize: { xs: 24, md: 31 }, fontWeight: 800 }}>{formattedTime}</Typography>
-            </Box>
-          </Stack>
+
         </Box>
-        <Box sx={{ px: { xs: 2, md: 4 }, py: 1.5, backgroundColor: "rgba(85, 17, 22, 0.28)", display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "1fr 1fr 2fr 1fr 1fr" }, gap: 2 }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, py: 1.5, backgroundColor: "lightgray", display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "1fr 1fr 2fr 1fr 1fr" }, gap: 2, borderTop: `2px solid ${borderColor}` }}>
           {[
             ["School Year", `${sy.current_year || ""}-${sy.next_year || ""}`],
             ["Semester", sy.semester_description || "N/A"],
@@ -969,18 +1028,18 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
             ["Year Level", studentYearLevel],
           ].map(([label, value]) => (
             <Box key={label} sx={{ borderLeft: { lg: "1px solid rgba(255,255,255,0.22)" }, pl: { lg: 2 } }}>
-              <Typography sx={{ fontSize: 12, textTransform: "uppercase", opacity: 0.78 }}>{label}</Typography>
-              <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{value}</Typography>
+              <Typography sx={{ fontSize: 12, textTransform: "uppercase", opacity: 0.78, color: "black" }}>{label}</Typography>
+              <Typography sx={{ fontSize: 15, fontWeight: 600, color: "black" }}>{value}</Typography>
             </Box>
           ))}
         </Box>
       </Box>
 
-      <Box sx={{ py: { xs: 2, md: 2.5 }, mx: { xs: 1.5, md: 3 }, maxWidth: "none" }}>
-        <Grid container spacing={2} sx={{ width: "100%" }}>
-          <Grid item xs={12} md={6} lg={3}>
-            <Card sx={cardSx}>
-              <CardContent sx={{ p: 3 }}>
+      <Box sx={{ py: { xs: 2, md: 2.5 }, mx: { xs: 1.5, md: 3 }, maxWidth: "none", }}>
+        <Grid container spacing={2} sx={{ width: "100%", }}>
+          <Grid item xs={12} md={6} lg={3} sx={{}}>
+            <Card sx={{ ...cardSx, border: `2px solid ${borderColor}`, }}>
+              <CardContent sx={{ p: 3, }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                   <Box>
                     <Typography sx={{ fontSize: 20, fontWeight: 700 }}>Course Status</Typography>
@@ -1021,7 +1080,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           </Grid>
 
           <Grid item xs={12} md={6} lg={3}>
-            <Card sx={cardSx}>
+            <Card sx={{ ...cardSx, border: `2px solid ${borderColor}`, }}>
               <CardContent sx={{ p: 3 }}>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5 }}>
                   <Box sx={iconBoxSx}><PersonIcon /></Box>
@@ -1045,7 +1104,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           </Grid>
 
           <Grid item xs={12} md={6} lg={3}>
-            <Card sx={cardSx}>
+            <Card sx={{ ...cardSx, border: `2px solid ${borderColor}`, }}>
               <CardContent sx={{ p: 3 }}>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5 }}>
                   <Box sx={iconBoxSx}><AccountBalanceWallet /></Box>
@@ -1076,44 +1135,204 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           </Grid>
 
           <Grid item xs={12} md={6} lg={3}>
-            <Card sx={{ ...cardSx, width: "100%", flexShrink: 0 }}>
-              <CardContent sx={{ p: 2.5 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-                  <IconButton disabled sx={{ border: `1px solid ${softBorder}`, borderRadius: "8px" }}><ArrowBackIos fontSize="small" /></IconButton>
-                  <Typography sx={{ fontSize: 18, fontWeight: 700 }}>{date.toLocaleString("default", { month: "long" })} {year}</Typography>
-                  <IconButton disabled sx={{ border: `1px solid ${softBorder}`, borderRadius: "8px" }}><ArrowForwardIos fontSize="small" /></IconButton>
-                </Stack>
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", rowGap: 1, width: "100%" }}>
-                  {days.map((day) => <Typography key={day} sx={{ textAlign: "center", fontSize: 12, color: "text.secondary", textTransform: "uppercase" }}>{day.slice(0, 2)}</Typography>)}
-                  {weeks.flatMap((week, i) => week.map((day, j) => {
-                    const isToday = day === today && month === thisMonth && year === thisYear;
-                    const dateKey = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : "";
-                    const isHoliday = day ? holidays[dateKey] : null;
-                    const cell = (
-                      <Box key={`${i}-${j}`} sx={{ height: 39, display: "grid", placeItems: "center", color: !day ? "transparent" : isToday ? "#fff" : "text.primary", fontWeight: isToday || isHoliday ? 700 : 500 }}>
-                        <Box sx={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", bgcolor: isToday ? maroon : isHoliday ? "#f5dfac" : "transparent" }}>{day || 0}</Box>
-                      </Box>
-                    );
-                    return isHoliday ? <Tooltip key={`${i}-${j}`} title={isHoliday.localName} arrow>{cell}</Tooltip> : cell;
-                  }))}
+            <Card
+              sx={{
+                ...cardSx,
+                p: 2,
+                flexShrink: 0,
+                border: `2px solid ${borderColor}`,
+              }}
+            >
+              <CardContent sx={{ p: "0 !important" }}>
+                {/* Header */}
+                <Grid
+                  container
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    backgroundColor: maroon,
+                    color: "white",
+                    border: `2px solid ${borderColor}`,
+                    borderBottom: "none",
+                    borderRadius: "8px 8px 0 0",
+                    padding: "10px 8px",
+                  }}
+                >
+                  <Grid item>
+                    <IconButton
+                      size="small"
+                      onClick={handlePrevMonth}
+                      sx={{ color: "white" }}
+                    >
+                      <ArrowBackIos fontSize="small" />
+                    </IconButton>
+                  </Grid>
+
+                  <Grid item>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: "bold",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {date.toLocaleString("default", {
+                        month: "long",
+                      })}{" "}
+                      {year}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item>
+                    <IconButton
+                      size="small"
+                      onClick={handleNextMonth}
+                      sx={{ color: "white" }}
+                    >
+                      <ArrowForwardIos fontSize="small" />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+
+                {/* Calendar Body */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(7, 1fr)",
+                    borderLeft: `2px solid ${borderColor}`,
+                    borderRight: `2px solid ${borderColor}`,
+                    borderBottom: `2px solid ${borderColor}`,
+                    borderTop: `2px solid ${borderColor}`,
+                    borderRadius: "0 0 8px 8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Days */}
+                  {days.map((day, idx) => (
+                    <Box
+                      key={idx}
+                      sx={{
+                        backgroundColor: "#f3f3f3",
+                        textAlign: "center",
+                        py: 0.5,
+                        fontWeight: "bold",
+                        fontSize: 14,
+                        borderBottom: `2px solid ${borderColor}`,
+                      }}
+                    >
+                      {day}
+                    </Box>
+                  ))}
+
+                  {/* Dates */}
+                  {weeks.map((week, i) =>
+                    week.map((day, j) => {
+                      if (!day) {
+                        return (
+                          <Box
+                            key={`${i}-${j}`}
+                            sx={{
+                              height: 50,
+                              backgroundColor: "#fff",
+                            }}
+                          />
+                        );
+                      }
+
+                      const isToday =
+                        day === today &&
+                        month === thisMonth &&
+                        year === thisYear;
+
+                      const dateKey = `${year}-${String(
+                        month + 1
+                      ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                      const isHoliday = holidays[dateKey];
+
+                      const dayCell = (
+                        <Box
+                          sx={{
+                            height: 38,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "50%",
+                            fontSize: 12,
+                            backgroundColor: isToday
+                              ? maroon
+                              : isHoliday
+                                ? "#E8C999"
+                                : "#fff",
+                            color: isToday ? "white" : "black",
+                            fontWeight: isHoliday ? "bold" : "500",
+                            cursor: isHoliday ? "pointer" : "default",
+
+                            "&:hover": {
+                              backgroundColor: isHoliday
+                                ? "#F5DFA6"
+                                : "#000",
+                              color: isHoliday ? "black" : "white",
+                            },
+                          }}
+                        >
+                          {day}
+                        </Box>
+                      );
+
+                      return isHoliday ? (
+                        <Tooltip
+                          key={`${i}-${j}`}
+                          title={
+                            <>
+                              <Typography fontWeight="bold">
+                                {isHoliday.localName}
+                              </Typography>
+
+                              <Typography variant="caption">
+                                {isHoliday.date}
+                              </Typography>
+                            </>
+                          }
+                          arrow
+                          placement="top"
+                        >
+                          {dayCell}
+                        </Tooltip>
+                      ) : (
+                        <React.Fragment key={`${i}-${j}`}>
+                          {dayCell}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
                 </Box>
               </CardContent>
             </Card>
           </Grid>
-
           <Grid item xs={12} lg={5}>
-            <Card sx={cardSx}>
-              <CardContent sx={{ p: 0 }}>
+            <Card sx={{ ...cardSx, border: `2px solid ${borderColor}`, }}>
+              <CardContent sx={{ p: 0, }}>
                 <Grid container>
                   <Grid item xs={12} md={5.2} sx={{ p: 2.5, borderRight: { md: `1px solid ${softBorder}` } }}>
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}><Box sx={iconBoxSx}><StarBorder /></Box><Typography sx={{ fontSize: 18, fontWeight: 700 }}>Grade Summary</Typography></Stack>
-                    <Box sx={{ border: "1px solid #f0cfcd", borderRadius: "8px", p: 2.5, textAlign: "center", mb: 2.5 }}>
-                      <Typography sx={{ fontSize: 16 }}>GWA</Typography>
+                    <Box sx={{ border: `2px solid ${borderColor}`, borderRadius: "8px", p: 2.5, textAlign: "center", mb: 2.5 }}>
+                      <Typography sx={{ fontSize: 16 }}>Overall GWA</Typography>
                       <Typography sx={{ fontSize: 42, color: maroon, fontWeight: 800 }}>
                         {gradeSummary.gwa !== null && gradeSummary.gwa !== undefined
                           ? Number(gradeSummary.gwa).toFixed(3)
                           : "N/A"}
                       </Typography>
+                      <Divider sx={{ my: 1.5 }} />
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Latest Term GWA</Typography>
+                        <Typography sx={{ color: maroon, fontSize: 18, fontWeight: 800 }}>
+                          {gradeSummary.latestTermGwa !== null &&
+                          gradeSummary.latestTermGwa !== undefined
+                            ? Number(gradeSummary.latestTermGwa).toFixed(3)
+                            : "N/A"}
+                        </Typography>
+                      </Stack>
                       {gradeSummary.message && (
                         <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 12 }}>
                           {gradeSummary.message}
@@ -1128,7 +1347,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
                     <Typography sx={{ fontSize: 18, fontWeight: 700, mb: 2 }}>Quick Access</Typography>
                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" }, gap: 1.5 }}>
                       {quickLinks.map((link) => (
-                        <Button key={link.label} type="button" onClick={() => navigate(link.href)} variant="outlined" sx={{ height: 86, borderRadius: "8px", borderColor: softBorder, color: "text.primary", display: "flex", flexDirection: "column", gap: 0.8, textTransform: "none", "& svg": { color: maroon }, "&:hover": { borderColor: maroon, bgcolor: "rgba(155,47,53,0.04)" } }}>
+                        <Button key={link.label} type="button" onClick={() => navigate(link.href)} variant="outlined" sx={{ height: 86, borderRadius: "8px", borderColor: softBorder, color: "text.primary", display: "flex", flexDirection: "column", gap: 0.8, textTransform: "none", "& svg": { color: maroon }, "&:hover": { borderColor: maroon, bgcolor: "rgba(155,47,53,0.04)" }, border: `2px solid ${borderColor}` }}>
                           {link.icon}<Typography sx={{ fontSize: 13, lineHeight: 1.1 }}>{link.label}</Typography>
                         </Button>
                       ))}
@@ -1146,7 +1365,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
                     startIcon={<DownloadIcon />}
                     onClick={downloadCorPdf}
                     disabled={!isCorReadyToPrint || isGeneratingCorPdf}
-                    sx={{ borderColor: softBorder, color: "text.primary", textTransform: "none", borderRadius: "8px", px: 3 }}
+                    sx={{ border: `2px solid ${borderColor}`, color: "text.primary", textTransform: "none", borderRadius: "8px", px: 3 }}
                   >
                     {isGeneratingCorPdf ? "Generating PDF..." : "Download student's copy"}
                   </Button>
@@ -1156,7 +1375,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           </Grid>
 
           <Grid item xs={12} lg={7}>
-            <Card sx={cardSx}>
+            <Card sx={{ ...cardSx, border: `2px solid ${borderColor}`, }}>
               <CardContent sx={{ p: 0 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 2, pb: 1.5 }}><Box sx={iconBoxSx}><Campaign /></Box><Typography sx={{ fontSize: 18, fontWeight: 800, textTransform: "uppercase" }}>Announcements</Typography></Stack>
                 <Box sx={{ px: 2 }}>

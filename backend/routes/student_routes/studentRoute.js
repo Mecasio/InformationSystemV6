@@ -872,6 +872,7 @@ router.get("/api/student/:id", async (req, res) => {
         es.curriculum_id,
         pgt.program_description,
         pgt.program_code,
+        sy.id AS active_school_year_id,
         sy.semester_id
       FROM student_numbering_table AS snt
       INNER JOIN person_table AS pt ON snt.person_id = pt.person_id
@@ -894,43 +895,147 @@ router.get("/api/student/:id", async (req, res) => {
       return res.status(404).json({ error: "Person not found" });
     }
 
-    const { student_number, year_level_id, curriculum_id, semester_id } =
-      rows[0];
+    const {
+      student_number,
+      year_level_id,
+      curriculum_id,
+      semester_id,
+      active_school_year_id,
+    } = rows[0];
 
-    const checkTotalRequiredUnits = `
-      SELECT COALESCE(SUM(ct.course_unit) + SUM(ct.lab_unit), 0) AS required_total_units
-      FROM program_tagging_table AS ptt
-      INNER JOIN course_table AS ct ON ptt.course_id = ct.course_id
-      WHERE ptt.year_level_id = ? AND ptt.semester_id = ? AND ptt.curriculum_id = ?
+    const regularCategoryClause = `
+      LOWER(COALESCE(CAST(ptt.category AS CHAR), 'regular')) NOT IN ('bridging', 'bridge', 'special')
     `;
-    const [requiredUnits] = await db3.query(checkTotalRequiredUnits, [
+
+    const expectedRegularSubjectsQuery = `
+      SELECT DISTINCT ptt.course_id
+      FROM program_tagging_table AS ptt
+      INNER JOIN year_level_table AS ylt ON ptt.year_level_id = ylt.year_level_id
+      WHERE ptt.year_level_id = ?
+        AND ptt.semester_id = ?
+        AND ptt.curriculum_id = ?
+        AND COALESCE(LOWER(ylt.level_type), 'year') <> 'special'
+        AND ${regularCategoryClause}
+    `;
+    const [expectedRegularSubjects] = await db3.query(expectedRegularSubjectsQuery, [
       year_level_id,
       semester_id,
       curriculum_id,
     ]);
 
-    const checkTotalEnrolledUnits = `
-      SELECT COALESCE(SUM(ct.course_unit) + SUM(ct.lab_unit), 0) AS enrolled_total_units
+    const enrolledSubjectsQuery = `
+      SELECT
+        es.course_id,
+        MAX(
+          CASE
+            WHEN LOWER(COALESCE(CAST(ptt.category AS CHAR), '')) IN ('bridging', 'bridge') THEN 1
+            WHEN LOWER(COALESCE(ylt.year_level_description, '')) LIKE '%bridg%' THEN 1
+            ELSE 0
+          END
+        ) AS is_bridging,
+        MAX(
+          CASE
+            WHEN LOWER(COALESCE(CAST(ptt.category AS CHAR), '')) = 'special' THEN 1
+            WHEN COALESCE(LOWER(ylt.level_type), 'year') = 'special' THEN 1
+            ELSE 0
+          END
+        ) AS is_special
       FROM enrolled_subject AS es
-      INNER JOIN course_table AS ct ON es.course_id = ct.course_id
-      INNER JOIN student_status_table AS sst ON es.student_number = sst.student_number
-      INNER JOIN active_school_year_table AS sy ON es.active_school_year_id = sy.id
-      WHERE sy.astatus = 1 AND es.student_number = ? AND sst.year_level_id = ?;
+      LEFT JOIN program_tagging_table AS ptt
+        ON ptt.curriculum_id = es.curriculum_id
+        AND ptt.course_id = es.course_id
+        AND ptt.semester_id = ?
+      LEFT JOIN year_level_table AS ylt ON ptt.year_level_id = ylt.year_level_id
+      WHERE es.student_number = ?
+        AND es.active_school_year_id = ?
+      GROUP BY es.course_id
     `;
-    const [enrolledUnits] = await db3.query(checkTotalEnrolledUnits, [
+    const [enrolledSubjects] = await db3.query(enrolledSubjectsQuery, [
+      semester_id,
       student_number,
-      year_level_id,
+      active_school_year_id,
     ]);
 
-    const requiredTotal = requiredUnits[0]?.required_total_units || 0;
-    const enrolledTotal = enrolledUnits[0]?.enrolled_total_units || 0;
+    const [officialRegularityRows] = await db3.query(
+      `
+      SELECT
+        CASE
+          WHEN COUNT(es.is_regular) = 0 THEN NULL
+          WHEN MIN(es.is_regular) = 0 THEN 0
+          ELSE 1
+        END AS official_is_regular
+      FROM enrolled_subject AS es
+      WHERE es.student_number = ?
+        AND es.active_school_year_id = ?
+      `,
+      [student_number, active_school_year_id],
+    );
 
+    const expectedRegularCourseIds = new Set(
+      expectedRegularSubjects.map((subject) => Number(subject.course_id)),
+    );
+    const enrolledRegularCourseIds = new Set(
+      enrolledSubjects
+        .filter(
+          (subject) =>
+            Number(subject.is_bridging) !== 1 && Number(subject.is_special) !== 1,
+        )
+        .map((subject) => Number(subject.course_id)),
+    );
+
+    const missingRegularSubjects = [...expectedRegularCourseIds].filter(
+      (courseId) => !enrolledRegularCourseIds.has(courseId),
+    );
+    const extraRegularSubjects = [...enrolledRegularCourseIds].filter(
+      (courseId) => !expectedRegularCourseIds.has(courseId),
+    );
+
+    const computedStudentStatus =
+      missingRegularSubjects.length === 0 && extraRegularSubjects.length === 0
+        ? "Regular"
+        : "Irregular";
+    const officialIsRegular = officialRegularityRows[0]?.official_is_regular;
     const student_status =
-      enrolledTotal === requiredTotal ? "Regular" : "Irregular";
+      officialIsRegular === null || officialIsRegular === undefined
+        ? computedStudentStatus
+        : Number(officialIsRegular) === 1
+          ? "Regular"
+          : "Irregular";
+    const regularity_source =
+      officialIsRegular === null || officialIsRegular === undefined
+        ? "computed"
+        : "official";
+
+    const has_bridging = enrolledSubjects.some(
+      (subject) => Number(subject.is_bridging) === 1,
+    );
+    const has_special = enrolledSubjects.some(
+      (subject) => Number(subject.is_special) === 1,
+    );
+    const subject_load_note =
+      has_bridging && has_special
+        ? "With Bridging and Special"
+        : has_bridging
+          ? "With Bridging"
+          : has_special
+            ? "With Special"
+            : "Normal";
+    const display_status =
+      subject_load_note === "Normal"
+        ? student_status
+        : `${student_status} ${subject_load_note}`;
 
     return res.json({
       ...rows[0],
       student_status,
+      display_status,
+      subject_load_note,
+      computed_student_status: computedStudentStatus,
+      regularity_source,
+      has_bridging,
+      has_special,
+      missing_regular_subject_count: missingRegularSubjects.length,
+      extra_regular_subject_count: extraRegularSubjects.length,
     });
   } catch (error) {
     console.error("Error fetching person:", error);
